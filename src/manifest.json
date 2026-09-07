@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "sf-releaselens",
+  "version": "0.1.0",
+  "description": "Release dashboard, metadata inspector and approvals helper for Salesforce release managers.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "sidePanel"],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "ui/sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open sf-releaselens"
+  }
+}

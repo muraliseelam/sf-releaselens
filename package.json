@@ -1,0 +1,41 @@
+{
+  "name": "sf-releaselens",
+  "version": "0.1.0",
+  "description": "Manifest V3 side panel that joins Salesforce release status, deployment metadata and promotion approvals into one surface.",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "keywords": [
+    "salesforce",
+    "chrome-extension",
+    "manifest-v3",
+    "side-panel",
+    "release-management",
+    "devops"
+  ],
+  "scripts": {
+    "build": "tsc --build && node scripts/build.mjs",
+    "clean": "tsc --build --clean && node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "bench": "node bench/bench.mjs",
+    "check": "npm run lint && npm run build && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/chrome": "0.1.31",
+    "@types/node": "22.20.1",
+    "@typescript-eslint/eslint-plugin": "8.69.0",
+    "@typescript-eslint/parser": "8.69.0",
+    "@vitest/coverage-v8": "5.0.0",
+    "eslint": "10.10.0",
+    "jsdom": "27.0.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  }
+}

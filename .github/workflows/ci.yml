@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint · build · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      # The build verifies that every path manifest.json references exists, so a
+      # broken extension fails here rather than at "Load unpacked".
+      - name: Package the unpacked extension
+        run: |
+          cd dist
+          zip -r ../sf-releaselens.zip . -x '*.map' '*.d.ts'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sf-releaselens-unpacked
+          path: sf-releaselens.zip
+          retention-days: 14

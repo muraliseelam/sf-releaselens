@@ -1,0 +1,204 @@
+# sf-releaselens
+
+A Manifest V3 Chrome side panel that joins Salesforce release status, deployment metadata
+and promotion approvals into one surface, so a release manager stops reassembling them from
+four browser tabs.
+
+## The problem
+
+Tracking a promotion train across dev → UAT → production means holding four things in your
+head at once, none of which talk to each other:
+
+| Where the answer lives | The question it answers |
+| --- | --- |
+| Setup → Deployment Status, per org | Did the Friday deploy actually land? |
+| `package.xml` / `sf project deploy` output | What is *in* this release? |
+| Jira / Azure DevOps | Which work items does it cover? |
+| A Slack thread | Has the change board signed off? |
+
+The cost is concrete and recurring. A release manager running a fortnightly train answers
+"which releases are blocked right now?" several times a day, and each answer costs minutes
+of tab-switching. "Is `AccountTriggerHandler` in Friday's release, and what else depends on
+it?" means opening a manifest and grepping. Worst of all, an approval waiting on one person
+is invisible until cutover, because nobody has a list of what is pending *on them* — so the
+block is discovered in the deployment window rather than three days before it.
+
+sf-releaselens does not become a fifth system of record. It reads a snapshot you already
+have — an `sf project deploy report --json`, or an export from a teammate — and makes its
+state visible and actionable in one panel.
+
+## Install
+
+```bash
+git clone https://github.com/your-org/sf-releaselens.git
+cd sf-releaselens
+npm install
+npm run build
+```
+
+Then load it: open `chrome://extensions`, turn on **Developer mode**, choose **Load
+unpacked**, and select the `dist/` directory. Chrome 116 or later is required for the side
+panel API.
+
+## 60-second quickstart
+
+1. Click the sf-releaselens toolbar icon. The side panel opens on the **Dashboard**, seeded
+   with a demo dataset — five releases, ~57 components, seven approvals — and a banner
+   saying so.
+2. The headline reads `5 releases tracked · 2 need attention`. Click the red **Blocked**
+   chip: one release, *Payment Retry Hotfix*, with a note explaining the change board
+   rejected it.
+3. Click that release. You land in the **Inspector**, already scoped to it. Type `payment`
+   and select `PaymentGatewayAdapter` — the detail pane shows `55% covered`, a
+   `HARDCODED_ID` warning, what it depends on, and what depends on it.
+4. Open the **Approvals** tab. The badge shows the gates waiting on you. Approve one with a
+   comment; the panel reports the decision *and* the release status change it caused, in
+   place. Try rejecting one without a comment — it refuses, and keeps what you typed.
+5. Press **Export** to download the snapshot as JSON, or **Import** to replace it with your
+   own `sf project deploy report --json` output. **Start empty** on the demo banner clears
+   the sample data.
+
+## Architecture
+
+Four layers, one dependency direction. `core/` is pure TypeScript with no `chrome.*` and no
+I/O, so every rule in the product is testable in Node without a browser or a mock framework.
+
+```mermaid
+flowchart TD
+    subgraph UI["ui/ - side panel"]
+        V["dashboard / inspector / approvals"]
+        VS["pure view-state reducer"]
+    end
+    subgraph BG["background/ - service worker"]
+        R["message router (single writer)"]
+    end
+    subgraph DATA["data/ - adapters"]
+        DS["DataSource port"]
+        LDS["LocalDataSource"]
+        SA["StorageArea port"]
+        CS["ChromeStorageArea"]
+        MS["MemoryStorageArea (tests)"]
+        SFDS["SalesforceDataSource (not built)"]
+    end
+    subgraph CORE["core/ - pure domain"]
+        RS["releases: summarise, derive status"]
+        MD["metadata: search, facets, dependencies"]
+        AP["approvals: queues, transitions"]
+        VAL["validate: parse untrusted JSON"]
+    end
+
+    V --> VS
+    V -- typed messages --> R
+    R --> DS
+    DS -.implemented by.-> LDS
+    DS -.implemented by.-> SFDS
+    LDS --> SA
+    SA -.-> CS
+    SA -.-> MS
+    R --> CORE
+    VS --> CORE
+    LDS --> VAL
+```
+
+Three decisions worth knowing before reading the code:
+
+- **The service worker is the single writer.** Every mutation goes through one message
+  router, which re-reads storage immediately before writing. Two open windows deciding the
+  same approval produce a typed conflict error, not a silently lost write.
+- **No bundler and no runtime dependencies.** `tsc` emits ES modules that Chrome loads
+  natively in both the worker and the panel; the build is `tsc` plus a 90-line copy-and-
+  verify script. The whole review surface for someone deciding to install this is the source.
+- **A side panel, not a popup.** The dashboard and inspector are reference surfaces used
+  *while* looking at an org tab, and a popup dismisses on outside click.
+
+Full design rationale, data model and failure-mode table: [`docs/DESIGN.md`](docs/DESIGN.md).
+
+## Measured numbers
+
+From `node bench/bench.mjs` on Node v24.19.0, against **5,000 components across 40
+releases** — larger than a typical release payload. Re-run the script rather than trusting
+these; they are copied from one run on one machine.
+
+| Operation | p50 | p95 |
+| --- | ---: | ---: |
+| `searchMetadata`, no filters | 0.44 ms | 0.95 ms |
+| `searchMetadata`, text + type + operation facets | 5.74 ms | 9.44 ms |
+| `resolveDependencies` for one component | 0.51 ms | 1.01 ms |
+| `summariseByStatus` over 40 releases | <0.01 ms | 0.01 ms |
+| `parseSnapshot` over the whole payload | 2.78 ms | 4.63 ms |
+
+The filtered search is the slowest path because facet counts are computed three times —
+once for the results, once per facet group with that group's own filter lifted — which is
+what makes a facet chip's count trustworthy. At 5,000 components it stays inside a 16 ms
+frame; the inspector also caps rendering at 200 rows and says so in the caption.
+
+Test coverage, from `npm run test:coverage`: **96.7% lines, 91.5% branches** across
+`core/`, `data/`, the message layer and the whole UI layer — **343 tests** in 20 files.
+Every exported function has direct tests; `main.ts` and `service-worker.ts` are excluded
+because they are `chrome.*` wiring with no logic of their own.
+
+## Configuration
+
+There is nothing to configure, and nothing to authenticate. State lives in one
+`chrome.storage.local` key, `sf-releaselens.snapshot.v1`.
+
+| Manifest permission | Why |
+| --- | --- |
+| `storage` | The snapshot. Nothing else is stored. |
+| `sidePanel` | Opening the panel from the toolbar icon. |
+
+There are **no `host_permissions`, no content scripts and no network access**. The
+extension cannot read the page you are on.
+
+Data gets in three ways:
+
+| Input | Notes |
+| --- | --- |
+| Demo dataset | Seeded on first run. Replaceable with **Start empty**. |
+| A previous export | **Import** → any `.json` this extension exported. Your local profile is preserved rather than overwritten by the exporter's. |
+| `sf project deploy report --json` | **Import** → the same button detects the shape. Maps `componentSuccesses` / `componentFailures` onto components; failures become error-level warnings. |
+
+Development commands:
+
+```bash
+npm run build          # tsc + copy assets + verify every manifest path exists
+npm run test           # vitest
+npm run test:coverage  # vitest with v8 coverage thresholds
+npm run lint           # eslint, type-checked rules
+npm run check          # all of the above
+node bench/bench.mjs   # the numbers above (needs a build first)
+```
+
+## Limitations and known gaps
+
+Stated plainly, because they determine whether this is useful to you:
+
+- **Approvals are a workflow aid, not an auditable control.** There is no server, so the
+  "acting as" profile is not authenticated and a decision is local state its owner could
+  edit by exporting, changing the JSON and re-importing. If you need an approval trail that
+  stands up to an audit, this is not it, and pretending otherwise would be worse than the
+  Slack thread it replaces.
+- **No live org connection.** v1 reads snapshots you give it. The `DataSource` interface is
+  the seam a Salesforce adapter would implement (`docs/DESIGN.md` §6); it would additionally
+  need OAuth via `chrome.identity`, `host_permissions` for the org domain, and a decision
+  about where approvals live, since Salesforce has no native deployment-approval object.
+- **Nothing is shared between machines.** Two people running this see two independent
+  snapshots. Sharing means exporting and importing a file.
+- **A deploy report carries no dependency graph.** Imported components therefore have no
+  `dependsOn` edges, and the inspector's dependency panes will be empty for them. The demo
+  dataset has edges so the feature is visible; real ones must come from an export that has
+  them.
+- **Coverage is only as good as the snapshot.** Unknown coverage renders as "Coverage
+  unknown" and is never shown as 0%, but nothing here computes coverage.
+- **Not verified against a live Chrome install in CI.** The build verifies that every path
+  the manifest references exists, and the logic is covered by unit and integration tests,
+  but there is no automated end-to-end load of the packaged extension.
+- **No icons.** The extension ships without icon assets, so Chrome shows a default puzzle
+  piece in the toolbar. Add PNGs and an `icons` block to `src/manifest.json` if you fork it —
+  `scripts/build.mjs` already verifies those paths.
+- **The inspector renders at most 200 rows** per result set. The count is shown, but the
+  201st component is only reachable by narrowing the filters.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).

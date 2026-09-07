@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sf-releaselens</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!--
+      The panel renders entirely from main.ts. There is no inline script and no
+      inline style: MV3's content security policy forbids both, and keeping the
+      markup empty means there is exactly one place that decides what is on
+      screen.
+    -->
+    <div id="root" role="main"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
