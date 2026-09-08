@@ -70,6 +70,12 @@ export default [
     },
   },
   {
+    // The two sanctioned network call sites. See the no-restricted-globals
+    // comment above: everywhere else reaches the org through OrgConnection.
+    files: ['src/data/fetchConnection.ts', 'src/auth/oauth.ts'],
+    rules: { 'no-restricted-globals': 'off' },
+  },
+  {
     // The build script and the benchmark are Node, not a browser or a worker.
     files: ['scripts/**/*.mjs', 'bench/**/*.mjs'],
     languageOptions: {
