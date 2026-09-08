@@ -17,6 +17,7 @@ import { createSalesforceDataSource } from '../../src/data/salesforce.js';
 import { createMemoryStorageArea, type StorageArea } from '../../src/data/storage.js';
 import { fakeOrgConnection } from '../fixtures/fakeConnection.js';
 import {
+  API_VERSIONS,
   COVERAGE_ROWS,
   DEPLOY_SUCCEEDED,
   DEPLOY_SUCCEEDED_DETAIL,
@@ -78,9 +79,10 @@ function fakePermissions(granted = true): PermissionsApi & { requested: string[]
 function orgConnection() {
   return fakeOrgConnection({
     getResponses: {
+      '/services/data/': API_VERSIONS,
       [`${API}/limits`]: HEALTHY_LIMITS,
       [`${API}/query`]: queryResponse([SANDBOX_ORG]),
-      [`${API}/tooling/sobjects/DeployRequest/${DEPLOY_SUCCEEDED.Id}`]: DEPLOY_SUCCEEDED_DETAIL,
+      [`${API}/metadata/deployRequest/${DEPLOY_SUCCEEDED.Id}`]: DEPLOY_SUCCEEDED_DETAIL,
     },
     queryResponses: [
       { match: 'FROM DeployRequest', response: queryResponse([DEPLOY_SUCCEEDED]) },

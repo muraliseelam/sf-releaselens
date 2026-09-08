@@ -1,17 +1,28 @@
 /**
- * Salesforce response fixtures, modelled on real API shapes.
+ * Salesforce response fixtures, with the shapes five real orgs actually return.
  *
- * Field names, casing and nesting match what the REST and Tooling APIs actually
- * return — including the parts that are awkward: `TrialExpirationDate` is
- * `null` rather than absent, `DeployRequest` list queries omit the details,
- * and component rows use `created`/`changed`/`deleted` booleans rather than an
- * operation string.
+ * These were hand-written first, and several details were wrong in ways that
+ * mattered — see `test/fixtures/org/*.json` for the captures that corrected
+ * them, and `docs/ORG-COMPATIBILITY.md` for the measurements. What changed:
  *
- * Nothing here is real org data. All ids, names and usernames are fictional.
+ *  - `TestLevel` was modelled as `'RunLocalTests'`. It is `null` in every one
+ *    of twenty real `DeployRequest` rows across five orgs, and is no longer
+ *    selected at all.
+ *  - Component rows carried a `createdByName`. **No real component has one**,
+ *    in either the Metadata API or the CLI's `deploy report --json`. The
+ *    author is on the deploy.
+ *  - Details were modelled on the Tooling record. That record has no
+ *    `DeployResult` field whatsoever; details come from the Metadata REST API
+ *    with `includeDetails=true`, and its keys are lower camel case.
+ *  - `problemType` was `'Error'` on a failure. It is `null` on real failures,
+ *    while `problem` carries the text.
+ *
+ * Nothing here is real org data. All ids, names and paths are fictional.
  */
 
 import type {
   ApexCoverageRow,
+  DeployRequestDetailResponse,
   DeployRequestRow,
   OrganizationRow,
   OrgLimits,
@@ -60,7 +71,6 @@ export const DEPLOY_SUCCEEDED: DeployRequestRow = {
   NumberComponentsTotal: 3,
   NumberComponentErrors: 0,
   NumberComponentsDeployed: 3,
-  TestLevel: 'RunLocalTests',
 };
 
 /** A failed deploy. */
@@ -75,7 +85,6 @@ export const DEPLOY_FAILED: DeployRequestRow = {
   NumberComponentsTotal: 2,
   NumberComponentErrors: 1,
   NumberComponentsDeployed: 1,
-  TestLevel: 'NoTestRun',
 };
 
 /** A check-only deploy that succeeded: validated, NOT deployed. */
@@ -88,7 +97,6 @@ export const DEPLOY_VALIDATED: DeployRequestRow = {
   CreatedBy: { Name: 'Sam Okafor' },
   NumberComponentsTotal: 1,
   NumberComponentErrors: 0,
-  TestLevel: 'RunSpecifiedTests',
 };
 
 /** An in-flight deploy: no CompletedDate. */
@@ -101,43 +109,63 @@ export const DEPLOY_IN_PROGRESS: DeployRequestRow = {
   CreatedBy: { Name: 'Ada Kensington' },
   NumberComponentsTotal: 12,
   NumberComponentErrors: 0,
-  TestLevel: 'RunLocalTests',
 };
 
-/** The same deploy fetched individually — details present. */
-export const DEPLOY_SUCCEEDED_DETAIL: DeployRequestRow = {
-  ...DEPLOY_SUCCEEDED,
-  DeployResult: {
+/**
+ * The details for a deploy, as `GET /metadata/deployRequest/{id}?includeDetails=true`
+ * returns them.
+ *
+ * Lower camel case, nested under `deployResult`, and with the author at the
+ * deploy level rather than on any component — all three confirmed against four
+ * orgs. The extra keys (`warning`, `knownPackagingProblem`,
+ * `requiresProductionTestRun`, `lineNumber`) are present because they are
+ * present in reality and the mapper must ignore them.
+ */
+export const DEPLOY_SUCCEEDED_DETAIL: DeployRequestDetailResponse = {
+  id: DEPLOY_SUCCEEDED.Id,
+  deployResult: {
+    status: 'Succeeded',
+    checkOnly: false,
+    createdDate: '2026-09-05T08:00:00.000+0000',
+    completedDate: '2026-09-05T08:07:31.000+0000',
+    createdByName: 'Lin Zhou',
+    numberComponentErrors: 0,
     details: {
       componentSuccesses: [
         {
-          fullName: 'InvoiceBuilder',
           componentType: 'ApexClass',
           fileName: 'classes/InvoiceBuilder.cls',
+          fullName: 'InvoiceBuilder',
           created: true,
           changed: false,
           deleted: false,
-          createdByName: 'Lin Zhou',
+          success: true,
+          problem: null,
+          problemType: null,
           createdDate: '2026-09-05T08:07:00.000+0000',
         },
         {
-          fullName: 'Invoice__c.UsageTotal__c',
           componentType: 'CustomField',
           fileName: 'objects/Invoice__c/fields/UsageTotal__c.field-meta.xml',
+          fullName: 'Invoice__c.UsageTotal__c',
           created: false,
           changed: true,
           deleted: false,
-          createdByName: 'Ada Kensington',
+          success: true,
+          problem: null,
+          problemType: null,
           createdDate: '2026-09-05T08:07:10.000+0000',
         },
         {
-          // The package manifest is returned as a component and must be dropped.
-          fullName: 'package.xml',
+          // The package manifest is returned as a component with an empty type
+          // and must be dropped. Confirmed in real captures.
           componentType: '',
           fileName: 'package.xml',
+          fullName: 'package.xml',
           created: false,
           changed: true,
           deleted: false,
+          success: true,
         },
       ],
       componentFailures: [],
@@ -145,35 +173,76 @@ export const DEPLOY_SUCCEEDED_DETAIL: DeployRequestRow = {
   },
 };
 
-export const DEPLOY_FAILED_DETAIL: DeployRequestRow = {
-  ...DEPLOY_FAILED,
-  DeployResult: {
+export const DEPLOY_FAILED_DETAIL: DeployRequestDetailResponse = {
+  id: DEPLOY_FAILED.Id,
+  deployResult: {
+    status: 'Failed',
+    checkOnly: false,
+    createdDate: '2026-09-04T11:00:00.000+0000',
+    completedDate: '2026-09-04T11:04:52.000+0000',
+    createdByName: 'Marco Bellini',
+    numberComponentErrors: 1,
     details: {
       componentSuccesses: [
         {
-          fullName: 'PaymentRetryScheduler',
           componentType: 'ApexClass',
           fileName: 'classes/PaymentRetryScheduler.cls',
+          fullName: 'PaymentRetryScheduler',
           created: false,
           changed: true,
           deleted: false,
-          createdByName: 'Marco Bellini',
+          success: true,
         },
       ],
       componentFailures: [
         {
-          fullName: 'LegacyTaxCalculator',
           componentType: 'ApexClass',
           fileName: 'classes/LegacyTaxCalculator.cls',
+          fullName: 'LegacyTaxCalculator',
+          created: false,
+          changed: false,
           deleted: true,
+          success: false,
+          // Null on a real failure, while `problem` carries the text. The
+          // warning code has to be derived, not read.
+          problemType: null,
           problem: 'Dependent class is invalid and needs recompilation.',
-          problemType: 'Error',
-          createdByName: 'Marco Bellini',
+          lineNumber: 34,
+          columnNumber: 30,
         },
       ],
     },
   },
 };
+
+/** A deploy whose details came back with no components at all. */
+export const DEPLOY_EMPTY_DETAIL: DeployRequestDetailResponse = {
+  id: DEPLOY_VALIDATED.Id,
+  deployResult: {
+    status: 'Succeeded',
+    checkOnly: true,
+    createdByName: 'Sam Okafor',
+    details: { componentSuccesses: [], componentFailures: [] },
+  },
+};
+
+/**
+ * `GET /services/data/`, trimmed to the ends of the real list.
+ *
+ * Every org measured offers 31.0 through 67.0. The pinned 62.0 is present, so
+ * the version check passes; `OLD_API_VERSIONS` is the same list without it.
+ */
+export const API_VERSIONS: readonly { label: string; url: string; version: string }[] = [
+  { label: "Summer '14", url: '/services/data/v31.0', version: '31.0' },
+  { label: "Winter '25", url: '/services/data/v62.0', version: '62.0' },
+  { label: "Spring '25", url: '/services/data/v63.0', version: '63.0' },
+  { label: "Summer '26", url: '/services/data/v67.0', version: '67.0' },
+];
+
+/** An org that has retired the version this build pins. */
+export const API_VERSIONS_WITHOUT_PINNED = API_VERSIONS.filter(
+  (entry) => entry.version !== '62.0',
+);
 
 export const COVERAGE_ROWS: ApexCoverageRow[] = [
   { ApexClassOrTrigger: { Name: 'InvoiceBuilder' }, NumLinesCovered: 91, NumLinesUncovered: 9 },

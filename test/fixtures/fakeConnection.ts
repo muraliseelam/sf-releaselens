@@ -21,8 +21,15 @@ export interface FakeConnectionOptions {
   /**
    * Tooling query responses. Keyed by a substring of the SOQL, so a test can
    * key on `FROM DeployRequest` without restating the whole query.
+   *
+   * `reject` fails that one query while the others succeed — the shape of a
+   * real org that answers for deploys but not for
+   * `ApexCodeCoverageAggregate`, which is one of the five measured.
    */
-  queryResponses?: readonly { match: string; response: unknown }[];
+  queryResponses?: readonly (
+    | { match: string; response: unknown; reject?: undefined }
+    | { match: string; response?: undefined; reject: Error }
+  )[];
   /** `queryMore` responses keyed by `nextRecordsUrl`. */
   queryMoreResponses?: Readonly<Record<string, unknown>>;
   /** Thrown by whichever member is named, to exercise a single failure. */
@@ -92,6 +99,7 @@ export function fakeOrgConnection(options: FakeConnectionOptions = {}): FakeOrgC
           new Error(`FakeOrgConnection has no query response matching: ${soql.slice(0, 80)}`),
         );
       }
+      if (entry.reject !== undefined) return Promise.reject(entry.reject);
       return Promise.resolve(toPage<T>(entry.response, soql.slice(0, 40)));
     },
 

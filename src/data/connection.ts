@@ -61,6 +61,19 @@ export interface OrganizationRow {
 }
 
 /** One component row inside a `DeployRequest`'s details. */
+/**
+ * One component in a deploy's details.
+ *
+ * The field list is the union observed across five real orgs and the CLI's own
+ * `deploy report --json`; the two agree. Two things worth knowing, both
+ * measured rather than assumed:
+ *
+ *  - There is **no author field**. `createdByName` does not appear on a
+ *    component in either source. The deploy's author is the only author
+ *    available.
+ *  - `problemType` is `null` even on genuine failures, while `problem` carries
+ *    the text — so a warning code has to be derived rather than read.
+ */
 export interface DeployMessageRow {
   fullName?: string | null;
   componentType?: string | null;
@@ -68,10 +81,12 @@ export interface DeployMessageRow {
   created?: boolean | null;
   changed?: boolean | null;
   deleted?: boolean | null;
-  createdByName?: string | null;
   createdDate?: string | null;
+  success?: boolean | null;
   problem?: string | null;
   problemType?: string | null;
+  lineNumber?: number | null;
+  columnNumber?: number | null;
 }
 
 export interface DeployRequestRow {
@@ -85,16 +100,36 @@ export interface DeployRequestRow {
   NumberComponentsTotal?: number | null;
   NumberComponentErrors?: number | null;
   NumberComponentsDeployed?: number | null;
-  TestLevel?: string | null;
   DeployOptions?: unknown;
-  /**
-   * Present only when the record is fetched individually — the Tooling API
-   * omits `Metadata`/details from list queries.
-   */
-  DeployResult?: {
+}
+
+/**
+ * `GET /services/data/vXX/metadata/deployRequest/{id}?includeDetails=true`.
+ *
+ * This, and **not** the Tooling API's `sobjects/DeployRequest/{id}`, is where
+ * component details live. Measured against five real orgs: the Tooling record
+ * carries no `DeployResult` field at all, so reading details from it yields
+ * zero components every time. Without `includeDetails=true` on this endpoint
+ * the arrays come back present but empty, which is the same failure wearing a
+ * better disguise.
+ */
+export interface DeployRequestDetailResponse {
+  id?: string | null;
+  deployResult?: {
+    status?: string | null;
+    checkOnly?: boolean | null;
+    createdDate?: string | null;
+    completedDate?: string | null;
+    /**
+     * The person who ran the deploy. It lives here, at the deploy level —
+     * individual components carry no author at all, in either this API or the
+     * CLI's `deploy report --json`.
+     */
+    createdByName?: string | null;
+    numberComponentErrors?: number | null;
     details?: {
-      componentSuccesses?: DeployMessageRow[] | null;
-      componentFailures?: DeployMessageRow[] | null;
+      componentSuccesses?: DeployMessageRow[] | DeployMessageRow | null;
+      componentFailures?: DeployMessageRow[] | DeployMessageRow | null;
     } | null;
   } | null;
 }

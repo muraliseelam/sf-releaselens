@@ -103,10 +103,23 @@ export function snapshotFromDeployReport(
   const successes = asArray(details['componentSuccesses']);
   const failures = asArray(details['componentFailures']);
 
+  // The CLI's report carries the author at the deploy level as `createdByName`.
+  // A component carries none, so this is the only author there is.
+  const deployedBy = readString(result['createdByName']);
+
   const items: MetadataItem[] = [
-    ...successes.map((entry) => itemFromDeployComponent(entry, releaseId, deps, completedAt, [])),
+    ...successes.map((entry) =>
+      itemFromDeployComponent(entry, releaseId, deps, completedAt, [], deployedBy),
+    ),
     ...failures.map((entry) =>
-      itemFromDeployComponent(entry, releaseId, deps, completedAt, [warningFromDeployFailure(entry)]),
+      itemFromDeployComponent(
+        entry,
+        releaseId,
+        deps,
+        completedAt,
+        [warningFromDeployFailure(entry)],
+        deployedBy,
+      ),
     ),
   ].filter((item) => item.type.length > 0 && item.fullName.length > 0);
 
@@ -162,6 +175,16 @@ export function itemFromDeployComponent(
   deps: SnapshotDeps,
   lastModifiedAt: string,
   warnings: readonly MetadataWarning[],
+  /**
+   * Who ran the deploy.
+   *
+   * Passed in because a component does not carry an author. Measured across
+   * five real orgs and the CLI's own `deploy report --json`: zero of the
+   * components in either source have a `createdByName`, so reading one off the
+   * component — which this used to do — made every org-sourced component show
+   * "unknown". The deploy has the name; the component does not.
+   */
+  deployedBy?: string,
 ): MetadataItem {
   const record = asRecord(entry) ?? {};
   return {
@@ -172,7 +195,7 @@ export function itemFromDeployComponent(
     operation: toOperation(record),
     filePath: readString(record['fileName']) ?? '',
     apiVersion: readString(record['apiVersion']) ?? '',
-    lastModifiedBy: readString(record['createdByName']) ?? 'unknown',
+    lastModifiedBy: deployedBy ?? readString(record['createdByName']) ?? 'unknown',
     lastModifiedAt: readString(record['createdDate']) ?? lastModifiedAt,
     dependsOn: [],
     // A deploy report lists what was deployed, not what depends on what —

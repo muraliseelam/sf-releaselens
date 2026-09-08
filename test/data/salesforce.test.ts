@@ -9,7 +9,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createFixedClock, createSequentialIdFactory } from '../../src/core/clock.js';
-import { ApiLimitExhaustedError, OrgResponseInvalidError } from '../../src/core/errors.js';
+import {
+  ApiLimitExhaustedError,
+  OrgAuthExpiredError,
+  OrgRequestFailedError,
+  OrgResponseInvalidError,
+} from '../../src/core/errors.js';
 import type { DataSource } from '../../src/data/datasource.js';
 import {
   API_LIMIT_REFUSE_RATIO,
@@ -20,7 +25,10 @@ import {
 import { createMemoryStorageArea, type StorageArea } from '../../src/data/storage.js';
 import { fakeOrgConnection, type FakeConnectionOptions } from '../fixtures/fakeConnection.js';
 import {
+  API_VERSIONS,
+  API_VERSIONS_WITHOUT_PINNED,
   COVERAGE_ROWS,
+  DEPLOY_EMPTY_DETAIL,
   DEPLOY_FAILED,
   DEPLOY_FAILED_DETAIL,
   DEPLOY_SUCCEEDED,
@@ -46,6 +54,7 @@ function connectionFor(
     details?: Record<string, unknown>;
     limits?: unknown;
     coverage?: unknown[];
+    versions?: unknown;
   } = {},
 ): FakeConnectionOptions {
   const deploys = options.deploys ?? [DEPLOY_SUCCEEDED];
@@ -53,11 +62,16 @@ function connectionFor(
 
   return {
     getResponses: {
+      // The version list is read once per refresh, before anything that
+      // depends on a response shape.
+      '/services/data/': options.versions ?? API_VERSIONS,
       [`${API}/limits`]: options.limits ?? HEALTHY_LIMITS,
       [`${API}/query`]: queryResponse([options.org ?? SANDBOX_ORG]),
+      // Component details come from the Metadata REST API, not the Tooling
+      // record — see the note in test/fixtures/salesforce.ts.
       ...Object.fromEntries(
         Object.entries(details).map(([id, detail]) => [
-          `${API}/tooling/sobjects/DeployRequest/${id}`,
+          `${API}/metadata/deployRequest/${id}`,
           detail,
         ]),
       ),
@@ -171,7 +185,15 @@ describe('refresh() maps the org', () => {
     const failed = snapshot.items.find((item) => item.fullName === 'LegacyTaxCalculator')!;
 
     expect(failed.operation).toBe('delete');
-    expect(failed.warnings[0]).toMatchObject({ code: 'ERROR', severity: 'error' });
+    // `DEPLOY_FAILURE`, not `ERROR`. The hand-written fixture used to set
+    // `problemType: 'Error'` and this asserted that it was read; every real
+    // failure across four orgs has `problemType: null` and the text in
+    // `problem`, so the code is derived rather than read.
+    expect(failed.warnings[0]).toMatchObject({
+      code: 'DEPLOY_FAILURE',
+      severity: 'error',
+      message: 'Dependent class is invalid and needs recompilation.',
+    });
   });
 
   it('maps a check-only success to scheduled, not deployed', async () => {
@@ -197,6 +219,196 @@ describe('refresh() maps the org', () => {
     const { dataSource } = build(connectionFor({ org: PRODUCTION_ORG }));
 
     expect((await dataSource.refresh()).environments[0]!.kind).toBe('production');
+  });
+});
+
+describe('what a real org actually returns', () => {
+  /*
+   * Every test in this block corrects something the hand-written fixtures got
+   * wrong. They were found by running the shipping code against five live orgs
+   * — see docs/ORG-COMPATIBILITY.md — not by reading it.
+   */
+
+  it('reads component details from the Metadata API, not the Tooling record', async () => {
+    const { dataSource, connection } = build();
+
+    await dataSource.refresh();
+
+    const paths = connection.calls.filter((call) => call.kind === 'get').map((call) => call.argument);
+    // The Tooling record has no DeployResult field at all, in any org measured.
+    // Reading details from it produced zero components every time.
+    expect(paths).toContain(`${API}/metadata/deployRequest/${DEPLOY_SUCCEEDED.Id}`);
+    expect(paths.some((path) => path.includes('tooling/sobjects/DeployRequest'))).toBe(false);
+  });
+
+  it('attributes a component to whoever ran the deploy', async () => {
+    const { dataSource } = build();
+
+    const snapshot = await dataSource.refresh();
+
+    // A component carries no author in either the Metadata API or the CLI's
+    // report. Reading one off the component — which this used to do — made
+    // every org-sourced component say "unknown".
+    expect(snapshot.items.every((item) => item.lastModifiedBy === 'Lin Zhou')).toBe(true);
+    expect(snapshot.items.some((item) => item.lastModifiedBy === 'unknown')).toBe(false);
+  });
+
+  it('renders an org with no deploy history as empty, not as an error', async () => {
+    const { dataSource } = build(connectionFor({ deploys: [], details: {} }));
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.releases).toEqual([]);
+    expect(snapshot.items).toEqual([]);
+    // Two of the five orgs measured have never had a deploy. An empty snapshot
+    // is the correct answer, and it must still be a valid one.
+    expect(snapshot.environments).toHaveLength(1);
+    expect(snapshot.isDemoData).toBe(false);
+  });
+
+  it('survives a deploy whose details came back with no components', async () => {
+    const { dataSource } = build(
+      connectionFor({
+        deploys: [DEPLOY_VALIDATED],
+        details: { [DEPLOY_VALIDATED.Id]: DEPLOY_EMPTY_DETAIL },
+      }),
+    );
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.releases).toHaveLength(1);
+    expect(snapshot.items).toEqual([]);
+  });
+});
+
+describe('coverage that the org will not answer for', () => {
+  /**
+   * One of the five orgs rejects `ApexCodeCoverageAggregate` outright:
+   * `INVALID_TYPE: sObject type 'ApexCodeCoverageAggregate' is not supported`.
+   * That used to fail the whole refresh, so the org showed no releases at all
+   * because a supplementary field could not be read.
+   */
+  const unsupported = () => ({
+    ...connectionFor(),
+    queryResponses: [
+      { match: 'FROM DeployRequest', response: queryResponse([DEPLOY_SUCCEEDED]) },
+    ],
+    failures: {
+      toolingQuery: undefined,
+    },
+  });
+
+  function coverageRejecting(): FakeConnectionOptions {
+    const base = connectionFor();
+    return {
+      ...base,
+      queryResponses: [
+        { match: 'FROM DeployRequest', response: queryResponse([DEPLOY_SUCCEEDED]) },
+        {
+          match: 'FROM ApexCodeCoverageAggregate',
+          reject: new OrgRequestFailedError(
+            400,
+            'INVALID_TYPE',
+            "sObject type 'ApexCodeCoverageAggregate' is not supported.",
+          ),
+        },
+      ],
+    };
+  }
+
+  it('still produces the releases', async () => {
+    const { dataSource } = build(coverageRejecting());
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.releases).toHaveLength(1);
+    expect(snapshot.items.length).toBeGreaterThan(0);
+  });
+
+  it('leaves coverage unknown rather than reporting zero', async () => {
+    const { dataSource } = build(coverageRejecting());
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.items.every((item) => item.testCoverage === undefined)).toBe(true);
+  });
+
+  it('records why, so the degradation is not silent', async () => {
+    const { dataSource } = build(coverageRejecting());
+
+    const snapshot = await dataSource.refresh();
+    const entry = snapshot.auditLog.at(-1);
+
+    expect(entry?.detail).toContain('Coverage is unavailable in this org');
+    expect(entry?.detail).toContain('INVALID_TYPE');
+  });
+
+  it('does not mistake an auth failure for an org without coverage', async () => {
+    const base = connectionFor();
+    const { dataSource } = build({
+      ...base,
+      queryResponses: [
+        { match: 'FROM DeployRequest', response: queryResponse([DEPLOY_SUCCEEDED]) },
+        {
+          match: 'FROM ApexCodeCoverageAggregate',
+          reject: new OrgAuthExpiredError('the session expired'),
+        },
+      ],
+    });
+
+    // "No coverage" and "no session" are different answers, and only the first
+    // is allowed to degrade.
+    await expect(dataSource.refresh()).rejects.toBeInstanceOf(OrgAuthExpiredError);
+  });
+
+  void unsupported;
+});
+
+describe('the pinned API version', () => {
+  it('refuses clearly when the org no longer offers it', async () => {
+    const { dataSource } = build(connectionFor({ versions: API_VERSIONS_WITHOUT_PINNED }));
+
+    // Otherwise every later request fails with a bare 404 that says nothing.
+    await expect(dataSource.refresh()).rejects.toBeInstanceOf(OrgResponseInvalidError);
+    await expect(dataSource.refresh()).rejects.toThrow(/no longer offers/);
+    await expect(dataSource.refresh()).rejects.toThrow(/needs updating/);
+  });
+
+  it('records drift when the org has moved a long way ahead', async () => {
+    const { dataSource } = build(connectionFor());
+
+    const snapshot = await dataSource.refresh();
+
+    // 62.0 pinned against an org offering 67.0: five versions, under the
+    // threshold, so nothing is said.
+    expect(snapshot.auditLog.at(-1)?.detail).not.toContain('fields added since then');
+
+    const far = build(
+      connectionFor({
+        versions: [
+          { label: "Winter '25", url: '/services/data/v62.0', version: '62.0' },
+          { label: "Winter '28", url: '/services/data/v70.0', version: '70.0' },
+        ],
+      }),
+    );
+    const drifted = await far.dataSource.refresh();
+
+    expect(drifted.auditLog.at(-1)?.detail).toContain('v70.0');
+    expect(drifted.auditLog.at(-1)?.detail).toContain('fields added since then');
+  });
+
+  it('refreshes anyway when the version list cannot be read', async () => {
+    const base = connectionFor();
+    const { dataSource } = build({
+      ...base,
+      getResponses: Object.fromEntries(
+        Object.entries(base.getResponses ?? {}).filter(([path]) => path !== '/services/data/'),
+      ),
+    });
+
+    // The list is a diagnostic. Failing the refresh because a nicety could not
+    // be read would trade a capability for a warning.
+    await expect(dataSource.refresh()).resolves.toBeDefined();
   });
 });
 

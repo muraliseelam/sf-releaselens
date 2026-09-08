@@ -3,6 +3,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
+    /**
+     * The live-org contract suite runs only through `npm run test:org`, which
+     * uses `vitest.org.config.ts`. Excluded here rather than merely un-included
+     * so that a green `npm run check` never depends on somebody having a
+     * Salesforce org authenticated.
+     */
+    exclude: ['test/org/**', '**/node_modules/**'],
     environment: 'node',
 
     /**

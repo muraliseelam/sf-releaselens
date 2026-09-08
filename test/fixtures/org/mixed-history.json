@@ -1,0 +1,902 @@
+{
+  "capturedAt": "2026-09-08",
+  "apiVersion": "62.0",
+  "orgApiVersion": "67.0",
+  "namespaced": false,
+  "versions": {
+    "ok": true,
+    "value": [
+      {
+        "label": "Summer '14",
+        "url": "synthetic/Unknown",
+        "version": "31.0"
+      },
+      {
+        "label": "Winter '15",
+        "url": "synthetic/Unknown",
+        "version": "32.0"
+      },
+      {
+        "label": "Spring '15",
+        "url": "synthetic/Unknown",
+        "version": "33.0"
+      },
+      {
+        "label": "Summer '15",
+        "url": "synthetic/Unknown",
+        "version": "34.0"
+      },
+      {
+        "label": "Winter '16",
+        "url": "synthetic/Unknown",
+        "version": "35.0"
+      },
+      {
+        "label": "Spring '16",
+        "url": "synthetic/Unknown",
+        "version": "36.0"
+      },
+      {
+        "label": "Summer '16",
+        "url": "synthetic/Unknown",
+        "version": "37.0"
+      },
+      {
+        "label": "Winter '17",
+        "url": "synthetic/Unknown",
+        "version": "38.0"
+      },
+      {
+        "label": "Spring '17",
+        "url": "synthetic/Unknown",
+        "version": "39.0"
+      },
+      {
+        "label": "Summer '17",
+        "url": "synthetic/Unknown",
+        "version": "40.0"
+      },
+      {
+        "label": "Winter '18",
+        "url": "synthetic/Unknown",
+        "version": "41.0"
+      },
+      {
+        "label": "Spring ’18",
+        "url": "synthetic/Unknown",
+        "version": "42.0"
+      },
+      {
+        "label": "Summer '18",
+        "url": "synthetic/Unknown",
+        "version": "43.0"
+      },
+      {
+        "label": "Winter '19",
+        "url": "synthetic/Unknown",
+        "version": "44.0"
+      },
+      {
+        "label": "Spring '19",
+        "url": "synthetic/Unknown",
+        "version": "45.0"
+      },
+      {
+        "label": "Summer '19",
+        "url": "synthetic/Unknown",
+        "version": "46.0"
+      },
+      {
+        "label": "Winter '20",
+        "url": "synthetic/Unknown",
+        "version": "47.0"
+      },
+      {
+        "label": "Spring '20",
+        "url": "synthetic/Unknown",
+        "version": "48.0"
+      },
+      {
+        "label": "Summer '20",
+        "url": "synthetic/Unknown",
+        "version": "49.0"
+      },
+      {
+        "label": "Winter '21",
+        "url": "synthetic/Unknown",
+        "version": "50.0"
+      },
+      {
+        "label": "Spring '21",
+        "url": "synthetic/Unknown",
+        "version": "51.0"
+      },
+      {
+        "label": "Summer '21",
+        "url": "synthetic/Unknown",
+        "version": "52.0"
+      },
+      {
+        "label": "Winter '22",
+        "url": "synthetic/Unknown",
+        "version": "53.0"
+      },
+      {
+        "label": "Spring '22",
+        "url": "synthetic/Unknown",
+        "version": "54.0"
+      },
+      {
+        "label": "Summer '22",
+        "url": "synthetic/Unknown",
+        "version": "55.0"
+      },
+      {
+        "label": "Winter '23",
+        "url": "synthetic/Unknown",
+        "version": "56.0"
+      },
+      {
+        "label": "Spring '23",
+        "url": "synthetic/Unknown",
+        "version": "57.0"
+      },
+      {
+        "label": "Summer '23",
+        "url": "synthetic/Unknown",
+        "version": "58.0"
+      },
+      {
+        "label": "Winter '24",
+        "url": "synthetic/Unknown",
+        "version": "59.0"
+      },
+      {
+        "label": "Spring '24",
+        "url": "synthetic/Unknown",
+        "version": "60.0"
+      },
+      {
+        "label": "Summer '24",
+        "url": "synthetic/Unknown",
+        "version": "61.0"
+      },
+      {
+        "label": "Winter '25",
+        "url": "synthetic/Unknown",
+        "version": "62.0"
+      },
+      {
+        "label": "Spring '25",
+        "url": "synthetic/Unknown",
+        "version": "63.0"
+      },
+      {
+        "label": "Summer '25",
+        "url": "synthetic/Unknown",
+        "version": "64.0"
+      },
+      {
+        "label": "Winter '26",
+        "url": "synthetic/Unknown",
+        "version": "65.0"
+      },
+      {
+        "label": "Spring '26",
+        "url": "synthetic/Unknown",
+        "version": "66.0"
+      },
+      {
+        "label": "Summer '26",
+        "url": "synthetic/Unknown",
+        "version": "67.0"
+      }
+    ]
+  },
+  "limits": {
+    "ok": true,
+    "value": {
+      "DailyApiRequests": {
+        "Max": 101000,
+        "Remaining": 100851
+      }
+    }
+  },
+  "organization": {
+    "ok": true,
+    "value": {
+      "totalSize": 1,
+      "done": true,
+      "records": [
+        {
+          "attributes": {
+            "type": "Organization",
+            "url": "synthetic/Organization"
+          },
+          "Id": "00DSYNTH00000001AAA",
+          "Name": "Contoso Test Org",
+          "IsSandbox": false,
+          "TrialExpirationDate": "2026-09-01T09:00:00.000+0000",
+          "OrganizationType": "Enterprise Edition",
+          "InstanceName": "USA000"
+        }
+      ]
+    }
+  },
+  "deployRequests": {
+    "ok": true,
+    "value": {
+      "records": [
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000003AAA",
+          "Status": "Succeeded",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 0,
+          "NumberComponentsDeployed": 1,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        },
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000004AAA",
+          "Status": "Succeeded",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 0,
+          "NumberComponentsDeployed": 1,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        },
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000005AAA",
+          "Status": "Succeeded",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 0,
+          "NumberComponentsDeployed": 1,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        },
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000006AAA",
+          "Status": "Failed",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 1,
+          "NumberComponentsDeployed": 0,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        },
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000007AAA",
+          "Status": "Failed",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 1,
+          "NumberComponentsDeployed": 0,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        },
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000008AAA",
+          "Status": "Succeeded",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 0,
+          "NumberComponentsDeployed": 1,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        },
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000009AAA",
+          "Status": "Failed",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 1,
+          "NumberComponentsDeployed": 0,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        },
+        {
+          "attributes": {
+            "type": "DeployRequest",
+            "url": "synthetic/DeployRequest"
+          },
+          "Id": "0AfSYNTH00000010AAA",
+          "Status": "Succeeded",
+          "CheckOnly": false,
+          "CreatedDate": "2026-09-01T09:04:12.000+0000",
+          "StartDate": "2026-09-02T14:20:00.000+0000",
+          "CompletedDate": "2026-09-01T09:00:00.000+0000",
+          "NumberComponentsTotal": 1,
+          "NumberComponentErrors": 0,
+          "NumberComponentsDeployed": 1,
+          "TestLevel": null,
+          "CreatedBy": {
+            "attributes": {
+              "type": "User",
+              "url": "synthetic/User"
+            },
+            "Name": "Alex Fixture"
+          }
+        }
+      ],
+      "done": true,
+      "totalSize": 8
+    }
+  },
+  "coverage": {
+    "ok": true,
+    "value": {
+      "records": [
+        {
+          "attributes": {
+            "type": "ApexCodeCoverageAggregate",
+            "url": "synthetic/ApexCodeCoverageAggregate"
+          },
+          "ApexClassOrTrigger": {
+            "attributes": {
+              "type": "Name",
+              "url": "synthetic/Name"
+            },
+            "Name": "SynthName11"
+          },
+          "NumLinesCovered": 14,
+          "NumLinesUncovered": 0
+        },
+        {
+          "attributes": {
+            "type": "ApexCodeCoverageAggregate",
+            "url": "synthetic/ApexCodeCoverageAggregate"
+          },
+          "ApexClassOrTrigger": {
+            "attributes": {
+              "type": "Name",
+              "url": "synthetic/Name"
+            },
+            "Name": "SynthName12"
+          },
+          "NumLinesCovered": 0,
+          "NumLinesUncovered": 0
+        }
+      ],
+      "done": true,
+      "totalSize": 2
+    }
+  },
+  "deployDetails": [
+    {
+      "ok": true,
+      "value": {
+        "id": "0AfSYNTH00000013AAA",
+        "validatedDeployRequestId": null,
+        "deployOptions": null,
+        "deployResult": {
+          "id": "0AfSYNTH00000014AAA",
+          "messages": null,
+          "retrieveResult": null,
+          "success": true,
+          "checkOnly": false,
+          "ignoreWarnings": false,
+          "rollbackOnError": true,
+          "status": "Succeeded",
+          "numberComponentsDeployed": 1,
+          "numberComponentsTotal": 1,
+          "numberComponentErrors": 0,
+          "numberTestsCompleted": 0,
+          "numberTestsTotal": 0,
+          "numberTestErrors": 0,
+          "details": {
+            "componentFailures": [],
+            "componentSuccesses": [
+              {
+                "componentType": "ConnectedApp",
+                "fileName": "synth/C15.xml",
+                "fullName": "SynthComp16",
+                "id": "0AfSYNTH00000017AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:04:12.000+0000",
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false,
+                "problemType": null
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C18.xml",
+                "fullName": "SynthComp19",
+                "id": null,
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-02T14:20:00.000+0000",
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": true,
+                "problemType": null
+              }
+            ],
+            "retrieveResult": null,
+            "allComponentMessages": [
+              {
+                "componentType": "ConnectedApp",
+                "fileName": "synth/C20.xml",
+                "fullName": "SynthComp21",
+                "id": "0AfSYNTH00000022AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:00:00.000+0000",
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false,
+                "problemType": null
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C23.xml",
+                "fullName": "SynthComp24",
+                "id": null,
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:04:12.000+0000",
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": true,
+                "problemType": null
+              }
+            ],
+            "runTestResult": {
+              "successes": [],
+              "failures": [],
+              "totalTime": 0,
+              "apexLogId": null,
+              "flowCoverageWarnings": [],
+              "numTestsRun": 0,
+              "codeCoverageWarnings": [],
+              "flowCoverage": [],
+              "numFailures": 0,
+              "codeCoverage": []
+            }
+          },
+          "createdDate": "2026-09-02T14:20:00.000+0000",
+          "startDate": "2026-09-01T09:00:00.000+0000",
+          "lastModifiedDate": "2026-09-01T09:04:12.000+0000",
+          "completedDate": "2026-09-02T14:20:00.000+0000",
+          "errorStatusCode": null,
+          "errorMessage": null,
+          "stateDetail": null,
+          "createdBy": "synthetic-25",
+          "createdByName": "Alex Fixture",
+          "canceledBy": null,
+          "canceledByName": null,
+          "runTestsEnabled": false,
+          "runTestResult": null,
+          "done": true
+        }
+      }
+    },
+    {
+      "ok": true,
+      "value": {
+        "id": "0AfSYNTH00000027AAA",
+        "validatedDeployRequestId": null,
+        "deployOptions": null,
+        "deployResult": {
+          "id": "0AfSYNTH00000028AAA",
+          "messages": null,
+          "retrieveResult": null,
+          "success": true,
+          "checkOnly": false,
+          "ignoreWarnings": false,
+          "rollbackOnError": true,
+          "status": "Succeeded",
+          "numberComponentsDeployed": 1,
+          "numberComponentsTotal": 1,
+          "numberComponentErrors": 0,
+          "numberTestsCompleted": 0,
+          "numberTestsTotal": 0,
+          "numberTestErrors": 0,
+          "details": {
+            "componentFailures": [],
+            "componentSuccesses": [
+              {
+                "componentType": "ConnectedApp",
+                "fileName": "synth/C29.xml",
+                "fullName": "SynthComp30",
+                "id": "0AfSYNTH00000031AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:00:00.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C32.xml",
+                "fullName": "SynthComp33",
+                "id": null,
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:04:12.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": true
+              }
+            ],
+            "retrieveResult": null,
+            "allComponentMessages": [
+              {
+                "componentType": "ConnectedApp",
+                "fileName": "synth/C34.xml",
+                "fullName": "SynthComp35",
+                "id": "0AfSYNTH00000036AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-02T14:20:00.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C37.xml",
+                "fullName": "SynthComp38",
+                "id": null,
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:00:00.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": true
+              }
+            ],
+            "runTestResult": {
+              "successes": [],
+              "failures": [],
+              "totalTime": 0,
+              "apexLogId": null,
+              "flowCoverageWarnings": [],
+              "numTestsRun": 0,
+              "flowCoverage": [],
+              "codeCoverage": [],
+              "numFailures": 0,
+              "codeCoverageWarnings": []
+            }
+          },
+          "createdDate": "2026-09-01T09:04:12.000+0000",
+          "startDate": "2026-09-02T14:20:00.000+0000",
+          "lastModifiedDate": "2026-09-01T09:00:00.000+0000",
+          "completedDate": "2026-09-01T09:04:12.000+0000",
+          "errorStatusCode": null,
+          "errorMessage": null,
+          "stateDetail": null,
+          "createdBy": "synthetic-39",
+          "createdByName": "Alex Fixture",
+          "canceledBy": null,
+          "canceledByName": null,
+          "runTestsEnabled": false,
+          "runTestResult": null,
+          "done": true
+        }
+      }
+    },
+    {
+      "ok": true,
+      "value": {
+        "id": "0AfSYNTH00000041AAA",
+        "validatedDeployRequestId": null,
+        "deployOptions": null,
+        "deployResult": {
+          "id": "0AfSYNTH00000042AAA",
+          "messages": null,
+          "retrieveResult": null,
+          "success": true,
+          "checkOnly": false,
+          "ignoreWarnings": false,
+          "rollbackOnError": true,
+          "status": "Succeeded",
+          "numberComponentsDeployed": 1,
+          "numberComponentsTotal": 1,
+          "numberComponentErrors": 0,
+          "numberTestsCompleted": 0,
+          "numberTestsTotal": 0,
+          "numberTestErrors": 0,
+          "details": {
+            "componentFailures": [],
+            "componentSuccesses": [
+              {
+                "componentType": "ConnectedApp",
+                "fileName": "synth/C43.xml",
+                "fullName": "SynthComp44",
+                "id": "0AfSYNTH00000045AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": true,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-02T14:20:00.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C46.xml",
+                "fullName": "SynthComp47",
+                "id": null,
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:00:00.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": true
+              }
+            ],
+            "retrieveResult": null,
+            "allComponentMessages": [
+              {
+                "componentType": "ConnectedApp",
+                "fileName": "synth/C48.xml",
+                "fullName": "SynthComp49",
+                "id": "0AfSYNTH00000050AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": true,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:04:12.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C51.xml",
+                "fullName": "SynthComp52",
+                "id": null,
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-02T14:20:00.000+0000",
+                "problemType": null,
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": true
+              }
+            ],
+            "runTestResult": {
+              "successes": [],
+              "failures": [],
+              "totalTime": 0,
+              "apexLogId": null,
+              "flowCoverageWarnings": [],
+              "numTestsRun": 0,
+              "flowCoverage": [],
+              "numFailures": 0,
+              "codeCoverage": [],
+              "codeCoverageWarnings": []
+            }
+          },
+          "createdDate": "2026-09-01T09:00:00.000+0000",
+          "startDate": "2026-09-01T09:04:12.000+0000",
+          "lastModifiedDate": "2026-09-02T14:20:00.000+0000",
+          "completedDate": "2026-09-01T09:00:00.000+0000",
+          "errorStatusCode": null,
+          "errorMessage": null,
+          "stateDetail": null,
+          "createdBy": "synthetic-53",
+          "createdByName": "Alex Fixture",
+          "canceledBy": null,
+          "canceledByName": null,
+          "runTestsEnabled": false,
+          "runTestResult": null,
+          "done": true
+        }
+      }
+    }
+  ],
+  "toolingDetailKeys": {
+    "ok": true,
+    "value": {
+      "keys": [
+        "AllowMissingFiles",
+        "AutoUpdatePackage",
+        "CanceledById",
+        "ChangeSetName",
+        "CheckOnly",
+        "CompletedDate",
+        "CreatedById",
+        "CreatedDate",
+        "ErrorMessage",
+        "ErrorStatusCode",
+        "Id",
+        "IgnoreWarnings",
+        "IsDeleted",
+        "LastModifiedById",
+        "LastModifiedDate",
+        "NumberComponentErrors",
+        "NumberComponentsDeployed",
+        "NumberComponentsTotal",
+        "NumberTestErrors",
+        "NumberTestsCompleted",
+        "NumberTestsTotal",
+        "PurgeOnDelete",
+        "RollbackOnError",
+        "RunTestsEnabled",
+        "SinglePackage",
+        "StartDate",
+        "StateDetail",
+        "Status",
+        "SystemModstamp",
+        "TestLevel",
+        "Type",
+        "attributes"
+      ],
+      "hasDeployResult": false
+    }
+  }
+}

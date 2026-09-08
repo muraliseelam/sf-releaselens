@@ -24,7 +24,7 @@ import { parseSnapshot } from '../../src/core/validate.js';
 import { ORG_SNAPSHOT_KEY, createSalesforceDataSource } from '../../src/data/salesforce.js';
 import { createMemoryStorageArea } from '../../src/data/storage.js';
 import { fakeOrgConnection } from '../fixtures/fakeConnection.js';
-import { HEALTHY_LIMITS } from '../fixtures/salesforce.js';
+import { API_VERSIONS, HEALTHY_LIMITS } from '../fixtures/salesforce.js';
 
 const RUNS = Number(process.env['FC_RUNS'] ?? 200);
 const config: fc.Parameters<unknown> = { numRuns: RUNS };
@@ -121,31 +121,34 @@ interface ResponseDraft {
 type Wiring = ReturnType<typeof buildResponses>;
 
 function buildResponses(responses: ResponseDraft) {
+  // The Metadata REST API's shape, which is where component details live.
   const detailFor = (id: unknown): unknown => ({
-    Id: id,
-    Status: 'Succeeded',
-    CheckOnly: false,
-    CreatedDate: '2026-09-01T10:00:00.000Z',
-    CompletedDate: '2026-09-01T10:05:00.000Z',
-    ...(responses.detailsPresent
-      ? {
-          DeployResult: {
+    id,
+    deployResult: {
+      status: 'Succeeded',
+      checkOnly: false,
+      createdDate: '2026-09-01T10:00:00.000Z',
+      completedDate: '2026-09-01T10:05:00.000Z',
+      createdByName: 'Alex Fixture',
+      ...(responses.detailsPresent
+        ? {
             details: {
               componentSuccesses: responses.components,
               componentFailures: responses.failures,
             },
-          },
-        }
-      : {}),
+          }
+        : {}),
+    },
   });
 
   return {
     getResponses: {
+      '/services/data/': API_VERSIONS,
       [`${API}/limits`]: HEALTHY_LIMITS,
       [`${API}/query`]: { records: [responses.org], done: true, totalSize: 1 },
       ...Object.fromEntries(
         responses.deploys.map((deploy) => [
-          `${API}/tooling/sobjects/DeployRequest/${String(deploy.Id)}`,
+          `${API}/metadata/deployRequest/${String(deploy.Id)}`,
           detailFor(deploy.Id),
         ]),
       ),

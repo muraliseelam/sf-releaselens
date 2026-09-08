@@ -24,6 +24,7 @@
 import type { Clock, IdFactory } from '../core/clock.js';
 import {
   ApiLimitExhaustedError,
+  OrgRequestFailedError,
   OrgResponseInvalidError,
   SnapshotValidationError,
 } from '../core/errors.js';
@@ -48,6 +49,8 @@ import {
 import { parseSnapshot } from '../core/validate.js';
 import type {
   ApexCoverageRow,
+  DeployMessageRow,
+  DeployRequestDetailResponse,
   DeployRequestRow,
   OrganizationRow,
   OrgConnection,
@@ -140,6 +143,11 @@ export function createSalesforceDataSource(deps: SalesforceDataSourceDeps): Data
       // integration, so we do not "try anyway".
       await assertBudgetAvailable(connection);
 
+      // Then the version check, before anything that depends on the shape of a
+      // response. An org that no longer offers this API version fails every
+      // later request with an unhelpful 404.
+      const versions = await checkApiVersion(connection);
+
       const organization = await fetchOrganization(connection);
       const environment = toEnvironment(organization, deps.orgAlias ?? 'connected org');
 
@@ -148,12 +156,13 @@ export function createSalesforceDataSource(deps: SalesforceDataSourceDeps): Data
       const items: MetadataItem[] = [];
 
       for (const deploy of deploys) {
-        const detailed = await fetchDeployDetail(connection, deploy.Id);
-        releases.push(toRelease(detailed, environment.id, overlay[detailed.Id]));
-        items.push(...toItems(detailed, snapshotDeps));
+        const components = await fetchDeployComponents(connection, deploy.Id);
+        releases.push(toRelease(deploy, environment.id, overlay[deploy.Id]));
+        items.push(...toItems(deploy, components, snapshotDeps));
       }
 
-      applyCoverage(items, await fetchCoverage(connection));
+      const coverage = await fetchCoverage(connection);
+      applyCoverage(items, coverage.byName);
 
       const merged = mergeIntoCache(cached, { environment, releases, items });
       const audited = appendAudit(
@@ -162,7 +171,14 @@ export function createSalesforceDataSource(deps: SalesforceDataSourceDeps): Data
           action: 'snapshot.refreshed',
           detail:
             `Refreshed from ${environment.name}: ${releases.length} deployment(s), ` +
-            `${items.length} component(s). Dependencies are not available from a deploy report.`,
+            `${items.length} component(s). Dependencies are not available from a deploy report.` +
+            // Both of these are degradations, so both are recorded. Silence
+            // here is how a partial refresh passes for a complete one.
+            (coverage.unavailable === undefined
+              ? ''
+              : ` Coverage is unavailable in this org (${coverage.unavailable}), so every ` +
+                'component reports coverage unknown.') +
+            (versions.drift === undefined ? '' : ` ${versions.drift}`),
         },
         snapshotDeps,
       );
@@ -269,9 +285,16 @@ async function fetchRecentDeploys(
   connection: OrgConnection,
   limit: number,
 ): Promise<DeployRequestRow[]> {
+  /*
+   * `TestLevel` used to be selected here and never read. Measured across five
+   * real orgs and twenty deploy records it was `null` every single time — the
+   * Tooling row simply does not populate it — so asking for it bought nothing
+   * and widened the query surface. Test counts, if they are ever wanted, are on
+   * the Metadata API's deployResult, populated.
+   */
   const soql =
     'SELECT Id, Status, CheckOnly, CreatedDate, StartDate, CompletedDate, ' +
-    'NumberComponentsTotal, NumberComponentErrors, NumberComponentsDeployed, TestLevel, CreatedBy.Name ' +
+    'NumberComponentsTotal, NumberComponentErrors, NumberComponentsDeployed, CreatedBy.Name ' +
     `FROM DeployRequest ORDER BY CreatedDate DESC LIMIT ${Math.max(1, Math.trunc(limit))}`;
   const page = await connection.toolingQuery<DeployRequestRow>(soql);
   // A row with no Id cannot become a release; skip it rather than emitting a
@@ -284,21 +307,165 @@ async function fetchRecentDeploys(
  * one API call per release, which is why `deployLimit` exists and why refresh
  * is user-initiated.
  */
-async function fetchDeployDetail(
-  connection: OrgConnection,
-  deployId: string,
-): Promise<DeployRequestRow> {
-  return connection.get<DeployRequestRow>(
-    `/services/data/v${connection.apiVersion}/tooling/sobjects/DeployRequest/${deployId}`,
-  );
+/** What one deploy contributes to the snapshot beyond its list row. */
+export interface DeployComponents {
+  readonly successes: readonly DeployMessageRow[];
+  readonly failures: readonly DeployMessageRow[];
+  /** The deploy's author, which is the only author a component has. */
+  readonly deployedBy: string | undefined;
 }
 
-async function fetchCoverage(connection: OrgConnection): Promise<Map<string, number>> {
+/**
+ * Fetches one deploy's component details.
+ *
+ * The endpoint matters. This used to read
+ * `tooling/sobjects/DeployRequest/{id}` and take `DeployResult.details` off it
+ * — but that record has no `DeployResult` field at all, in any of the five orgs
+ * measured, so every org-sourced release came back with **zero components** and
+ * the metadata inspector was permanently empty for org data. The Metadata REST
+ * API is where the details live, and `includeDetails=true` is required: without
+ * it the arrays are present and empty, which fails in exactly the same way
+ * while looking healthier.
+ */
+async function fetchDeployComponents(
+  connection: OrgConnection,
+  deployId: string,
+): Promise<DeployComponents> {
+  const response = await connection.get<DeployRequestDetailResponse>(
+    `/services/data/v${connection.apiVersion}/metadata/deployRequest/${deployId}`,
+    { includeDetails: 'true' },
+  );
+  const details = response.deployResult?.details;
+  return {
+    // A single-component deploy comes back as an object rather than a
+    // one-element array in some responses, so both are accepted.
+    successes: toRows(details?.componentSuccesses),
+    failures: toRows(details?.componentFailures),
+    deployedBy: optionalString(response.deployResult?.createdByName),
+  };
+}
+
+function toRows(value: DeployMessageRow[] | DeployMessageRow | null | undefined): DeployMessageRow[] {
+  if (value === null || value === undefined) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * How far the pinned API version may fall behind the org before the refresh
+ * says so. Salesforce ships three releases a year, so six versions is about two
+ * years — long enough not to nag, short enough to notice before retirement.
+ */
+export const API_VERSION_DRIFT_THRESHOLD = 6;
+
+export interface ApiVersionCheck {
+  /** The newest version the org offers, e.g. `67.0`. */
+  readonly latest: string | undefined;
+  /** A sentence for the refresh's audit entry, or absent when in step. */
+  readonly drift?: string;
+}
+
+/**
+ * Confirms the org still offers the version this build pins, before anything
+ * that depends on a response shape.
+ *
+ * The version is pinned rather than negotiated on purpose: the mapper is
+ * written against one version's shapes, and following the org's latest would
+ * mean the shapes could change underneath a user with no code change at all —
+ * which is the failure a pin exists to prevent.
+ *
+ * What a pin cannot do is notice that it has gone stale. Salesforce retires old
+ * versions, and the day this one goes every request starts failing with a bare
+ * 404 that says nothing about why. So the version list is read once per refresh
+ * — one small GET among a dozen — and two things are surfaced: the version
+ * being gone at all, which refuses clearly, and the version being far behind,
+ * which is recorded in the refresh entry rather than blocking anything.
+ *
+ * Measured: all five orgs tested report 67.0 and all still serve 62.0.
+ */
+async function checkApiVersion(connection: OrgConnection): Promise<ApiVersionCheck> {
+  let offered: readonly { version?: string | null }[];
+  try {
+    offered = await connection.get<{ version?: string | null }[]>('/services/data/');
+  } catch (cause) {
+    // The version list is a nicety. Failing the refresh because it could not be
+    // read would trade a real capability for a diagnostic.
+    void cause;
+    return { latest: undefined };
+  }
+
+  // `Array.isArray` widens to `any[]`, so the element type is restated rather
+  // than inherited — the same reason `fetchOrganization` does it. Read
+  // defensively rather than through `asRecord`, which throws: a malformed entry
+  // in a list that only exists to produce a warning must not fail the refresh.
+  const entries: readonly unknown[] = Array.isArray(offered) ? offered : [];
+  const versions = entries
+    .map((entry) =>
+      typeof entry === 'object' && entry !== null
+        ? optionalString((entry as { version?: unknown }).version)
+        : undefined,
+    )
+    .filter((version): version is string => version !== undefined);
+
+  if (versions.length === 0) return { latest: undefined };
+
+  const pinned = connection.apiVersion;
+  const latest = versions.reduce((a, b) => (Number(a) >= Number(b) ? a : b));
+
+  if (!versions.includes(pinned)) {
+    throw new OrgResponseInvalidError(
+      'apiVersion',
+      `this build talks Salesforce API v${pinned}, which this org no longer offers ` +
+        `(its versions run up to v${latest}). The extension needs updating; nothing was changed.`,
+    );
+  }
+
+  const behind = Math.round(Number(latest) - Number(pinned));
+  if (Number.isFinite(behind) && behind >= API_VERSION_DRIFT_THRESHOLD) {
+    return {
+      latest,
+      drift:
+        `This build talks API v${pinned} and the org offers up to v${latest}; ` +
+        'fields added since then are not read.',
+    };
+  }
+  return { latest };
+}
+
+export interface CoverageResult {
+  readonly byName: ReadonlyMap<string, number>;
+  /** Set when the org would not answer, with the reason. Absent on success. */
+  readonly unavailable?: string;
+}
+
+/**
+ * Coverage, or an explanation of why there is none.
+ *
+ * `ApexCodeCoverageAggregate` is not available in every org — one of the five
+ * measured rejects it outright with `INVALID_TYPE: sObject type
+ * 'ApexCodeCoverageAggregate' is not supported`. This used to let that error
+ * escape, which failed the entire refresh: an org would show no releases at all
+ * because a *supplementary* field could not be read.
+ *
+ * So this one degradation is allowed — and it is recorded rather than
+ * swallowed. Coverage is optional in the model and renders as "Coverage
+ * unknown", never as 0%, so the result is honest on screen; the reason lands in
+ * the refresh's audit entry so it is honest in the record too. Failures that
+ * are *not* about this object — an expired token, an unreachable org — are
+ * rethrown, because those are not "no coverage", they are "no refresh".
+ */
+async function fetchCoverage(connection: OrgConnection): Promise<CoverageResult> {
   const soql =
     'SELECT ApexClassOrTrigger.Name, NumLinesCovered, NumLinesUncovered FROM ApexCodeCoverageAggregate';
   const byName = new Map<string, number>();
 
-  const page = await connection.toolingQuery<ApexCoverageRow>(soql);
+  let page;
+  try {
+    page = await connection.toolingQuery<ApexCoverageRow>(soql);
+  } catch (cause) {
+    const reason = coverageUnavailableReason(cause);
+    if (reason === undefined) throw cause;
+    return { byName, unavailable: reason };
+  }
   for (const row of page.records) {
     const name = optionalString(row.ApexClassOrTrigger?.Name);
     const covered = optionalNumber(row.NumLinesCovered) ?? 0;
@@ -309,7 +476,23 @@ async function fetchCoverage(connection: OrgConnection): Promise<Map<string, num
     if (name === undefined || total === 0) continue;
     byName.set(name, covered / total);
   }
-  return byName;
+  return { byName };
+}
+
+/**
+ * Whether a failure means "this org cannot answer for coverage" rather than
+ * "this org cannot answer".
+ *
+ * Deliberately narrow: only a request the org itself rejected as a bad request
+ * about this object. Anything else — auth, network, a 500 — is a real failure
+ * of the refresh and must not be mistaken for an org without coverage data.
+ */
+function coverageUnavailableReason(cause: unknown): string | undefined {
+  if (!(cause instanceof OrgRequestFailedError)) return undefined;
+  if (cause.status !== 400 && cause.status !== 403) return undefined;
+  const detail = `${cause.errorCode} ${cause.message}`;
+  if (!/ApexCodeCoverageAggregate|INVALID_TYPE|INSUFFICIENT_ACCESS/i.test(detail)) return undefined;
+  return cause.errorCode === '' ? `HTTP ${cause.status}` : cause.errorCode;
 }
 
 // --- Mapping -----------------------------------------------------------------
@@ -365,20 +548,33 @@ function toRelease(
   };
 }
 
-function toItems(deploy: DeployRequestRow, deps: SnapshotDeps): MetadataItem[] {
-  const details = deploy.DeployResult?.details;
+function toItems(
+  deploy: DeployRequestRow,
+  components: DeployComponents,
+  deps: SnapshotDeps,
+): MetadataItem[] {
   const fallbackDate =
     optionalString(deploy.CompletedDate) ?? optionalString(deploy.CreatedDate) ?? deps.clock.now();
-
-  const successes = details?.componentSuccesses ?? [];
-  const failures = details?.componentFailures ?? [];
+  // The deploy's author, since a component has none. The list row's
+  // `CreatedBy.Name` is the same person and is the fallback when the Metadata
+  // API omits it.
+  const deployedBy = components.deployedBy ?? optionalString(deploy.CreatedBy?.Name);
 
   // `dependenciesUnavailable` is set by `itemFromDeployComponent`, because it is
   // a property of the deploy-report shape rather than of this transport.
   return [
-    ...successes.map((entry) => itemFromDeployComponent(entry, deploy.Id, deps, fallbackDate, [])),
-    ...failures.map((entry) =>
-      itemFromDeployComponent(entry, deploy.Id, deps, fallbackDate, [warningFromDeployFailure(entry)]),
+    ...components.successes.map((entry) =>
+      itemFromDeployComponent(entry, deploy.Id, deps, fallbackDate, [], deployedBy),
+    ),
+    ...components.failures.map((entry) =>
+      itemFromDeployComponent(
+        entry,
+        deploy.Id,
+        deps,
+        fallbackDate,
+        [warningFromDeployFailure(entry)],
+        deployedBy,
+      ),
     ),
   ]
     // `package.xml` comes back as a component with an empty type; it is a
