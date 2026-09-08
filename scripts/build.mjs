@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = join(projectRoot, 'src');
+const assetsRoot = join(projectRoot, 'assets');
 const distRoot = join(projectRoot, 'dist');
 
 /** Everything `tsc` does not emit. */
@@ -22,6 +23,16 @@ const ASSETS = [
   { from: 'ui/sidepanel.html', to: 'ui/sidepanel.html' },
   { from: 'ui/styles.css', to: 'ui/styles.css' },
 ];
+
+/**
+ * Icons live outside `src/` because they are generated artefacts, not source.
+ * Regenerate with `npm run icons`; the source of truth is
+ * `scripts/icon-design.mjs`.
+ */
+const ICONS = [16, 32, 48, 128].map((size) => ({
+  from: `icon-${size}.png`,
+  to: `icons/icon-${size}.png`,
+}));
 
 async function main() {
   if (!(await exists(distRoot))) {
@@ -40,6 +51,18 @@ async function main() {
     await cp(source, target);
   }
 
+  for (const icon of ICONS) {
+    const source = join(assetsRoot, icon.from);
+    const target = join(distRoot, icon.to);
+    if (!(await exists(source))) {
+      throw new Error(
+        `Icon is missing: assets/${icon.from}. Run \`npm run icons\` to regenerate it.`,
+      );
+    }
+    await mkdir(dirname(target), { recursive: true });
+    await cp(source, target);
+  }
+
   await verifyManifest();
 
   const emitted = await countFiles(distRoot);
@@ -52,10 +75,14 @@ async function verifyManifest() {
   const manifestPath = join(distRoot, 'manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 
+  // Every path the manifest can name. A missing icon must fail the build here
+  // rather than at "Load unpacked", where Chrome blames the manifest and not
+  // the file.
   const referenced = [
     manifest.background?.service_worker,
     manifest.side_panel?.default_path,
     ...Object.values(manifest.icons ?? {}),
+    ...Object.values(manifest.action?.default_icon ?? {}),
   ].filter((value) => typeof value === 'string');
 
   const missing = [];

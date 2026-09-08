@@ -79,7 +79,13 @@ export default [
     // The build script and the benchmark are Node, not a browser or a worker.
     files: ['scripts/**/*.mjs', 'bench/**/*.mjs'],
     languageOptions: {
-      globals: { console: 'readonly', process: 'readonly' },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        URL: 'readonly',
+        TextEncoder: 'readonly',
+      },
     },
   },
   {

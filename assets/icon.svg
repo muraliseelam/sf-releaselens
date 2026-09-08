@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GENERATED FILE - do not edit.
+
+  Source of truth: scripts/icon-design.mjs
+  Regenerate:      npm run icons
+  Verify:          npm run icons:check
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"
+     role="img" aria-label="sf-releaselens: a lens over a release pipeline">
+  <rect x="0" y="0" width="128" height="128" rx="26" fill="#1b2430"/>
+  <rect x="14" y="102" width="32" height="14" rx="7" fill="#4c9aff"/>
+  <rect x="52" y="102" width="30" height="14" rx="7" fill="#4c9aff"/>
+  <rect x="88" y="102" width="26" height="14" rx="7" fill="#4c9aff99"/>
+  <circle cx="56" cy="50" r="25.5" fill="#4c9aff33"/>
+  <line x1="77" y1="71" x2="98" y2="92" stroke="#e8eaf0" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="56" cy="50" r="30" fill="none" stroke="#e8eaf0" stroke-width="9"/>
+  <path d="M 50 29 A 21 21 0 0 0 35 50" fill="none" stroke="#ffffffcc" stroke-width="3.5" stroke-linecap="round"/>
+</svg>

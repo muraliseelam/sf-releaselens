@@ -18,13 +18,15 @@
   ],
   "scripts": {
     "build": "tsc --build && node scripts/build.mjs",
+    "icons": "node scripts/generate-icons.mjs",
+    "icons:check": "node scripts/generate-icons.mjs --check",
     "clean": "tsc --build --clean && node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "bench": "node bench/bench.mjs",
-    "check": "npm run lint && npm run build && npm run test"
+    "check": "npm run lint && npm run icons:check && npm run build && npm run test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
