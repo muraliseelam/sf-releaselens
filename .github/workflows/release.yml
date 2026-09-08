@@ -1,0 +1,53 @@
+name: Release
+
+# Runs only after CI has actually passed on main. Triggering on `push` instead
+# would let a release be cut from a commit whose tests were still running, or
+# had already failed.
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: semantic-release
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    permissions:
+      # Push the version bump and changelog, create the tag and the release.
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # semantic-release reads the full history to work out what changed
+          # since the last tag.
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+          cache: npm
+
+      - run: npm ci
+
+      # Belt and braces: CI already ran these on this exact SHA, but the release
+      # job is what publishes, so it verifies rather than assumes.
+      - name: Verify
+        run: npm run check
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
