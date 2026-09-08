@@ -175,6 +175,12 @@ export function itemFromDeployComponent(
     lastModifiedBy: readString(record['createdByName']) ?? 'unknown',
     lastModifiedAt: readString(record['createdDate']) ?? lastModifiedAt,
     dependsOn: [],
+    // A deploy report lists what was deployed, not what depends on what —
+    // there is no edge data in the payload at all. The flag travels with the
+    // empty array so the inspector renders "unknown" rather than "none",
+    // whichever path produced the item: a file the user imported, or the
+    // Tooling API.
+    dependenciesUnavailable: true,
     warnings,
   };
 }

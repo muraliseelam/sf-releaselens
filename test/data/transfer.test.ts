@@ -91,6 +91,18 @@ describe('parseImportText', () => {
     expect(snapshot.environments[0]?.name).toBe('Production');
   });
 
+  it('marks imported components as having no dependency data, not as having none', () => {
+    const snapshot = parseImportText(JSON.stringify(DEPLOY_REPORT), testDeps(), IMPORT_OPTIONS);
+
+    expect(snapshot.items.length).toBeGreaterThan(0);
+    for (const item of snapshot.items) {
+      expect(item.dependsOn).toEqual([]);
+      // Without this, the inspector reads an empty array as "depends on
+      // nothing", which is the one wrong answer a release manager acts on.
+      expect(item.dependenciesUnavailable).toBe(true);
+    }
+  });
+
   it('rejects text that is not JSON, naming the parse failure', () => {
     expect(() => parseImportText('{not json', testDeps(), IMPORT_OPTIONS)).toThrow(ImportFormatError);
     expect(() => parseImportText('{not json', testDeps(), IMPORT_OPTIONS)).toThrow(

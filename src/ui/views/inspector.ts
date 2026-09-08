@@ -231,7 +231,9 @@ function renderDetail(
   handlers: Handlers,
   now: number,
 ): HTMLElement {
-  const { resolved, external, dependents } = resolveDependencies(snapshot.items, item);
+  const { resolved, external, dependents, dependenciesUnavailable, uncheckedDependents } =
+    resolveDependencies(snapshot.items, item);
+  const edgeCount = resolved.length + external.length;
   const release = snapshot.releases.find((candidate) => candidate.id === item.releaseId);
 
   return el('section', { className: 'detail', attrs: { 'aria-label': 'Component detail' } }, [
@@ -272,37 +274,89 @@ function renderDetail(
         ]),
 
     el('div', { className: 'detail__block' }, [
-      el('h3', { className: 'detail__subtitle', text: `Depends on (${resolved.length + external.length})` }),
-      resolved.length === 0 && external.length === 0
-        ? el('p', { className: 'muted', text: 'No recorded dependencies.' })
-        : el('ul', { className: 'links' }, [
-            ...resolved.map((dependency) => dependencyLink(dependency, handlers)),
-            ...external.map((name) =>
-              el('li', {}, [
-                el('span', { className: 'link link--external', text: name }),
-                el('span', {
-                  className: 'muted',
-                  text: ' not in this snapshot',
-                  title:
-                    'This component depends on something outside the tracked releases. ' +
-                    'It is shown rather than hidden because that is often the risk.',
-                }),
-              ]),
-            ),
-          ]),
+      el('h3', {
+        className: 'detail__subtitle',
+        // No count when the edges are unknown: "(0)" is itself an answer, and
+        // the wrong one.
+        text: dependenciesUnavailable ? 'Depends on' : `Depends on (${edgeCount})`,
+      }),
+      dependenciesUnavailable && edgeCount === 0
+        ? unavailableNotice(
+            'Dependency data is not available',
+            'This component came from a deploy report, which lists what was deployed but ' +
+              'not what depends on what. That is a gap in the source, not a finding about ' +
+              'this component — it may well have dependencies. Only the demo dataset ' +
+              'carries dependency edges.',
+          )
+        : edgeCount === 0
+          ? el('p', {
+              className: 'muted',
+              text: 'No dependencies recorded. This component stands alone in this snapshot.',
+            })
+          : el('ul', { className: 'links' }, [
+              ...resolved.map((dependency) => dependencyLink(dependency, handlers)),
+              ...external.map((name) =>
+                el('li', {}, [
+                  el('span', { className: 'link link--external', text: name }),
+                  el('span', {
+                    className: 'muted',
+                    text: ' not in this snapshot',
+                    title:
+                      'This component depends on something outside the tracked releases. ' +
+                      'It is shown rather than hidden because that is often the risk.',
+                  }),
+                ]),
+              ),
+            ]),
     ]),
 
     el('div', { className: 'detail__block' }, [
-      el('h3', { className: 'detail__subtitle', text: `Depended on by (${dependents.length})` }),
+      el('h3', {
+        className: 'detail__subtitle',
+        text:
+          dependents.length === 0 && uncheckedDependents > 0
+            ? 'Depended on by'
+            : `Depended on by (${dependents.length})`,
+      }),
       dependents.length === 0
-        ? el('p', { className: 'muted', text: 'Nothing in this snapshot depends on it.' })
-        : el(
-            'ul',
-            { className: 'links' },
-            dependents.map((dependent) => dependencyLink(dependent, handlers)),
-          ),
+        ? uncheckedDependents > 0
+          ? unavailableNotice(
+              'Dependency data is not available',
+              `${countLabel(uncheckedDependents, 'component')} in this snapshot came from a ` +
+                'deploy report, which records no dependency edges, so nothing can be ruled ' +
+                'out. Do not read this as "safe to change".',
+            )
+          : el('p', { className: 'muted', text: 'Nothing in this snapshot depends on it.' })
+        : el('div', {}, [
+            el(
+              'ul',
+              { className: 'links' },
+              dependents.map((dependent) => dependencyLink(dependent, handlers)),
+            ),
+            uncheckedDependents === 0
+              ? null
+              : el('p', {
+                  className: 'muted detail__caveat',
+                  text: `At least. ${countLabel(uncheckedDependents, 'other component')} could not be checked — no dependency data.`,
+                }),
+          ]),
     ]),
   ]);
+}
+
+/**
+ * The "we do not know" state, deliberately styled as a notice rather than as
+ * muted body text so it cannot be skimmed as the "nothing here" state.
+ */
+function unavailableNotice(title: string, explanation: string): HTMLElement {
+  return el('div', { className: 'notice notice--warn', attrs: { role: 'note' } }, [
+    el('p', { className: 'notice__title', text: title }),
+    el('p', { className: 'muted', text: explanation }),
+  ]);
+}
+
+function countLabel(count: number, noun: string): string {
+  return count === 1 ? `1 ${noun}` : `${count} ${noun}s`;
 }
 
 function dependencyLink(item: MetadataItem, handlers: Handlers): HTMLElement {

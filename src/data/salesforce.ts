@@ -369,6 +369,8 @@ function toItems(deploy: DeployRequestRow, deps: SnapshotDeps): MetadataItem[] {
   const successes = details?.componentSuccesses ?? [];
   const failures = details?.componentFailures ?? [];
 
+  // `dependenciesUnavailable` is set by `itemFromDeployComponent`, because it is
+  // a property of the deploy-report shape rather than of this transport.
   return [
     ...successes.map((entry) => itemFromDeployComponent(entry, deploy.Id, deps, fallbackDate, [])),
     ...failures.map((entry) =>
@@ -377,13 +379,7 @@ function toItems(deploy: DeployRequestRow, deps: SnapshotDeps): MetadataItem[] {
   ]
     // `package.xml` comes back as a component with an empty type; it is a
     // manifest, not metadata.
-    .filter((item) => item.type.length > 0 && item.fullName.length > 0)
-    .map((item) => ({
-      ...item,
-      // The whole reason this flag exists: an empty dependsOn here means
-      // "unknown", and the inspector must not render it as "none".
-      dependenciesUnavailable: true,
-    }));
+    .filter((item) => item.type.length > 0 && item.fullName.length > 0);
 }
 
 function applyCoverage(items: MetadataItem[], coverage: ReadonlyMap<string, number>): void {

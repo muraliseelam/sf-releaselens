@@ -81,6 +81,7 @@ Seeded demo data. Values below are exact — anything else is a bug.
 | 4.6 | Detail — coverage | Select `InvoiceBuilder` → detail pane shows `91% covered`, `Depends on (2)`, `Depended on by (4)`. | ✅ dist |
 | 4.7 | Detail — unknown coverage | Select `ProrationCalculator` → shows **`Coverage unknown`**, never `0% covered`, plus a `NO_TEST_COVERAGE` warning. | ✅ dist |
 | 4.8 | External dependency | Select `Invoice_Approval_Routing` → `Billing_Approvers` listed as *not in this snapshot*. | ✅ auto |
+| 4.8a | Genuine "no dependencies" | Select `ProrationCalculator` (demo data, which *does* carry edges) → plain grey *No dependencies recorded. This component stands alone in this snapshot.* — **not** the amber unavailable notice. The two states must be tellable apart at a glance. | ✅ auto |
 | 4.9 | Walk the graph | In a detail pane, click a dependent → selection moves to it. | ✅ auto |
 | 4.10 | Caret survives typing | Type mid-word in the search box, then click into the middle of the text and keep typing. **The caret must not jump to the end.** Full re-render on every keystroke makes this the highest-risk interaction in the panel. | ❓ (logic ✅ auto) |
 | 4.11 | Scroll performance | Clear filters (57 components) and scroll. Should be smooth. | ❓ |
@@ -109,6 +110,7 @@ Seeded demo data. Values below are exact — anything else is a bug.
 | 6.2 | Import round-trip | **Import** that file → dashboard unchanged, demo banner gone. | ✅ auto |
 | 6.3 | Import a deploy report | Import `sf project deploy report --json` output → one release, components mapped, failures as error warnings. | ✅ auto |
 | 6.4 | Malformed import | Import a non-JSON file → `IMPORT_FORMAT` error and **the existing snapshot is untouched**. | ✅ auto |
+| 6.5 | Imported components say "unknown", not "none" | After 6.3, open any imported component. The detail pane must show the amber **Dependency data is not available** notice in *both* directions — never "No dependencies recorded" and never "Nothing in this snapshot depends on it". A deploy report carries no edges, and "none" is the one wrong answer someone acts on. | ✅ auto (both states), ❓ (that the amber notice is visually distinct on screen) |
 
 ## 7. Known-broken — do not sign off without checking
 
@@ -135,7 +137,7 @@ Prerequisite: a Connected App per [`CONNECTED-APP.md`](CONNECTED-APP.md). Use a
 | 8.6 | No automatic read | After connecting, **no** deployments appear until you press Refresh. | ✅ auto |
 | 8.7 | Refresh | **Refresh** → releases appear, one per recent deployment, named by deploy id. Bar shows *refreshed just now*. | ❓ (mapping ✅ auto) |
 | 8.8 | Components | Open a release in the Inspector → its components are listed; `package.xml` is **not** among them. | ✅ auto |
-| 8.9 | Dependencies say "unknown" | A component detail must **not** read "No recorded dependencies". It must say dependency data is unavailable from a deploy report. | ✅ auto (data), ❓ (wording on screen) |
+| 8.9 | Dependencies say "unknown" | Same as 6.5, via the org path rather than the import path: the amber **Dependency data is not available** notice, in both directions, with no `(0)` count next to either heading. | ✅ auto (data and wording), ❓ (rendering on screen) |
 | 8.10 | Coverage | Apex classes show a coverage percentage; a class with no lines shows *Coverage unknown*, never 0%. | ✅ auto |
 | 8.11 | Approvals survive a refresh | Approve something, press Refresh, confirm the decision is still there. | ✅ auto |
 | 8.12 | Approvals never reach the org | Setup → check no records were created anywhere. There is no write path. | ❓ |

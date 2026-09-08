@@ -395,10 +395,128 @@ describe('renderInspector', () => {
       const view = renderInspector(inspectorState({}, 'bare'), sparse, handlers, NOW);
 
       expect(texts(view, '.detail .fields dd').filter((t) => t === 'not recorded')).toHaveLength(2);
-      expect(view.querySelector('.detail')?.textContent).toContain('No recorded dependencies.');
+      expect(view.querySelector('.detail')?.textContent).toContain('No dependencies recorded.');
       expect(view.querySelector('.detail')?.textContent).toContain(
         'Nothing in this snapshot depends on it.',
       );
+    });
+
+    describe('when the source records no dependency edges', () => {
+      /** One component, flagged the way SalesforceDataSource flags org-sourced items. */
+      const opaque = (id: string, fullName: string) => ({
+        ...makeItem({ id, fullName }),
+        dependenciesUnavailable: true,
+      });
+
+      /**
+       * A realistic org-sourced snapshot: every item carries the flag, because
+       * the whole snapshot came from one deploy report.
+       */
+      const orgSnapshot = () =>
+        makeSnapshot({ items: [opaque('o1', 'FromOrg'), opaque('o2', 'AlsoFromOrg')] });
+
+      it('says the data is unavailable rather than that there are none', () => {
+        const orgSourced = orgSnapshot();
+        const detail = renderInspector(
+          inspectorState({}, 'o1'),
+          orgSourced,
+          handlers,
+          NOW,
+        ).querySelector('.detail')!;
+
+        expect(detail.textContent).toContain('Dependency data is not available');
+        // The claim that would mislead a release manager into thinking the
+        // component is safe to change.
+        expect(detail.textContent).not.toContain('No dependencies recorded.');
+        expect(detail.textContent).not.toContain('Nothing in this snapshot depends on it.');
+      });
+
+      it('omits the count entirely, because "(0)" is itself the wrong answer', () => {
+        const orgSourced = orgSnapshot();
+        const subtitles = texts(
+          renderInspector(inspectorState({}, 'o1'), orgSourced, handlers, NOW),
+          '.detail__subtitle',
+        );
+
+        expect(subtitles).toContain('Depends on');
+        expect(subtitles).toContain('Depended on by');
+        expect(subtitles).not.toContain('Depends on (0)');
+        expect(subtitles).not.toContain('Depended on by (0)');
+      });
+
+      it('distinguishes the two states visually, not only in wording', () => {
+        const known = makeSnapshot({ items: [makeItem({ id: 'k1', fullName: 'Standalone' })] });
+        const unknown = orgSnapshot();
+
+        const knownDetail = renderInspector(inspectorState({}, 'k1'), known, handlers, NOW);
+        const unknownDetail = renderInspector(inspectorState({}, 'o1'), unknown, handlers, NOW);
+
+        expect(knownDetail.querySelectorAll('.detail__block .notice--warn')).toHaveLength(0);
+        // Both directions, since both are unknowable from a deploy report.
+        expect(unknownDetail.querySelectorAll('.detail__block .notice--warn')).toHaveLength(2);
+      });
+
+      it('marks the explanation as a note for assistive technology', () => {
+        const unknown = orgSnapshot();
+        const notice = renderInspector(
+          inspectorState({}, 'o1'),
+          unknown,
+          handlers,
+          NOW,
+        ).querySelector('.detail__block .notice--warn')!;
+
+        expect(notice.getAttribute('role')).toBe('note');
+      });
+
+      it('explains why, so the gap reads as a limit of the source', () => {
+        const unknown = orgSnapshot();
+        const detail = renderInspector(
+          inspectorState({}, 'o1'),
+          unknown,
+          handlers,
+          NOW,
+        ).querySelector('.detail')!;
+
+        expect(detail.textContent).toContain('deploy report');
+        expect(detail.textContent).toContain('demo dataset');
+      });
+
+      it('reports known dependents as a lower bound when others cannot be checked', () => {
+        const mixed = makeSnapshot({
+          items: [
+            makeItem({ id: 'target', fullName: 'InvoiceBuilder' }),
+            makeItem({ id: 'dep', fullName: 'InvoiceTrigger', dependsOn: ['InvoiceBuilder'] }),
+            opaque('o1', 'FromOrg'),
+            opaque('o2', 'AlsoFromOrg'),
+          ],
+        });
+        const detail = renderInspector(
+          inspectorState({}, 'target'),
+          mixed,
+          handlers,
+          NOW,
+        ).querySelector('.detail')!;
+
+        expect(detail.textContent).toContain('Depended on by (1)');
+        expect(detail.querySelector('.detail__caveat')?.textContent).toBe(
+          'At least. 2 other components could not be checked — no dependency data.',
+        );
+      });
+
+      it('says none could be checked when the reverse edge is wholly unknown', () => {
+        const mixed = makeSnapshot({
+          items: [makeItem({ id: 'target', fullName: 'InvoiceBuilder' }), opaque('o1', 'FromOrg')],
+        });
+        const detail = renderInspector(
+          inspectorState({}, 'target'),
+          mixed,
+          handlers,
+          NOW,
+        ).querySelector('.detail')!;
+
+        expect(detail.textContent).toContain('1 component in this snapshot came from a');
+        expect(detail.textContent).not.toContain('Nothing in this snapshot depends on it.');
+      });
     });
   });
 

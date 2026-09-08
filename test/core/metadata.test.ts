@@ -165,7 +165,57 @@ describe('resolveDependencies', () => {
     const lonely = makeItem({ id: 'lonely', fullName: 'Standalone' });
     const view = resolveDependencies([lonely], lonely);
 
-    expect(view).toEqual({ resolved: [], external: [], dependents: [] });
+    expect(view).toEqual({
+      resolved: [],
+      external: [],
+      dependents: [],
+      dependenciesUnavailable: false,
+      uncheckedDependents: 0,
+    });
+  });
+
+  describe('when the source cannot supply edges', () => {
+    it('separates "no dependencies" from "we do not know"', () => {
+      const known = makeItem({ id: 'known', fullName: 'Standalone' });
+      const unknown = makeItem({ id: 'unknown', fullName: 'FromDeployReport' });
+      const fromReport = { ...unknown, dependenciesUnavailable: true } as const;
+
+      expect(resolveDependencies([known], known).dependenciesUnavailable).toBe(false);
+      expect(resolveDependencies([fromReport], fromReport).dependenciesUnavailable).toBe(true);
+    });
+
+    it('counts the components whose reverse edge could not be checked', () => {
+      const target = makeItem({ id: 'target', fullName: 'InvoiceBuilder' });
+      const dependent = makeItem({ id: 'dep', fullName: 'InvoiceTrigger', dependsOn: ['InvoiceBuilder'] });
+      const blind = { ...makeItem({ id: 'blind', fullName: 'Opaque' }), dependenciesUnavailable: true };
+      const alsoBlind = { ...makeItem({ id: 'blind2', fullName: 'Opaque2' }), dependenciesUnavailable: true };
+
+      const view = resolveDependencies([target, dependent, blind, alsoBlind], target);
+
+      expect(view.dependents.map((item) => item.id)).toEqual(['dep']);
+      expect(view.uncheckedDependents).toBe(2);
+    });
+
+    it('does not count a component that does declare the edge, even from a blind source', () => {
+      // Belt and braces: an item can carry the flag and still have edges, if a
+      // snapshot were assembled from two sources. A declared edge is a fact.
+      const target = makeItem({ id: 'target', fullName: 'InvoiceBuilder' });
+      const odd = {
+        ...makeItem({ id: 'odd', fullName: 'Hybrid', dependsOn: ['InvoiceBuilder'] }),
+        dependenciesUnavailable: true,
+      };
+
+      const view = resolveDependencies([target, odd], target);
+
+      expect(view.dependents.map((item) => item.id)).toEqual(['odd']);
+      expect(view.uncheckedDependents).toBe(0);
+    });
+
+    it('does not count the item itself as an unchecked dependent', () => {
+      const blind = { ...makeItem({ id: 'solo', fullName: 'Solo' }), dependenciesUnavailable: true };
+
+      expect(resolveDependencies([blind], blind).uncheckedDependents).toBe(0);
+    });
   });
 });
 

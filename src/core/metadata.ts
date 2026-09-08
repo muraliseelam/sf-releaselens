@@ -146,6 +146,25 @@ export interface DependencyView {
   readonly external: readonly string[];
   /** Components in the snapshot that depend on this one. */
   readonly dependents: readonly MetadataItem[];
+  /**
+   * True when this item's source cannot supply dependency edges at all, so
+   * `resolved` and `external` being empty means *unknown*, not *none*.
+   *
+   * The caller must render those two cases differently. "No dependencies" tells
+   * a release manager a component is safe to change on its own; "we do not
+   * know" tells them to go and look. Conflating them is the more dangerous
+   * direction of the two.
+   */
+  readonly dependenciesUnavailable: boolean;
+  /**
+   * How many components in the snapshot could not be checked for a reverse edge
+   * to this one, because their own dependency data is unavailable.
+   *
+   * `dependents` is derived by scanning every other item's `dependsOn`, so an
+   * item with no edge data is indistinguishable from one that genuinely does
+   * not depend on this. Non-zero means `dependents` is a lower bound.
+   */
+  readonly uncheckedDependents: number;
 }
 
 /**
@@ -178,11 +197,26 @@ export function resolveDependencies(
     }
   }
 
-  const dependents = items.filter(
-    (candidate) => candidate.id !== item.id && candidate.dependsOn.includes(item.fullName),
-  );
+  const dependents: MetadataItem[] = [];
+  let uncheckedDependents = 0;
+  for (const candidate of items) {
+    if (candidate.id === item.id) continue;
+    if (candidate.dependsOn.includes(item.fullName)) {
+      dependents.push(candidate);
+    } else if (candidate.dependenciesUnavailable === true) {
+      // Its `dependsOn` is empty because nobody recorded it, not because it is
+      // empty. It may well depend on this item; we cannot tell.
+      uncheckedDependents += 1;
+    }
+  }
 
-  return { resolved, external, dependents };
+  return {
+    resolved,
+    external,
+    dependents,
+    dependenciesUnavailable: item.dependenciesUnavailable === true,
+    uncheckedDependents,
+  };
 }
 
 export function findItem(

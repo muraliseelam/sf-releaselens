@@ -831,6 +831,24 @@ body {
   border-left-color: var(--danger);
 }
 
+.notice__title {
+  font-weight: 600;
+}
+
+/*
+ * "Dependency data is unavailable" sits inside a detail block, where the
+ * surrounding text is 13px. Pull it in slightly so it reads as a caveat about
+ * the section above it rather than as a page-level banner.
+ */
+.detail__block .notice {
+  margin-top: 2px;
+}
+
+.detail__caveat {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
 .muted {
   color: var(--text-dim);
 }
