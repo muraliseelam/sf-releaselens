@@ -1,3 +1,9 @@
+## [0.3.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.2.1...v0.3.0) (2026-09-08)
+
+### Features
+
+* **a11y:** keyboard navigation, ARIA contract and live-region announcements ([54c6991](https://github.com/muraliseelam/sf-releaselens/commit/54c6991ce6b1b82432a6dffc3ee1a0ada68753a1))
+
 ## [0.2.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.2.0...v0.2.1) (2026-09-08)
 
 ### Bug fixes
