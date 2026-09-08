@@ -1,0 +1,46 @@
+version: 2
+
+updates:
+  # The extension ships zero runtime dependencies, so every update here is a
+  # development or CI tool. That is still worth tracking: semantic-release runs
+  # in CI holding a token, and the test tooling executes repository code.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      # Conventional Commits, so semantic-release classifies these correctly
+      # rather than cutting a release for a dev-tool bump.
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      # One PR for the whole toolchain: these move together and reviewing five
+      # separate bumps of the same eslint stack wastes the review.
+      dev-tooling:
+        patterns:
+          - '@typescript-eslint/*'
+          - 'eslint*'
+          - 'typescript'
+          - 'vitest'
+          - '@vitest/*'
+          - 'jsdom'
+      release-tooling:
+        patterns:
+          - 'semantic-release'
+          - '@semantic-release/*'
+          - 'conventional-changelog-*'
+
+  # Actions are pinned to commit SHAs, which means they cannot be updated by
+  # anything except a deliberate change. Dependabot proposes those bumps as
+  # pull requests that CI then validates.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci
+      include: scope

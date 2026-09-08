@@ -35,12 +35,22 @@ export default defineConfig({
         'src/background/messages.ts',
         'src/ui/**',
       ],
-      exclude: ['src/ui/main.ts', 'src/ui/handlers.ts'],
+      // `sidepanel.html` is swept up by `src/ui/**` and the coverage provider
+      // then tries to parse it as a module, printing a parse error before
+      // excluding it anyway. Excluding it here keeps the CI log honest.
+      exclude: ['src/ui/main.ts', 'src/ui/handlers.ts', 'src/**/*.html'],
+      /**
+       * Set just below what the suite actually achieves today
+       * (94.2 lines / 93.6 statements / 92.0 functions / 89.2 branches), so
+       * coverage cannot silently regress while leaving a little room for an
+       * honest refactor. These are a ratchet, not a target: raise them when the
+       * real numbers rise, and never lower them to make a run pass.
+       */
       thresholds: {
-        lines: 85,
-        functions: 85,
+        lines: 90,
+        statements: 90,
+        functions: 88,
         branches: 85,
-        statements: 85,
       },
     },
   },

@@ -17,32 +17,48 @@ jobs:
     name: lint, build and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to commit SHAs, not floating tags. A tag is mutable:
+      # whoever controls the action repository can repoint v4 at new code, which
+      # would then run with this workflow's token. Dependabot proposes SHA bumps
+      # as pull requests, so upgrades stay deliberate and CI-verified.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
+          # The floor declared in package.json engines, so CI tests the oldest
+          # Node the project claims to support rather than the newest available.
           node-version: '22.13'
           cache: npm
 
       - run: npm ci
 
+      # Meaningful because the extension ships zero runtime dependencies: this
+      # is zero today and would only ever fail if a real dependency appeared.
+      # A full `npm audit` is deliberately not gated — see the release commit.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=low
+
       - name: Lint
         run: npm run lint
+
+      - name: Check icons are current
+        run: npm run icons:check
 
       - name: Build
         run: npm run build
 
+      # Coverage thresholds live in vitest.config.ts and fail the run on their
+      # own, so coverage cannot silently regress.
       - name: Test with coverage
         run: npm run test:coverage
 
-      # The build verifies that every path manifest.json references exists, so a
-      # broken extension fails here rather than at "Load unpacked".
+      # Uses the project's own packaging script rather than the `zip` binary:
+      # same artefact the release workflow attaches, reproducible, and it fails
+      # loudly if dist/ is missing a manifest-referenced file.
       - name: Package the unpacked extension
-        run: |
-          cd dist
-          zip -r ../sf-releaselens.zip . -x '*.map' '*.d.ts'
+        run: npm run package
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sf-releaselens-unpacked
           path: sf-releaselens.zip
