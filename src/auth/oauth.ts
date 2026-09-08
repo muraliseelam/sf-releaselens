@@ -23,7 +23,7 @@
 import { OrgAuthExpiredError, OrgNotConnectedError, ReleaseLensError } from '../core/errors.js';
 import type { StorageArea } from '../data/storage.js';
 import { createPkcePair, createState, type CryptoLike } from './pkce.js';
-import { redact } from './redact.js';
+import { redact } from '../core/redact.js';
 
 /** Session-storage key holding the refresh token and org coordinates. */
 export const SESSION_KEY = 'sf-releaselens.org-session.v1';

@@ -172,6 +172,12 @@ The OAuth scopes requested are `api` and `refresh_token`, and nothing else.
 | Refresh token | `chrome.storage.session` only — memory-backed, never written to disk. | No |
 | Consumer Key | `chrome.storage.local`. A public identifier, not a secret. | Yes |
 
+The **org data cache is written to disk** in `chrome.storage.local`, unencrypted,
+like any extension storage. That is release names, deploy ids, component names
+and coverage figures — org metadata, not record data, and never a credential. If
+that is more than your policy allows on a laptop, use **Disconnect**, which
+clears the token, or **Start empty**, which clears the cache.
+
 There is no client secret: the extension is a PKCE public client and will not
 accept one. Every auth error message passes through a three-layer redactor before
 it reaches an `Error`, and a test asserts that no token value can appear in a

@@ -18,7 +18,7 @@ import {
   type IdentityApi,
   type OrgSessionDeps,
 } from '../../src/auth/oauth.js';
-import { containsSecret } from '../../src/auth/redact.js';
+import { containsSecret } from '../../src/core/redact.js';
 import { createMemoryStorageArea, type StorageArea } from '../../src/data/storage.js';
 
 const LOGIN_URL = 'https://login.salesforce.com';

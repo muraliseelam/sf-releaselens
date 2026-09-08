@@ -8,6 +8,7 @@
  */
 
 import { createOrgSession } from '../auth/oauth.js';
+import { redact } from '../core/redact.js';
 import { systemClock, systemIdFactory } from '../core/clock.js';
 import { createFetchOrgConnection } from '../data/fetchConnection.js';
 import { createLocalDataSource } from '../data/local.js';
@@ -72,10 +73,19 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
   router.handle(message).then(sendResponse, (cause: unknown) => {
     // `handle` is written not to reject; this is belt and braces so a bug there
     // becomes a visible error in the panel rather than a silent dead channel.
-    console.error('[sf-releaselens] router rejected unexpectedly', cause);
+    // Redacted, and only the message: logging the raw cause would print a
+    // whole error chain to a console anyone can open.
+    console.error(
+      '[sf-releaselens] router rejected unexpectedly:',
+      redact(cause instanceof Error ? cause.message : String(cause)),
+    );
     sendResponse({
       ok: false,
-      error: { code: 'UNEXPECTED', name: 'Error', message: String(cause) },
+      error: {
+        code: 'UNEXPECTED',
+        name: 'Error',
+        message: redact(cause instanceof Error ? cause.message : String(cause)),
+      },
     });
   });
   // Keeps the message channel open for the async response above.

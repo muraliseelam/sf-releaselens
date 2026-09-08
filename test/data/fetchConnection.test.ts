@@ -276,6 +276,55 @@ describe('queryMore', () => {
   });
 });
 
+describe('the org cannot leak a token through an error', () => {
+  // The org controls these strings and they reach the panel. `oauth.ts` always
+  // redacted its equivalents; this transport did not, which was a real gap
+  // found in self-review rather than by a failing test.
+  const TOKEN = '00D5f000000ABCDE!AQEAQNaGmY_fakeAccessTokenValue_0123456789';
+
+  it('redacts a token echoed in a Salesforce error message', async () => {
+    // A 400 rather than a 401: a 401 goes down the refresh path, and this is
+    // about the request-failed path.
+    const failing = vi.fn<typeof fetch>(() =>
+      Promise.resolve(jsonResponse(salesforceError('INVALID_FIELD', `bad token ${TOKEN}`), 400)),
+    );
+
+    try {
+      await build(failing).get('/x');
+      expect.unreachable('should have thrown');
+    } catch (cause) {
+      expect((cause as Error).message).not.toContain(TOKEN);
+      expect((cause as Error).message).toContain('INVALID_FIELD');
+    }
+  });
+
+  it('redacts a token in a non-JSON body it quotes back', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(`token=${TOKEN}`, { status: 200 })),
+    );
+
+    try {
+      await build(fetchImpl).get('/x');
+      expect.unreachable('should have thrown');
+    } catch (cause) {
+      expect((cause as Error).message).not.toContain(TOKEN);
+    }
+  });
+
+  it('redacts a token echoed in a network failure', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.reject(new Error(`connect failed with Bearer ${TOKEN}`)),
+    );
+
+    try {
+      await build(fetchImpl).get('/x');
+      expect.unreachable('should have thrown');
+    } catch (cause) {
+      expect((cause as Error).message).not.toContain(TOKEN);
+    }
+  });
+});
+
 describe('collectAllPages', () => {
   it('walks every page and concatenates the records', async () => {
     const connection = build(

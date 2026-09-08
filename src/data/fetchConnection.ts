@@ -17,6 +17,7 @@ import {
   OrgResponseInvalidError,
   OrgUnreachableError,
 } from '../core/errors.js';
+import { redact } from '../core/redact.js';
 import type { OrgConnection, QueryPage } from './connection.js';
 import { asArray, asRecord, optionalNumber, optionalString } from './connection.js';
 
@@ -209,7 +210,9 @@ async function readJson(response: Response, path: string): Promise<unknown> {
       path,
       looksLikeHtml
         ? 'the org returned HTML rather than JSON, which usually means the request was redirected to a login page'
-        : `the org returned a body that is not JSON (starts with "${text.slice(0, 40)}")`,
+        : // Redacted: this is an arbitrary body we are quoting back, and a
+          // token could be anywhere in it.
+          `the org returned a body that is not JSON (starts with "${redact(text.slice(0, 40))}")`,
     );
   }
 }
@@ -231,7 +234,9 @@ async function toRequestFailure(response: Response): Promise<OrgRequestFailedErr
     const first: unknown = Array.isArray(body) ? (body as unknown[])[0] : body;
     const record = typeof first === 'object' && first !== null ? (first as Record<string, unknown>) : {};
     errorCode = optionalString(record['errorCode']) ?? '';
-    detail = optionalString(record['message']) ?? detail;
+    // The org controls this string and it reaches the panel. `oauth.ts` has
+    // always redacted its equivalent; this path did not, which was a gap.
+    detail = redact(optionalString(record['message']) ?? detail);
   } catch (cause) {
     // A non-JSON error body is normal for 5xx and gateway pages. The status is
     // the useful part; keep it rather than replacing it with a parse error.
@@ -245,6 +250,6 @@ function describeNetworkFailure(cause: unknown, timeoutMs: number): string {
   if (cause instanceof Error && cause.name === 'AbortError') {
     return `the request timed out after ${timeoutMs / 1000}s`;
   }
-  if (cause instanceof Error) return cause.message;
-  return String(cause);
+  if (cause instanceof Error) return redact(cause.message);
+  return redact(String(cause));
 }

@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { containsSecret, redact, REDACTED } from '../../src/auth/redact.js';
+import { containsSecret, redact, REDACTED } from '../../src/core/redact.js';
 
 const ACCESS_TOKEN = '00D5f000000ABCDE!AQEAQNaGmY_fakeAccessTokenValue_0123456789';
 const REFRESH_TOKEN = '5Aep861fakeRefreshTokenValue_abcdefghijklmnopqrstuvwxyz';
