@@ -1,3 +1,13 @@
+## [0.5.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.4.1...v0.5.0) (2026-09-08)
+
+### Features
+
+* **diagnostics:** a bug report that cannot leak an org, and the runbook to use it ([1a99be4](https://github.com/muraliseelam/sf-releaselens/commit/1a99be465092fd0a9feb8c1b1268e5ccd1ecd3d7))
+
+### Build and CI
+
+* budget the packaged size, and measure startup in a real browser ([251cf81](https://github.com/muraliseelam/sf-releaselens/commit/251cf81c183db6ee1b8a912c6cec13319e79c051))
+
 ## [0.4.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.4.0...v0.4.1) (2026-09-08)
 
 ### Performance

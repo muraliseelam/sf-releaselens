@@ -1,6 +1,6 @@
 {
   "name": "sf-releaselens",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Manifest V3 side panel that joins Salesforce release status, deployment metadata and promotion approvals into one surface.",
   "license": "MIT",
   "private": false,
