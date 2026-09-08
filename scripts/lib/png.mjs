@@ -95,6 +95,7 @@ export function decodePng(buffer) {
   let offset = 8;
   let width = 0;
   let height = 0;
+  let colourType = 6;
   const idat = [];
 
   while (offset < buffer.length) {
@@ -105,8 +106,15 @@ export function decodePng(buffer) {
     if (type === 'IHDR') {
       width = data.readUInt32BE(0);
       height = data.readUInt32BE(4);
-      if (data[8] !== 8 || data[9] !== 6 || data[12] !== 0) {
-        throw new Error('Only 8-bit RGBA non-interlaced PNGs are supported');
+      colourType = data[9];
+      if (data[8] !== 8 || data[12] !== 0) {
+        throw new Error('Only 8-bit, non-interlaced PNGs are supported');
+      }
+      // 6 is RGBA, which is what this file writes. 2 is RGB, which is what
+      // Chromium's screenshot pipeline writes for an opaque page — and those
+      // are the images `compose-store-shots.mjs` reads.
+      if (colourType !== 2 && colourType !== 6) {
+        throw new Error(`Unsupported PNG colour type ${colourType}; expected 2 (RGB) or 6 (RGBA)`);
       }
     } else if (type === 'IDAT') {
       idat.push(data);
@@ -117,18 +125,77 @@ export function decodePng(buffer) {
   }
 
   const raw = inflateSync(Buffer.concat(idat));
-  const stride = width * 4;
-  const rgba = new Uint8ClampedArray(width * height * 4);
+  const channels = colourType === 6 ? 4 : 3;
+  const stride = width * channels;
+  // Unfiltered in the source layout, then widened to RGBA below. Filters are
+  // defined over the encoded bytes, so this cannot be done in one pass.
+  const flat = new Uint8ClampedArray(width * height * channels);
 
+  /*
+   * All five scanline filters, not just the one this file writes.
+   *
+   * `encodePng` emits filter 0 because a deterministic byte stream is worth
+   * more here than a smaller file. Reading is a different job: this decoder is
+   * pointed at PNGs from Chromium's screenshot pipeline, which picks a filter
+   * per row, so refusing anything but 0 would refuse almost every real PNG.
+   * Filters are defined in RFC 2083 §6; `left`, `up` and `upLeft` are the
+   * already-reconstructed bytes, treated as zero off the edge of the image.
+   */
   for (let y = 0; y < height; y += 1) {
     const filter = raw[y * (stride + 1)];
-    if (filter !== 0) {
-      throw new Error(`Unsupported scanline filter ${filter}; this decoder reads only filter 0`);
-    }
+    const rowStart = y * (stride + 1) + 1;
     for (let x = 0; x < stride; x += 1) {
-      rgba[y * stride + x] = raw[y * (stride + 1) + 1 + x];
+      const value = raw[rowStart + x];
+      const left = x >= channels ? flat[y * stride + x - channels] : 0;
+      const up = y > 0 ? flat[(y - 1) * stride + x] : 0;
+      const upLeft = y > 0 && x >= channels ? flat[(y - 1) * stride + x - channels] : 0;
+
+      let reconstructed;
+      switch (filter) {
+        case 0:
+          reconstructed = value;
+          break;
+        case 1:
+          reconstructed = value + left;
+          break;
+        case 2:
+          reconstructed = value + up;
+          break;
+        case 3:
+          reconstructed = value + ((left + up) >> 1);
+          break;
+        case 4:
+          reconstructed = value + paeth(left, up, upLeft);
+          break;
+        default:
+          throw new Error(`Unknown PNG scanline filter ${filter} on row ${y}`);
+      }
+      // Reconstruction is modulo 256, which is what the byte view gives us.
+      flat[y * stride + x] = reconstructed & 0xff;
     }
   }
 
+  if (channels === 4) return { width, height, rgba: flat };
+
+  // Widen RGB to RGBA. Everything downstream works in one layout, and an image
+  // with no alpha channel is fully opaque by definition.
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let pixel = 0; pixel < width * height; pixel += 1) {
+    rgba[pixel * 4] = flat[pixel * 3];
+    rgba[pixel * 4 + 1] = flat[pixel * 3 + 1];
+    rgba[pixel * 4 + 2] = flat[pixel * 3 + 2];
+    rgba[pixel * 4 + 3] = 255;
+  }
   return { width, height, rgba };
+}
+
+/** The Paeth predictor from RFC 2083 §6.6: whichever neighbour is closest. */
+function paeth(left, up, upLeft) {
+  const estimate = left + up - upLeft;
+  const dLeft = Math.abs(estimate - left);
+  const dUp = Math.abs(estimate - up);
+  const dUpLeft = Math.abs(estimate - upLeft);
+  if (dLeft <= dUp && dLeft <= dUpLeft) return left;
+  if (dUp <= dUpLeft) return up;
+  return upLeft;
 }

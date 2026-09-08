@@ -149,9 +149,9 @@ rather than the panel alone on a white field.
 | --- | --- | --- | --- |
 | 1 | Release dashboard | The `5 releases tracked · 2 need attention` headline, the status chips including the zero ones, and the blocked release sorted first with its red edge. | The first screenshot is the one that decides whether anyone reads the second. |
 | 2 | Metadata inspector, filtered | The search box with a term typed, the type facet chips, and the `21 of 57 components` caption. | Shows the tool is about narrowing, not scrolling. |
-| 3 | Component detail | A component with coverage, a warning, and the "dependency data is not available" note. | Demonstrates the honesty of the data model, which is the differentiator. |
+| 3 | Component detail, imported | A component from an imported deploy report, showing the amber *Dependency data is not available* notice in both directions. | Demonstrates the honesty of the data model, which is the differentiator. Coverage and the unavailable notice cannot appear together — coverage comes from the demo dataset, the notice from an import — so this shot carries the notice and shot 2 carries the rest. |
 | 4 | Approvals | The three queues, and a decision just recorded showing the release status change in place. | Shows the one interactive workflow. |
-| 5 | Org connection | The org strip connected, with the last-refreshed time and the Refresh button. | Proves the org integration is real without needing a live org in shot. |
+| 5 | Org connection | The connect form: login URL, Consumer Key, and the note that no client secret is accepted. | Shows that the org integration uses a Connected App the reviewer creates themselves. A *connected* strip would have to be staged, since there is no live org; if you have one, capture that state by hand and replace this plate. |
 
 **Before recording**
 
@@ -162,6 +162,11 @@ rather than the panel alone on a white field.
 - No real org name, username, instance URL or deploy id may appear in any shot.
   Demo data is safe by construction; a connected-org shot is not — blur or use a
   scratch org with a fictional name.
+
+**Generating them:** `npm run assets` drives the real extension in Chromium and
+writes these five plates at 1280×800 into `build-assets/store/`, plus a video of
+the walkthrough. See [`ASSETS.md`](ASSETS.md). Nothing is hand-composed, so a
+plate cannot show a state the product does not reach.
 
 **Small promo tile** (440×280, optional but strongly recommended): the icon on
 the `#1b2430` plate colour with the wordmark `sf-releaselens` to its right.

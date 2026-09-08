@@ -83,31 +83,26 @@ from its tag and compare it byte-for-byte against the published artefact.
 
 ## What it looks like
 
-<!-- DEMO GIF: not recorded yet. Replace this block with:
-     ![sf-releaselens walkthrough](docs/media/demo.gif)
-     and delete the note below. -->
+<!-- DEMO GIF: replace this whole block with the line below once the GIF exists.
+     ![sf-releaselens walkthrough](docs/media/demo.gif) -->
 
-**Not recorded yet.** A screen recording is the single highest-value thing missing from
-this README, and it needs a human with a browser. When recording:
+Run it yourself, or generate the assets:
 
-- **Roughly 20 seconds, no audio, looping.** Longer than that and nobody watches to the
-  end; a loop that restarts cleanly reads as intentional.
-- **1280×800, light theme**, side panel open beside a Salesforce tab so the panel's width
-  is obvious. Not the panel alone on a white field.
-- **Reset to the demo dataset first** (**Start empty**, reload, reinstall the sample set)
-  so the numbers match the ones quoted in the quickstart above.
-- **Follow the quickstart, in order.** Dashboard headline → click the red **Blocked** chip
-  → click through to the inspector → type `payment` → open `PaymentGatewayAdapter` and let
-  the coverage, the warning and the dependency panel land → **Approvals** → approve one
-  with a comment and hold on the release-status change it caused.
-- **Pause about a second on each state change.** The instinct is to move at the speed you
-  read your own UI; that is roughly twice as fast as a stranger can follow.
-- **No real org name, username, instance URL or deploy id in frame** at any point. The demo
-  dataset is fictional by construction; a connected-org shot is not.
-- Save as `docs/media/demo.gif`, under 5 MB so GitHub renders it inline rather than
-  linking it.
+```bash
+npm run assets
+```
 
-Still frames for the store listing are specified separately, in
+That drives the real extension in a real Chromium for about 40 seconds and writes
+`build-assets/video/walkthrough.webm` plus eight screenshots — dashboard, filtered
+inspector, component detail, an approval being recorded, and the *dependency data is not
+available* state. Nothing is hand-composed, so nothing here can show a state the product
+does not actually reach.
+
+**The inline GIF is the one asset still missing**, because converting the video needs
+ffmpeg and a human to look at the result.
+[`docs/ASSETS.md`](docs/ASSETS.md) has the exact two commands and the size budget.
+
+Still frames for the store listing come out of the same run:
 [`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) §3.
 
 ## Architecture

@@ -43,4 +43,20 @@ export default defineConfig({
 
   // Fail a CI run that contains a stray `test.only`.
   forbidOnly: process.env['CI'] !== undefined,
+
+  projects: [
+    {
+      name: 'e2e',
+      // The capture run drives the same product but produces artefacts rather
+      // than assertions, and takes a minute of deliberate pauses to do it. It
+      // has no place in the suite CI gates on.
+      testIgnore: '**/capture.spec.ts',
+    },
+    {
+      name: 'capture',
+      testMatch: '**/capture.spec.ts',
+      // Long, because it is mostly waiting on purpose.
+      timeout: 180_000,
+    },
+  ],
 });
