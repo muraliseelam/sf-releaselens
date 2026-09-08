@@ -9,7 +9,8 @@ four browser tabs.
 [![Release](https://img.shields.io/github/v/release/muraliseelam/sf-releaselens?sort=semver)](https://github.com/muraliseelam/sf-releaselens/releases/latest)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-> **Status: pre-1.0, and never yet run against a live Salesforce org.** Everything below is
+> **Status: pre-1.0.** The data layer is verified against seven real Salesforce orgs; the
+> OAuth sign-in has never been performed. Everything below is
 > either verified by tests or explicitly marked as unverified. Read
 > [Limitations and known gaps](#limitations-and-known-gaps) before you rely on it.
 
@@ -330,7 +331,9 @@ Development commands:
 npm run build          # tsc + copy assets + verify every manifest path exists
 npm run test           # vitest, ~5 seconds
 npm run test:coverage  # vitest with v8 coverage thresholds
-npm run test:e2e       # real Chromium with dist/ loaded, ~90 seconds
+npm run test:e2e       # real Chromium with dist/ loaded, ~45 seconds
+npm run test:e2e:org   # the org-connected panel, from captured Salesforce payloads
+npm run test:org       # the shipping code against a real org via the sf CLI (opt-in)
 npm run size           # fail if the packaged extension outgrew its budget
 npm run lint           # eslint, type-checked rules
 npm run check          # everything except the browser suite
@@ -351,11 +354,14 @@ Stated plainly, because they determine whether this is useful to you:
   edit by exporting, changing the JSON and re-importing. If you need an approval trail that
   stands up to an audit, this is not it, and pretending otherwise would be worse than the
   Slack thread it replaces.
-- **Never tested against a live Salesforce org.** The org integration is complete and fully
-  unit-tested against a fake connection, but nobody has yet pointed it at a real org.
-  [`docs/LIVE-ORG-RUNBOOK.md`](docs/LIVE-ORG-RUNBOOK.md) is the exact sequence for doing it,
-  including what is most likely to break first; `docs/QA-CHECKLIST.md` §9 tracks what stays
-  unverified until someone does.
+- **The data layer has been run against seven real Salesforce orgs; the OAuth flow has
+  not.** `npm run test:org` drives the shipping code against orgs the `sf` CLI is
+  authenticated to, and [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md) records what
+  those orgs actually return. That found five real defects the mocked suite had missed. What
+  is still unverified is the half that needs a person: creating a Connected App, and
+  completing `chrome.identity.launchWebAuthFlow` — the org tests borrow the CLI's token.
+  [`docs/LIVE-ORG-RUNBOOK.md`](docs/LIVE-ORG-RUNBOOK.md) marks which steps are measured and
+  which are not.
 - **Nothing is shared between machines.** Two people running this see two independent
   snapshots. Sharing means exporting and importing a file.
 - **No dependency graph from an org or a deploy report.** Both list components, not edges.

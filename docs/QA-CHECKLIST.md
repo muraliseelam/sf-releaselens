@@ -159,7 +159,14 @@ reader.
 | 7a.9 | Names, not positions | Browse by button with a screen reader. Every "Approve" says what it approves; every chip says what its number counts. | ✅ auto (names), ❓ (as read aloud) |
 | 7a.10 | Zoom to 200% | Nothing is clipped, and the panel does not scroll horizontally. | ❓ |
 
-## 8. Org connection (all ❓ — never run against a real org)
+## 8. Org connection
+
+**Much of this is now automated.** `npm run test:org` drives the shipping code
+against real orgs through the `sf` CLI's authentication — see
+[`ORG-COMPATIBILITY.md`](ORG-COMPATIBILITY.md) — and `npm run test:e2e:org`
+replays payloads captured from those orgs through the real UI in Chrome. What
+remains ❓ is the half that needs a human: the Connected App, the OAuth consent,
+and the permission prompt.
 
 Prerequisite: a Connected App per [`CONNECTED-APP.md`](CONNECTED-APP.md). Use a
 **sandbox or scratch org**, never production, for first verification.

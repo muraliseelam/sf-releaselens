@@ -98,6 +98,36 @@ Two things to know before adding to it:
 not. It is part of `npm run check`, and it has already caught a listener that
 silently did nothing.
 
+## The org suites
+
+Two more, both about real Salesforce data.
+
+`npm run test:e2e:org` replays payloads captured from real orgs through the real
+extension in Chrome. It needs no org access and no network — the captures are in
+`test/fixtures/org/` — and CI runs it on every push.
+
+`npm run test:org` drives the shipping code against a live org, using the `sf`
+CLI's own authentication. It is **opt-in and read-only**: every call goes through
+`OrgConnection`, which has no write member. With no CLI or no authenticated org
+it skips with a message saying which, so a green build never depends on anybody
+having an org.
+
+```bash
+npm run test:org                          # every connected org
+npm run test:org -- --target-org nsorg    # one
+```
+
+**Never commit a captured payload by hand.** `scripts/capture-org-fixtures.mjs`
+scrubs by allow-list — every string is replaced unless its field is Salesforce's
+own vocabulary — and `test/fixtures/org/no-secrets.test.ts` re-checks the
+committed result from the other direction, including that it is a fixed point of
+the product's own redactor. If that test fails, re-capture; do not weaken it.
+
+Ids are scrubbed **stably per original value**, because the captures
+cross-reference each other: a deploy row's `Id` is the key used to fetch its
+details. Minting a fresh id per occurrence breaks that join silently, and the
+fixture then reproduces a bug that is not real.
+
 ## Commits and releases
 
 [Conventional Commits](https://www.conventionalcommits.org/), semantic-release compatible:
