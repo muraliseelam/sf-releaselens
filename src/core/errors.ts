@@ -175,3 +175,100 @@ function describeCause(cause: unknown): string {
   }
   return `a value of type ${typeof cause}`;
 }
+
+// --- Org connection ----------------------------------------------------------
+//
+// These exist because connecting an org introduces failures the local-only
+// build could not have: a network, a token with a lifetime, a permission the
+// user can revoke, and a daily call budget. Each keeps the project's posture —
+// refuse clearly and name the fix, rather than degrade silently.
+
+/** No org is connected. Not an error state in the UI; local mode is normal. */
+export class OrgNotConnectedError extends ReleaseLensError {
+  override readonly code = 'ORG_NOT_CONNECTED';
+
+  constructor(operation: string) {
+    super(
+      `Cannot ${operation}: no Salesforce org is connected. The extension works locally without one.`,
+    );
+  }
+}
+
+/**
+ * The refresh token is gone or rejected. Deliberately terminal: we refresh once
+ * and then stop, because a silent re-prompt loop is how an extension ends up
+ * asking for credentials over and over with no explanation.
+ */
+export class OrgAuthExpiredError extends ReleaseLensError {
+  override readonly code = 'ORG_AUTH_EXPIRED';
+
+  constructor(detail: string) {
+    super(
+      `The Salesforce session has expired and could not be renewed: ${detail}`,
+    );
+  }
+}
+
+/** The user revoked the host permission for the org's origin. */
+export class HostPermissionRevokedError extends ReleaseLensError {
+  override readonly code = 'HOST_PERMISSION_REVOKED';
+
+  constructor(readonly origin: string) {
+    super(
+      `Chrome is no longer granting this extension access to ${origin}, so the org cannot be reached.`,
+    );
+  }
+}
+
+/**
+ * The org's daily API budget is nearly spent. We refuse rather than "try
+ * anyway": the call we are about to make could be the one that breaks a
+ * production integration.
+ */
+export class ApiLimitExhaustedError extends ReleaseLensError {
+  override readonly code = 'API_LIMIT_EXHAUSTED';
+
+  constructor(
+    readonly used: number,
+    readonly max: number,
+  ) {
+    super(
+      `Refusing to refresh: this org has used ${used.toLocaleString()} of ${max.toLocaleString()} daily API calls ` +
+        `(${Math.round((used / max) * 100)}%). Refreshing now risks exhausting the budget other integrations depend on.`,
+    );
+  }
+}
+
+/** The org was unreachable. The cached snapshot stays on screen. */
+export class OrgUnreachableError extends ReleaseLensError {
+  override readonly code = 'ORG_UNREACHABLE';
+
+  constructor(detail: string) {
+    super(`Could not reach the Salesforce org: ${detail}`);
+  }
+}
+
+/** The org answered, but not with anything we can read. */
+export class OrgResponseInvalidError extends ReleaseLensError {
+  override readonly code = 'ORG_RESPONSE_INVALID';
+
+  constructor(
+    readonly path: string,
+    readonly detail: string,
+  ) {
+    super(`The org's response was not valid at "${path}": ${detail}`);
+  }
+}
+
+/** The org rejected the request. Carries the status and Salesforce error code. */
+export class OrgRequestFailedError extends ReleaseLensError {
+  override readonly code = 'ORG_REQUEST_FAILED';
+
+  constructor(
+    readonly status: number,
+    readonly errorCode: string,
+    detail: string,
+  ) {
+    super(`The org rejected a request (HTTP ${status}${errorCode ? `, ${errorCode}` : ''}): ${detail}`);
+  }
+}
