@@ -162,28 +162,35 @@ Full design rationale, data model and failure-mode table: [`docs/DESIGN.md`](doc
 
 ## Measured numbers
 
-From `node bench/bench.mjs` on Node v24.19.0, against **5,000 components across 40
-releases** — larger than a typical release payload. Re-run the script rather than trusting
-these; they are copied from one run on one machine.
+Full table, at 100 / 1,000 / 10,000 components: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+Re-run it with `npm run bench` rather than trusting these; they are one run on one machine,
+and they are **synthetic** — no live org has ever been measured.
+
+At **1,000 components across 20 releases**, which is a large quarterly release:
 
 | Operation | p50 | p95 |
 | --- | ---: | ---: |
-| `searchMetadata`, no filters | 0.44 ms | 0.95 ms |
-| `searchMetadata`, text + type + operation facets | 5.74 ms | 9.44 ms |
-| `resolveDependencies` for one component | 0.51 ms | 1.01 ms |
-| `summariseByStatus` over 40 releases | <0.01 ms | 0.01 ms |
-| `parseSnapshot` over the whole payload | 2.78 ms | 4.63 ms |
+| Parse the stored snapshot | 0.52 ms | 0.96 ms |
+| Render the dashboard | 2.36 ms | 4.19 ms |
+| Render the inspector | 10.3 ms | 13.6 ms |
+| Search, text + type + operation facets | 0.68 ms | 1.18 ms |
+| Merge a refresh into the cache | 0.03 ms | 0.06 ms |
 
-The filtered search is the slowest path because facet counts are computed three times —
+The filtered search is the slowest core path because facet counts are computed three times —
 once for the results, once per facet group with that group's own filter lifted — which is
-what makes a facet chip's count trustworthy. At 5,000 components it stays inside a 16 ms
-frame; the inspector also caps rendering at 200 rows and says so in the caption.
+what makes a facet chip's count trustworthy. The inspector caps rendering at 200 rows and
+says so in the caption, which is why its render cost barely moves between 1,000 and 10,000.
 
-Test coverage, from `npm run test:coverage`: **94.5% lines, 89.4% branches** across
-`core/`, `data/`, the auth and message layers and the whole UI layer — **565 tests** in 28
-files. Every exported function has direct tests; `main.ts`, `handlers.ts` and
-`service-worker.ts` are excluded because they are `chrome.*` wiring with no logic of their
-own. CI fails below 90% statements or 85% branches, so those numbers cannot quietly slide.
+Benchmarking found and fixed one real scaling bug: the dashboard computed each release's
+component count by filtering the whole item list, once per row, which is quadratic in
+(releases × components). See the "What changed as a result" section of the benchmarks.
+
+Test coverage, from `npm run test:coverage`: **94.8% lines, 91.3% branches** across
+`core/`, `data/`, the auth and message layers and the whole UI layer — **584 unit tests** in
+30 files, plus **40 end-to-end checks** in a real Chromium. Every exported function has
+direct tests; `main.ts`, `handlers.ts` and `service-worker.ts` are excluded because they are
+`chrome.*` wiring with no logic of their own. CI fails below 90% statements or 85% branches,
+so those numbers cannot quietly slide.
 
 ## Security and what this extension can see
 

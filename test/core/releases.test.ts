@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  countItemsByRelease,
   countPendingApprovalsByRelease,
   deriveReleaseStatus,
   filterReleasesByStatus,
@@ -11,7 +12,7 @@ import {
   summariseByStatus,
 } from '../../src/core/releases.js';
 import { RELEASE_STATUSES } from '../../src/core/types.js';
-import { makeApproval, makeEnvironment, makeRelease } from '../fixtures/snapshot.js';
+import { makeApproval, makeEnvironment, makeItem, makeRelease } from '../fixtures/snapshot.js';
 
 describe('summariseByStatus', () => {
   it('reports every status, including the ones at zero', () => {
@@ -150,6 +151,26 @@ describe('filterReleasesByStatus', () => {
 
   it('returns only the matching status', () => {
     expect(filterReleasesByStatus(releases, 'blocked').map((r) => r.id)).toEqual(['a']);
+  });
+});
+
+describe('countItemsByRelease', () => {
+  it('counts each release in one pass, including the ones with none', () => {
+    const counts = countItemsByRelease([
+      makeItem({ id: 'a', releaseId: 'rel-1' }),
+      makeItem({ id: 'b', releaseId: 'rel-1' }),
+      makeItem({ id: 'c', releaseId: 'rel-2' }),
+    ]);
+
+    expect(counts.get('rel-1')).toBe(2);
+    expect(counts.get('rel-2')).toBe(1);
+    // Absent rather than zero: the caller supplies the default, and a release
+    // with no components is not the same fact as a release nobody counted.
+    expect(counts.get('rel-3')).toBeUndefined();
+  });
+
+  it('returns an empty map for an empty snapshot', () => {
+    expect(countItemsByRelease([]).size).toBe(0);
   });
 });
 

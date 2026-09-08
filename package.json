@@ -30,7 +30,7 @@
     "test:e2e": "playwright test --project=e2e",
     "test:e2e:ui": "playwright test --ui",
     "assets": "npm run build && playwright test --project=capture && node scripts/compose-store-shots.mjs",
-    "bench": "node bench/bench.mjs",
+    "bench": "node --expose-gc bench/bench.mjs",
     "check": "npm run lint && npm run typecheck:e2e && npm run icons:check && npm run build && npm run test"
   },
   "devDependencies": {

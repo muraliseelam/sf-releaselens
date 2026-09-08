@@ -6,6 +6,7 @@
  */
 
 import {
+  countItemsByRelease,
   countPendingApprovalsByRelease,
   filterReleasesByStatus,
   isAttention,
@@ -26,6 +27,8 @@ export function renderDashboard(
 ): HTMLElement {
   const summary = summariseByStatus(snapshot.releases);
   const pendingByRelease = countPendingApprovalsByRelease(snapshot.approvals);
+  // Counted once for the whole list, not per row: see countItemsByRelease.
+  const componentsByRelease = countItemsByRelease(snapshot.items);
   const filter = state.dashboard.statusFilter;
   const visible = sortReleasesForDashboard(filterReleasesByStatus(snapshot.releases, filter));
 
@@ -67,7 +70,14 @@ export function renderDashboard(
           'ul',
           { className: 'list', attrs: { 'aria-label': 'Releases' } },
           visible.map((release) =>
-            renderReleaseRow(release, snapshot, pendingByRelease.get(release.id) ?? 0, handlers, now),
+            renderReleaseRow(
+              release,
+              snapshot,
+              componentsByRelease.get(release.id) ?? 0,
+              pendingByRelease.get(release.id) ?? 0,
+              handlers,
+              now,
+            ),
           ),
         ),
   ]);
@@ -141,12 +151,12 @@ function statusChip(
 function renderReleaseRow(
   release: Release,
   snapshot: Snapshot,
+  componentCount: number,
   pendingApprovals: number,
   handlers: Handlers,
   now: number,
 ): HTMLElement {
   const environment = snapshot.environments.find((it) => it.id === release.targetEnvironmentId);
-  const componentCount = snapshot.items.filter((item) => item.releaseId === release.id).length;
 
   return el('li', {}, [
     el(
