@@ -1,0 +1,10 @@
+# Normalise to LF in the repository, whatever the contributor's platform does
+# locally. CI runs on Linux; a file committed with CRLF is a portability bug
+# waiting for a tool that cares.
+* text=auto eol=lf
+
+# Generated PNGs are binary: never touch their bytes, or the checked-in icons
+# stop matching what the generator produces and the build's verification fails.
+*.png binary
+*.zip binary
+*.ico binary
