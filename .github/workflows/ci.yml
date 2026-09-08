@@ -63,3 +63,39 @@ jobs:
           name: sf-releaselens-unpacked
           path: sf-releaselens.zip
           retention-days: 14
+
+  # Separate job, not another step: this launches a real Chromium and takes
+  # minutes rather than seconds. Keeping it apart means a lint or type error
+  # still fails in under a minute, and a browser failure is legible as one.
+  e2e:
+    name: browser end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.13'
+          cache: npm
+
+      - run: npm ci
+
+      # The suite drives dist/, not src/. Building here rather than downloading
+      # the other job's artefact keeps the two jobs independent.
+      - name: Build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end
+        run: npm run test:e2e
+
+      # Traces are only written for failures, so this uploads nothing on a
+      # green run and everything needed to debug a red one.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: e2e-failure-artifacts
+          path: e2e-results/
+          retention-days: 7

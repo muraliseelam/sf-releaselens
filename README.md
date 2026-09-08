@@ -309,12 +309,18 @@ Development commands:
 
 ```bash
 npm run build          # tsc + copy assets + verify every manifest path exists
-npm run test           # vitest
+npm run test           # vitest, ~5 seconds
 npm run test:coverage  # vitest with v8 coverage thresholds
+npm run test:e2e       # real Chromium with dist/ loaded, ~90 seconds
 npm run lint           # eslint, type-checked rules
-npm run check          # all of the above
+npm run check          # everything except the browser suite
 node bench/bench.mjs   # the numbers above (needs a build first)
 ```
+
+`test:e2e` is deliberately outside `check`: the unit suite runs in about five
+seconds and is what you run on every save, and a browser suite that slow gets
+skipped. CI runs it as its own job, and a release cannot be cut unless it
+passes.
 
 ## Limitations and known gaps
 
@@ -347,9 +353,11 @@ Stated plainly, because they determine whether this is useful to you:
   org is at or above 95% of its daily API budget.
 - **Coverage is only as good as the snapshot.** Unknown coverage renders as "Coverage
   unknown" and is never shown as 0%, but nothing here computes coverage.
-- **Not verified against a live Chrome install in CI.** The build verifies that every path
-  the manifest references exists, and the logic is covered by unit and integration tests,
-  but there is no automated end-to-end load of the packaged extension.
+- **Chrome's own side-panel frame is not automated.** `npm run test:e2e` loads the built
+  extension into a real Chromium and drives the panel document at the extension origin, but
+  there is no automation surface for the browser's toolbar icon or the side-panel container
+  itself. That the icon opens the panel, and that the panel is legible at the width Chrome
+  gives it, are still human checks.
 - **No demo recording.** See "What it looks like" above; the screenshots and the GIF are
   both still to be captured by a human.
 - **The inspector renders at most 200 rows** per result set. The count is shown, but the

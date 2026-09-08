@@ -18,19 +18,23 @@
   ],
   "scripts": {
     "build": "tsc --build && node scripts/build.mjs",
-    "package": "node scripts/package-extension.mjs",
     "icons": "node scripts/generate-icons.mjs",
     "icons:check": "node scripts/generate-icons.mjs --check",
+    "package": "node scripts/package-extension.mjs",
     "clean": "tsc --build --clean && node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "lint": "eslint .",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "bench": "node bench/bench.mjs",
-    "check": "npm run lint && npm run icons:check && npm run build && npm run test"
+    "check": "npm run lint && npm run typecheck:e2e && npm run icons:check && npm run build && npm run test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "^1.63.0",
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/exec": "7.1.0",
     "@semantic-release/git": "10.0.1",

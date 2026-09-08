@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    // Playwright's runner transpiles without type checking, so nothing else
+    // would ever type-check these files. `npm run check` does it here instead.
+    "types": ["chrome", "node"]
+  },
+  "include": ["e2e/**/*.ts", "playwright.config.ts"]
+}

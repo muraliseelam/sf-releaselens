@@ -5,5 +5,11 @@
     "declaration": false,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "*.ts", "scripts/**/*.mjs"]
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "e2e/**/*.ts",
+    "*.ts",
+    "scripts/**/*.mjs"
+  ]
 }

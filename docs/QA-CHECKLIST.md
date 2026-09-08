@@ -1,5 +1,21 @@
 # Manual QA checklist
 
+## What is now automated
+
+`npm run test:e2e` launches a real Chromium with the built extension from
+`dist/` loaded, and drives the panel document at the extension's own origin
+through the real service worker, real `chrome.storage` and real message passing.
+40 checks. Any uncaught exception, unhandled promise rejection or console error
+fails the run even if every assertion passed.
+
+That moves most of §1–§7 from "a human must check" to "CI checks". The rows
+below are marked accordingly. **What it still cannot do** is drive Chrome's own
+side-panel host frame: there is no automation surface for the toolbar icon or
+the panel container, so "clicking the icon opens the side panel" and "the panel
+is legible at the width Chrome gives it" remain human checks. The suite loads
+the panel document directly at `ui/sidepanel.html`, which is the same code at
+the same origin, inside a 480px viewport.
+
 ## Why this document exists
 
 Nobody has yet loaded this extension into a real Chrome, and nobody has pointed

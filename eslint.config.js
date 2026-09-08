@@ -89,6 +89,30 @@ export default [
     },
   },
   {
+    // Playwright's config and the e2e suite run in Node, and the page/worker
+    // callbacks they send into the browser use the browser's globals. Both
+    // sets are legitimate here, in a way they are not in src/.
+    files: ['playwright.config.ts', 'e2e/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...WEB_GLOBALS,
+        process: 'readonly',
+        Buffer: 'readonly',
+        createImageBitmap: 'readonly',
+      },
+    },
+    rules: {
+      // The suite reaches into `chrome.*` responses and storage payloads that
+      // are `unknown` by construction; narrowing them by assertion at the
+      // point of use is the honest shape.
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+  {
     files: ['test/**/*.ts'],
     rules: {
       // Tests deliberately construct malformed payloads to prove the validator
