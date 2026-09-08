@@ -1,3 +1,9 @@
+## [0.4.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.4.0...v0.4.1) (2026-09-08)
+
+### Performance
+
+* **dashboard:** count components once per render, not once per row ([56b72d7](https://github.com/muraliseelam/sf-releaselens/commit/56b72d7272b099bc01c78a3c875a47c5da6c7315))
+
 ## [0.4.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.3.1...v0.4.0) (2026-09-08)
 
 ### Features
