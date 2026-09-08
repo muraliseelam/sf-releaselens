@@ -1,3 +1,17 @@
+## [0.2.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.2.0...v0.2.1) (2026-09-08)
+
+### Bug fixes
+
+* **inspector:** distinguish "no dependencies" from "dependency data unavailable" ([e22c23c](https://github.com/muraliseelam/sf-releaselens/commit/e22c23c5505cd48f41a2075b76c72f8c805636f5))
+
+### Documentation
+
+* add a security policy, threat model and contribution scaffolding ([d600eeb](https://github.com/muraliseelam/sf-releaselens/commit/d600eebf230abdb05d36b52fab621dfdac5de5e6))
+
+### Build and CI
+
+* gate on coverage, pin actions to SHAs, add Dependabot ([2c2bab6](https://github.com/muraliseelam/sf-releaselens/commit/2c2bab685598ba0ed905cbc00c23e5e12fc0d30b))
+
 ## [0.2.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.1.0...v0.2.0) (2026-09-08)
 
 ### Features
