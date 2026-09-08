@@ -184,8 +184,8 @@ once for the results, once per facet group with that group's own filter lifted �
 what makes a facet chip's count trustworthy. At 5,000 components it stays inside a 16 ms
 frame; the inspector also caps rendering at 200 rows and says so in the caption.
 
-Test coverage, from `npm run test:coverage`: **94.2% lines, 89.2% branches** across
-`core/`, `data/`, the auth and message layers and the whole UI layer — **524 tests** in 27
+Test coverage, from `npm run test:coverage`: **94.5% lines, 89.4% branches** across
+`core/`, `data/`, the auth and message layers and the whole UI layer — **565 tests** in 28
 files. Every exported function has direct tests; `main.ts`, `handlers.ts` and
 `service-worker.ts` are excluded because they are `chrome.*` wiring with no logic of their
 own. CI fails below 90% statements or 85% branches, so those numbers cannot quietly slide.

@@ -37,7 +37,11 @@ const ICONS = [16, 32, 48, 128].map((size) => ({
 async function main() {
   if (!(await exists(distRoot))) {
     throw new Error(
-      `dist/ does not exist. Run "tsc --build" before this script (or use "npm run build").`,
+      // The likely cause is a deleted dist/ with a surviving tsbuildinfo: tsc
+      // then believes it has nothing to emit, and "npm run build" appears to
+      // succeed while producing nothing. Say the command that actually works.
+      `dist/ does not exist. If you just ran "npm run build", tsc considered ` +
+        `itself up to date because .tsbuildinfo outlived dist/. Run "npm run clean" first.`,
     );
   }
 
