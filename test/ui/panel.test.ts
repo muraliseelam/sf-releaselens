@@ -22,12 +22,26 @@ type SentRequest = { type: string; [key: string]: unknown };
  */
 type StubResponse = unknown;
 
+/**
+ * The panel asks for `org.info` on every start. Answering it by default keeps
+ * these tests about the surface they are actually testing; a test that cares
+ * about the org overrides it.
+ */
+const DEFAULT_RESPONSES: Record<string, StubResponse> = {
+  'org.info': { connected: false, hasHostPermission: false },
+};
+
 function stubClient(responses: Record<string, StubResponse>) {
   const sent: SentRequest[] = [];
+  // The panel asks for `org.info` on every start; answering it by default keeps
+  // these tests about the surface they are actually testing. A test that cares
+  // about the org overrides it.
   const client: Client = {
     send: ((request: SentRequest) => {
       sent.push(request);
-      const response = responses[request.type];
+      // Looked up per call, not copied up front: several tests swap a response
+      // in after `start` to simulate the world changing underneath the panel.
+      const response = responses[request.type] ?? DEFAULT_RESPONSES[request.type];
       if (typeof response === 'function') return (response as () => Promise<unknown>)();
       if (response === undefined) {
         return Promise.reject(new Error(`stub client has no response for ${request.type}`));
@@ -62,7 +76,7 @@ describe('start', () => {
 
     expect(root.querySelector('.loading')?.textContent).toContain('Loading release data…');
     expect(root.querySelector('.loading')?.getAttribute('aria-live')).toBe('polite');
-    expect(sent).toEqual([{ type: 'snapshot.load' }]);
+    expect(sent).toContainEqual({ type: 'snapshot.load' });
   });
 
   it('renders the dashboard once the snapshot arrives', async () => {
@@ -142,7 +156,7 @@ describe('start', () => {
       expect(notice.textContent).toContain('Error code: STORAGE_UNAVAILABLE');
 
       (notice.querySelector('.button--primary') as HTMLButtonElement).click();
-      expect(sent).toHaveLength(2);
+      expect(sent.filter((request) => request.type === 'snapshot.load')).toHaveLength(2);
     });
 
     it('offers rescue before reset for a snapshot it cannot parse', async () => {
@@ -207,7 +221,7 @@ describe('start', () => {
       await settle();
 
       (root.querySelector('#tab-approvals') as HTMLButtonElement).click();
-      (root.querySelector('.button--primary') as HTMLButtonElement).click();
+      (root.querySelector('[aria-label="Approvals"] .button--primary') as HTMLButtonElement).click();
       await settle();
 
       expect(sent).toContainEqual({
@@ -220,7 +234,7 @@ describe('start', () => {
         'moved from awaiting_approval to scheduled',
       );
       // The decision moved the approval out of the actionable queue.
-      expect(root.querySelector('.button--primary')).toBeNull();
+      expect(root.querySelector('[aria-label="Approvals"] .button--primary')).toBeNull();
     });
 
     it('disables the control while the decision is in flight', async () => {
@@ -232,9 +246,11 @@ describe('start', () => {
       await settle();
 
       (root.querySelector('#tab-approvals') as HTMLButtonElement).click();
-      (root.querySelector('.button--primary') as HTMLButtonElement).click();
+      (root.querySelector('[aria-label="Approvals"] .button--primary') as HTMLButtonElement).click();
 
-      const button = root.querySelector('.button--primary') as HTMLButtonElement;
+      const button = root.querySelector(
+        '[aria-label="Approvals"] .button--primary',
+      ) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       expect(button.textContent).toBe('Recording…');
 

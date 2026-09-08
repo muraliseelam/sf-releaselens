@@ -16,6 +16,11 @@ import type { Actor, ApprovalDecisionOutcome, Snapshot } from '../core/types.js'
 
 export type Request =
   | { readonly type: 'snapshot.load' }
+  | { readonly type: 'snapshot.refresh' }
+  | { readonly type: 'org.info' }
+  | { readonly type: 'org.connect'; readonly loginUrl: string; readonly clientId: string }
+  | { readonly type: 'org.disconnect' }
+  | { readonly type: 'org.grantPermission' }
   | { readonly type: 'snapshot.readRaw' }
   | { readonly type: 'snapshot.export' }
   | { readonly type: 'snapshot.import'; readonly text: string }
@@ -35,9 +40,40 @@ export interface ExportPayload {
   readonly json: string;
 }
 
+/**
+ * What the panel knows about the org connection.
+ *
+ * Re-declared here rather than imported from the auth module so the message
+ * layer cannot accidentally widen to a shape that carries a token: this type has
+ * no token field and never will.
+ */
+export interface OrgStatus {
+  readonly connected: boolean;
+  readonly instanceUrl?: string;
+  readonly loginUrl?: string;
+  readonly organizationId?: string;
+  readonly userId?: string;
+  readonly connectedAt?: string;
+  /** Whether Chrome still grants access to the org's origin. */
+  readonly hasHostPermission: boolean;
+  /** Consumer key of the Connected App, remembered for reconnecting. Not secret. */
+  readonly clientId?: string;
+}
+
+/** A snapshot plus the org status that produced it. */
+export interface SnapshotWithStatus {
+  readonly snapshot: Snapshot;
+  readonly org: OrgStatus;
+}
+
 /** Response payload for each request type. */
 export interface ResponsePayloads {
   'snapshot.load': Snapshot;
+  'snapshot.refresh': SnapshotWithStatus;
+  'org.info': OrgStatus;
+  'org.connect': SnapshotWithStatus;
+  'org.disconnect': SnapshotWithStatus;
+  'org.grantPermission': OrgStatus;
   'snapshot.readRaw': { readonly raw: unknown };
   'snapshot.export': ExportPayload;
   'snapshot.import': Snapshot;

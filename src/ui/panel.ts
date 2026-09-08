@@ -22,11 +22,13 @@ import {
   INITIAL_STATE,
   TABS,
   currentSnapshot,
+  lastRefreshedAt,
   reduce,
   type Action,
   type Tab,
   type ViewState,
 } from './state.js';
+import { renderOrgBar } from './views/orgbar.js';
 import { renderApprovals } from './views/approvals.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderInspector } from './views/inspector.js';
@@ -68,9 +70,64 @@ export function start(root: HTMLElement, client: Client): Panel {
       .catch((cause: unknown) => dispatch({ type: 'load/failed', error: toSerialisedError(cause) }));
   }
 
+  /** Loads the org status. Never blocks the first paint. */
+  function loadOrgStatus(): void {
+    client
+      .send({ type: 'org.info' })
+      .then((status) => dispatch({ type: 'org/statusLoaded', status }))
+      .catch((cause: unknown) => dispatch({ type: 'org/actionFailed', error: toSerialisedError(cause) }));
+  }
+
   const handlers: Handlers = {
     dispatch,
     reload: () => refresh(),
+
+    refreshOrg(): void {
+      dispatch({ type: 'org/actionStarted', action: 'refreshing' });
+      client
+        .send({ type: 'snapshot.refresh' })
+        .then((result) =>
+          dispatch({ type: 'org/actionSucceeded', status: result.org, snapshot: result.snapshot }),
+        )
+        // A failed refresh must NOT clear the snapshot: `org/actionFailed`
+        // deliberately leaves `load` alone so the cache stays on screen.
+        .catch((cause: unknown) =>
+          dispatch({ type: 'org/actionFailed', error: toSerialisedError(cause) }),
+        );
+    },
+
+    connectOrg(loginUrl: string, clientId: string): void {
+      dispatch({ type: 'org/actionStarted', action: 'connecting' });
+      client
+        .send({ type: 'org.connect', loginUrl, clientId })
+        .then((result) =>
+          dispatch({ type: 'org/actionSucceeded', status: result.org, snapshot: result.snapshot }),
+        )
+        .catch((cause: unknown) =>
+          dispatch({ type: 'org/actionFailed', error: toSerialisedError(cause) }),
+        );
+    },
+
+    disconnectOrg(): void {
+      dispatch({ type: 'org/actionStarted', action: 'disconnecting' });
+      client
+        .send({ type: 'org.disconnect' })
+        .then((result) =>
+          dispatch({ type: 'org/actionSucceeded', status: result.org, snapshot: result.snapshot }),
+        )
+        .catch((cause: unknown) =>
+          dispatch({ type: 'org/actionFailed', error: toSerialisedError(cause) }),
+        );
+    },
+
+    grantOrgPermission(): void {
+      client
+        .send({ type: 'org.grantPermission' })
+        .then((status) => dispatch({ type: 'org/actionSucceeded', status, snapshot: null }))
+        .catch((cause: unknown) =>
+          dispatch({ type: 'org/actionFailed', error: toSerialisedError(cause) }),
+        );
+    },
 
     decide(approvalId: string, outcome: ApprovalDecisionOutcome, comment: string | null): void {
       dispatch({ type: 'approvals/decisionStarted', approvalId });
@@ -125,6 +182,7 @@ export function start(root: HTMLElement, client: Client): Panel {
 
   render();
   refresh();
+  loadOrgStatus();
   return { handlers, onExternalChange: () => refresh({ silent: true }) };
 }
 
@@ -161,6 +219,13 @@ function renderShell(state: ViewState, handlers: Handlers): HTMLElement {
           }),
         ])
       : null,
+
+    renderOrgBar({
+      state,
+      lastRefreshed: lastRefreshedAt(snapshot),
+      now: Date.now(),
+      handlers,
+    }),
 
     el(
       'nav',

@@ -12,6 +12,12 @@ import type { Action } from './state.js';
 export interface Handlers {
   dispatch(action: Action): void;
   reload(): void;
+  /** Reads the org now. Only ever called from a user gesture. */
+  refreshOrg(): void;
+  connectOrg(loginUrl: string, clientId: string): void;
+  disconnectOrg(): void;
+  /** Re-requests the host permission Chrome is currently withholding. */
+  grantOrgPermission(): void;
   decide(approvalId: string, outcome: ApprovalDecisionOutcome, comment: string | null): void;
   exportSnapshot(): void;
   importSnapshot(): void;

@@ -10,7 +10,7 @@
 import { EMPTY_QUERY, type MetadataQuery } from '../core/metadata.js';
 import type { DecisionResult } from '../core/snapshot.js';
 import type { MetadataOperation, ReleaseId, ReleaseStatus, Snapshot } from '../core/types.js';
-import type { SerialisedError } from '../background/messages.js';
+import type { OrgStatus, SerialisedError } from '../background/messages.js';
 
 export const TABS = ['dashboard', 'inspector', 'approvals'] as const;
 export type Tab = (typeof TABS)[number];
@@ -45,8 +45,28 @@ export interface ApprovalsState {
   readonly drafts: Readonly<Record<string, string>>;
 }
 
+/**
+ * The org connection, as the panel sees it.
+ *
+ * `status` is what the worker reports; `busy` and `error` are this panel's view
+ * of an in-flight action. A failed refresh never clears the snapshot — that is
+ * the rule behind "org unreachable keeps the cache on screen" (DATASOURCE §8).
+ */
+export interface OrgState {
+  readonly status: OrgStatus | null;
+  readonly busy: 'connecting' | 'refreshing' | 'disconnecting' | null;
+  readonly error: SerialisedError | null;
+  /** Whether the connect form is open. */
+  readonly showConnectForm: boolean;
+  readonly loginUrlDraft: string;
+  readonly clientIdDraft: string;
+}
+
+export const DEFAULT_LOGIN_URL = 'https://login.salesforce.com';
+
 export interface ViewState {
   readonly tab: Tab;
+  readonly org: OrgState;
   readonly load: LoadState;
   readonly dashboard: { readonly statusFilter: ReleaseStatus | 'all' };
   readonly inspector: InspectorState;
@@ -59,6 +79,14 @@ export const INITIAL_STATE: ViewState = {
   dashboard: { statusFilter: 'all' },
   inspector: { query: EMPTY_QUERY, selectedItemId: null },
   approvals: { busyApprovalId: null, error: null, lastOutcome: null, drafts: {} },
+  org: {
+    status: null,
+    busy: null,
+    error: null,
+    showConnectForm: false,
+    loginUrlDraft: DEFAULT_LOGIN_URL,
+    clientIdDraft: '',
+  },
 };
 
 export type Action =
@@ -83,7 +111,19 @@ export type Action =
   | { readonly type: 'approvals/decisionStarted'; readonly approvalId: string }
   | { readonly type: 'approvals/decisionSucceeded'; readonly result: DecisionResult }
   | { readonly type: 'approvals/decisionFailed'; readonly error: SerialisedError }
-  | { readonly type: 'approvals/feedbackDismissed' };
+  | { readonly type: 'approvals/feedbackDismissed' }
+  | { readonly type: 'org/statusLoaded'; readonly status: OrgStatus }
+  | { readonly type: 'org/actionStarted'; readonly action: 'connecting' | 'refreshing' | 'disconnecting' }
+  | {
+      readonly type: 'org/actionSucceeded';
+      readonly status: OrgStatus;
+      readonly snapshot: Snapshot | null;
+    }
+  | { readonly type: 'org/actionFailed'; readonly error: SerialisedError }
+  | { readonly type: 'org/errorDismissed' }
+  | { readonly type: 'org/connectFormToggled'; readonly open: boolean }
+  | { readonly type: 'org/loginUrlChanged'; readonly value: string }
+  | { readonly type: 'org/clientIdChanged'; readonly value: string };
 
 export function reduce(state: ViewState, action: Action): ViewState {
   switch (action.type) {
@@ -194,7 +234,79 @@ export function reduce(state: ViewState, action: Action): ViewState {
 
     case 'approvals/feedbackDismissed':
       return { ...state, approvals: { ...state.approvals, error: null, lastOutcome: null } };
+
+    case 'org/statusLoaded':
+      return {
+        ...state,
+        org: {
+          ...state.org,
+          status: action.status,
+          clientIdDraft:
+            state.org.clientIdDraft.length > 0
+              ? state.org.clientIdDraft
+              : (action.status.clientId ?? ''),
+        },
+      };
+
+    case 'org/actionStarted':
+      return { ...state, org: { ...state.org, busy: action.action, error: null } };
+
+    case 'org/actionSucceeded':
+      return {
+        ...state,
+        // A null snapshot means "keep what is on screen" — used by actions that
+        // change only the connection, and by a refresh that failed.
+        load:
+          action.snapshot === null ? state.load : { status: 'ready', snapshot: action.snapshot },
+        org: {
+          ...state.org,
+          status: action.status,
+          busy: null,
+          error: null,
+          showConnectForm: false,
+        },
+      };
+
+    case 'org/actionFailed':
+      // Deliberately does NOT touch `load`. Losing the org must never blank the
+      // panel: the cached snapshot stays on screen under a banner.
+      return { ...state, org: { ...state.org, busy: null, error: action.error } };
+
+    case 'org/errorDismissed':
+      return { ...state, org: { ...state.org, error: null } };
+
+    case 'org/connectFormToggled':
+      return { ...state, org: { ...state.org, showConnectForm: action.open, error: null } };
+
+    case 'org/loginUrlChanged':
+      return { ...state, org: { ...state.org, loginUrlDraft: action.value } };
+
+    case 'org/clientIdChanged':
+      return { ...state, org: { ...state.org, clientIdDraft: action.value } };
   }
+}
+
+/**
+ * When the org data was last refreshed, from the audit log.
+ *
+ * Derived rather than stored so it cannot drift from what actually happened.
+ */
+export function lastRefreshedAt(snapshot: Snapshot | null): string | null {
+  if (snapshot === null) return null;
+  for (let index = snapshot.auditLog.length - 1; index >= 0; index -= 1) {
+    const entry = snapshot.auditLog[index];
+    if (entry?.action === 'snapshot.refreshed') return entry.at;
+  }
+  return null;
+}
+
+/** Cached org data older than this is called out as stale. */
+export const STALE_AFTER_MS = 15 * 60 * 1000;
+
+export function isStale(lastRefreshed: string | null, now: number): boolean {
+  if (lastRefreshed === null) return false;
+  const at = Date.parse(lastRefreshed);
+  return !Number.isNaN(at) && now - at > STALE_AFTER_MS;
 }
 
 /** The snapshot when one is loaded, otherwise `null`. */
