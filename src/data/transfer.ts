@@ -104,9 +104,9 @@ export function snapshotFromDeployReport(
   const failures = asArray(details['componentFailures']);
 
   const items: MetadataItem[] = [
-    ...successes.map((entry) => toItem(entry, releaseId, deps, completedAt, [])),
+    ...successes.map((entry) => itemFromDeployComponent(entry, releaseId, deps, completedAt, [])),
     ...failures.map((entry) =>
-      toItem(entry, releaseId, deps, completedAt, [toFailureWarning(entry)]),
+      itemFromDeployComponent(entry, releaseId, deps, completedAt, [warningFromDeployFailure(entry)]),
     ),
   ].filter((item) => item.type.length > 0 && item.fullName.length > 0);
 
@@ -114,7 +114,7 @@ export function snapshotFromDeployReport(
     id: releaseId,
     name: options.releaseName ?? `Deploy ${deployId}`,
     version: deployId,
-    status: toReleaseStatus(readString(result['status']), result['checkOnly'] === true),
+    status: releaseStatusFromDeployStatus(readString(result['status']), result['checkOnly'] === true),
     targetEnvironmentId: environmentId,
     owner: options.owner,
     createdAt,
@@ -149,7 +149,14 @@ export function snapshotFromDeployReport(
   return parseSnapshot(JSON.parse(JSON.stringify(snapshot)));
 }
 
-function toItem(
+/**
+ * Maps one deploy component row to a MetadataItem.
+ *
+ * Exported so the org-backed data source reuses it rather than duplicating the
+ * mapping: a deploy report and the Tooling API return the same component shape,
+ * and two copies would drift.
+ */
+export function itemFromDeployComponent(
   entry: unknown,
   releaseId: string,
   deps: SnapshotDeps,
@@ -178,7 +185,7 @@ function toOperation(record: Record<string, unknown>): MetadataOperation {
   return 'modify';
 }
 
-function toFailureWarning(entry: unknown): MetadataWarning {
+export function warningFromDeployFailure(entry: unknown): MetadataWarning {
   const record = asRecord(entry) ?? {};
   return {
     code: readString(record['problemType'])?.toUpperCase() ?? 'DEPLOY_FAILURE',
@@ -192,7 +199,7 @@ function toFailureWarning(entry: unknown): MetadataWarning {
  * maps to `scheduled`. Conflating the two would let the dashboard claim a
  * release is live when nothing was written to the org.
  */
-function toReleaseStatus(status: string | undefined, checkOnly: boolean): ReleaseStatus {
+export function releaseStatusFromDeployStatus(status: string | undefined, checkOnly: boolean): ReleaseStatus {
   switch (status) {
     case 'Succeeded':
       return checkOnly ? 'scheduled' : 'deployed';

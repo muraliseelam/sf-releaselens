@@ -35,6 +35,19 @@ export interface DataSource {
   /** Replaces the whole snapshot from untrusted JSON. All-or-nothing. */
   importSnapshot(raw: unknown): Promise<Snapshot>;
 
+  /**
+   * Refetches from the org and merges into the cached snapshot.
+   *
+   * Explicit and user-initiated only. Nothing in this codebase polls, sets a
+   * timer, or refreshes in the background: an extension that quietly hits
+   * someone's org on a schedule burns the API budget other integrations depend
+   * on, and gets uninstalled.
+   *
+   * `LocalDataSource` delegates this to {@link load}, so local mode behaves
+   * exactly as it did before the port grew this method.
+   */
+  refresh(): Promise<Snapshot>;
+
   /** Same as {@link load}, named for intent at the call site. */
   exportSnapshot(): Promise<Snapshot>;
 

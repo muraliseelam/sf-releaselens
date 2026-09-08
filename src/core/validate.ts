@@ -135,6 +135,10 @@ function parseRelease(raw: unknown, path: string): Release {
 function parseMetadataItem(raw: unknown, path: string): MetadataItem {
   const value = asObject(raw, path);
   const testCoverage = asOptionalFraction(value['testCoverage'], `${path}.testCoverage`);
+  const dependenciesUnavailable = asOptionalBoolean(
+    value['dependenciesUnavailable'],
+    `${path}.dependenciesUnavailable`,
+  );
 
   return {
     id: asNonEmptyString(value['id'], `${path}.id`),
@@ -153,6 +157,7 @@ function parseMetadataItem(raw: unknown, path: string): MetadataItem {
       parseWarning(warning, `${path}.warnings[${index}]`),
     ),
     ...(testCoverage === undefined ? {} : { testCoverage }),
+    ...(dependenciesUnavailable === undefined ? {} : { dependenciesUnavailable }),
   };
 }
 
@@ -308,6 +313,11 @@ function asNumber(value: unknown, path: string): number {
     throw new SnapshotValidationError(path, `expected a finite number, received ${describe(value)}`);
   }
   return value;
+}
+
+function asOptionalBoolean(value: unknown, path: string): boolean | undefined {
+  if (value == null) return undefined;
+  return asBoolean(value, path);
 }
 
 function asBoolean(value: unknown, path: string): boolean {

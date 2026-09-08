@@ -136,6 +136,17 @@ export interface MetadataItem {
    * same decision as zero — never default this.
    */
   readonly testCoverage?: number;
+  /**
+   * True when the source of this item cannot supply dependency edges at all, so
+   * an empty `dependsOn` means "unknown" rather than "none".
+   *
+   * A deploy report — whether imported from the CLI or read from the Tooling
+   * API — lists components, not edges. Rendering that as "No recorded
+   * dependencies" would tell a reader the component is safe to change, which is
+   * exactly the wrong conclusion. Same rule as `testCoverage`: unknown and zero
+   * are different answers and must not be conflated.
+   */
+  readonly dependenciesUnavailable?: boolean;
   readonly warnings: readonly MetadataWarning[];
 }
 
@@ -185,6 +196,7 @@ export const AUDIT_ACTIONS = [
   'release.status_changed',
   'snapshot.imported',
   'snapshot.reset',
+  'snapshot.refreshed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

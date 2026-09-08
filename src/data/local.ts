@@ -61,6 +61,13 @@ export function createLocalDataSource(options: LocalDataSourceOptions): DataSour
   return {
     load: read,
 
+    /**
+     * There is nothing to refetch in local mode, so this is `load`. Keeping the
+     * method rather than throwing means the panel's Refresh path needs no
+     * "is this local?" branch.
+     */
+    refresh: read,
+
     readRaw() {
       return storage.read(key);
     },
