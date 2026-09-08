@@ -1,3 +1,9 @@
+## [0.3.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.3.0...v0.3.1) (2026-09-08)
+
+### Bug fixes
+
+* **panel:** make "Export raw data" actually export the raw data ([1b4753e](https://github.com/muraliseelam/sf-releaselens/commit/1b4753e6b8b82ee6bd5a89c845a22509b9703543))
+
 ## [0.3.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.2.1...v0.3.0) (2026-09-08)
 
 ### Features
