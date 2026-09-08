@@ -70,6 +70,34 @@ If you change anything in `core/metadata.ts` or `core/validate.ts`, re-run
 `node bench/bench.mjs` and update the table in the README with the numbers you actually
 measured.
 
+## The browser suite
+
+`npm run test:e2e` launches a real Chromium with the built extension from
+`dist/` loaded and drives the panel through the real service worker, real
+`chrome.storage` and real message passing. It is deliberately **outside**
+`npm run check`: the unit suite runs in about five seconds and is what you run
+on every save, and a ninety-second suite in that loop gets skipped.
+
+Run it before opening a pull request, and always after touching anything in
+`background/`, `data/storage.ts` or the panel's message plumbing. CI runs it as
+its own job, and a release cannot be cut unless it passes.
+
+Two things to know before adding to it:
+
+- **Console output fails a test.** Any console error, uncaught exception or
+  unhandled promise rejection fails a test that otherwise passed. If you need to
+  allow one, add it to `IGNORED_CONSOLE` in `e2e/fixtures.ts` *with a reason* —
+  an allow-list that grows without argument is how a gate stops finding
+  anything.
+- **One browser per worker, storage cleared between tests.** Do not add a
+  per-test browser: deleting a Chromium profile on Windows costs tens of
+  seconds, and that choice is what keeps the suite at ninety seconds rather than
+  seven minutes.
+
+`npm run typecheck:e2e` type-checks the suite, which Playwright's runner does
+not. It is part of `npm run check`, and it has already caught a listener that
+silently did nothing.
+
 ## Commits and releases
 
 [Conventional Commits](https://www.conventionalcommits.org/), semantic-release compatible:

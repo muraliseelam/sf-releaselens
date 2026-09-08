@@ -5,6 +5,7 @@ and promotion approvals into one surface, so a release manager stops reassemblin
 four browser tabs.
 
 [![CI](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml/badge.svg)](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml)
+[![End-to-end](https://img.shields.io/badge/e2e-45%20checks%20in%20real%20Chromium-brightgreen)](e2e/)
 [![Release](https://img.shields.io/github/v/release/muraliseelam/sf-releaselens?sort=semver)](https://github.com/muraliseelam/sf-releaselens/releases/latest)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
@@ -191,9 +192,9 @@ Benchmarking found and fixed one real scaling bug: the dashboard computed each r
 component count by filtering the whole item list, once per row, which is quadratic in
 (releases × components). See the "What changed as a result" section of the benchmarks.
 
-Test coverage, from `npm run test:coverage`: **94.8% lines, 91.3% branches** across
-`core/`, `data/`, the auth and message layers and the whole UI layer — **584 unit tests** in
-30 files, plus **40 end-to-end checks** in a real Chromium. Every exported function has
+Test coverage, from `npm run test:coverage`: **93.8% lines, 90.5% branches** across
+`core/`, `data/`, the auth and message layers and the whole UI layer — **602 unit tests** in
+31 files, plus **45 end-to-end checks** in a real Chromium. Every exported function has
 direct tests; `main.ts`, `handlers.ts` and `service-worker.ts` are excluded because they are
 `chrome.*` wiring with no logic of their own. CI fails below 90% statements or 85% branches,
 so those numbers cannot quietly slide.
