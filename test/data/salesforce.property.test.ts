@@ -146,11 +146,20 @@ function buildResponses(responses: ResponseDraft) {
       '/services/data/': API_VERSIONS,
       [`${API}/limits`]: HEALTHY_LIMITS,
       [`${API}/query`]: { records: [responses.org], done: true, totalSize: 1 },
+      /*
+       * Only rows with a string Id get a detail route.
+       *
+       * `String(value)` throws `TypeError: Cannot convert object to primitive
+       * value` for an object whose `toString` is not callable, and the
+       * generator produces exactly that. The product already filters those rows
+       * out — a DeployRequest with no usable Id cannot become a release — so
+       * the harness has to as well, or it fails on its own arithmetic and
+       * reports it as a product defect.
+       */
       ...Object.fromEntries(
-        responses.deploys.map((deploy) => [
-          `${API}/metadata/deployRequest/${String(deploy.Id)}`,
-          detailFor(deploy.Id),
-        ]),
+        responses.deploys
+          .filter((deploy): deploy is { Id: string } => typeof deploy.Id === 'string')
+          .map((deploy) => [`${API}/metadata/deployRequest/${deploy.Id}`, detailFor(deploy.Id)]),
       ),
     },
     queryResponses: [

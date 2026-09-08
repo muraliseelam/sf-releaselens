@@ -141,9 +141,24 @@ function scrub(value, key, counter, ownerType) {
     return SYNTHETIC_DATES[counter.dates++ % SYNTHETIC_DATES.length];
   }
 
+  /*
+   * Ids are stable per original value, not per occurrence.
+   *
+   * The captures cross-reference each other: a `DeployRequest` row's `Id` is
+   * the key used to fetch that deploy's details, and the details echo it back
+   * as `deployResult.id`. Minting a fresh synthetic id at every occurrence
+   * silently broke that join — the fixture server then found no details for any
+   * deploy and the browser test saw "0 of 0 components", which is precisely the
+   * bug this whole session is about. A fixture that cannot be joined is worse
+   * than no fixture: it reproduces a failure that is not real.
+   */
   if (key === 'Id' || key === 'id' || key === 'CreatedById') {
+    const existing = counter.ids.get(value);
+    if (existing !== undefined) return existing;
     const prefix = ID_PREFIX[ownerType ?? ''] ?? (key === 'CreatedById' ? '005' : '0Af');
-    return `${prefix}SYNTH0000${String(counter.values++).padStart(4, '0')}AAA`;
+    const minted = `${prefix}SYNTH0000${String(counter.values++).padStart(4, '0')}AAA`;
+    counter.ids.set(value, minted);
+    return minted;
   }
 
   if (key === 'Name') {
@@ -162,7 +177,7 @@ function scrub(value, key, counter, ownerType) {
 }
 
 function scrubPayload(payload) {
-  return scrub(payload, undefined, { values: 1, dates: 0 }, undefined);
+  return scrub(payload, undefined, { values: 1, dates: 0, ids: new Map() }, undefined);
 }
 
 async function main() {

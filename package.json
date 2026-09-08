@@ -30,6 +30,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --project=e2e",
+    "test:e2e:org": "npm run build && node scripts/build-org-test-extension.mjs && playwright test --project=org",
     "test:e2e:ui": "playwright test --ui",
     "test:org": "node scripts/run-org-tests.mjs",
     "assets": "npm run build && playwright test --project=capture && node scripts/compose-store-shots.mjs",

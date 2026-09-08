@@ -97,6 +97,12 @@ jobs:
       - name: End-to-end
         run: npm run test:e2e
 
+      # The org-connected path, served from payloads captured from real
+      # Salesforce orgs and committed under test/fixtures/org/. Needs no org
+      # access and no network — the fixtures are in the repository.
+      - name: End-to-end, org-connected
+        run: npm run test:e2e:org
+
       # Traces are only written for failures, so this uploads nothing on a
       # green run and everything needed to debug a red one.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

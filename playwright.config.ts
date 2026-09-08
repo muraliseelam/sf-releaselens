@@ -49,8 +49,15 @@ export default defineConfig({
       name: 'e2e',
       // The capture run drives the same product but produces artefacts rather
       // than assertions, and takes a minute of deliberate pauses to do it. It
-      // has no place in the suite CI gates on.
-      testIgnore: '**/capture.spec.ts',
+      // has no place in the suite CI gates on. The org project needs a
+      // differently-built extension, so it is its own project too.
+      testIgnore: ['**/capture.spec.ts', '**/org.spec.ts'],
+    },
+    {
+      // The org-connected path, served from captured Salesforce payloads. Needs
+      // `.org-test-extension/`, which `npm run test:e2e:org` builds first.
+      name: 'org',
+      testMatch: '**/org.spec.ts',
     },
     {
       name: 'capture',

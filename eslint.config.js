@@ -30,7 +30,17 @@ const WEB_GLOBALS = {
 
 export default [
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', '*.tsbuildinfo'],
+    ignores: [
+      'dist/**',
+      // A generated copy of dist/ for the org browser tests; see
+      // scripts/build-org-test-extension.mjs.
+      '.org-test-extension/**',
+      'build-assets/**',
+      'e2e-results/**',
+      'coverage/**',
+      'node_modules/**',
+      '*.tsbuildinfo',
+    ],
   },
   js.configs.recommended,
   {
