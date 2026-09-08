@@ -222,6 +222,33 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
         .catch((cause: unknown) => dispatch({ type: 'load/failed', error: toSerialisedError(cause) }));
     },
 
+    /*
+     * The rescue path out of a corrupt snapshot. It must not go through
+     * `snapshot.export`, which validates on the way out and therefore fails on
+     * exactly the data this exists to save — the bug this replaces, where the
+     * button was offered, downloaded nothing, and the next button destroyed
+     * the data.
+     */
+    exportRawSnapshot(): void {
+      client
+        .send({ type: 'snapshot.readRaw' })
+        .then((payload) => {
+          if (payload.raw === undefined) {
+            dispatch({
+              type: 'load/failed',
+              error: {
+                code: 'NOTHING_STORED',
+                name: 'NothingStoredError',
+                message: 'There is nothing in storage to export. Nothing has been changed.',
+              },
+            });
+            return;
+          }
+          download(rawExportName(), JSON.stringify(payload.raw, null, 2));
+        })
+        .catch((cause: unknown) => dispatch({ type: 'load/failed', error: toSerialisedError(cause) }));
+    },
+
     importSnapshot(): void {
       pickFile()
         .then((text) => {
@@ -490,7 +517,7 @@ function renderError(
                 type: 'button',
                 'aria-label': 'Export raw data: download exactly what is stored, before changing anything',
               },
-              on: { click: () => handlers.exportSnapshot() },
+              on: { click: () => handlers.exportRawSnapshot() },
             })
           : null,
         recoverable
@@ -538,6 +565,11 @@ function pickFile(): Promise<string | null> {
     // settles. That is harmless here: nothing is awaiting it but a UI update.
     input.click();
   });
+}
+
+/** `sf-releaselens-raw-2026-09-08T13-25-54.json` — timestamped, so a second attempt does not overwrite the first. */
+function rawExportName(): string {
+  return `sf-releaselens-raw-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
 }
 
 function download(filename: string, contents: string): void {

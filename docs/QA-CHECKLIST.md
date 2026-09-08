@@ -116,7 +116,7 @@ Seeded demo data. Values below are exact — anything else is a bug.
 
 | # | Check | Expected | Status |
 | --- | --- | --- | --- |
-| 7.1 | **Raw export of a corrupt snapshot is broken** | With a corrupt snapshot stored, the panel says *"Export the raw data before resetting so nothing is lost"* and offers **Export raw data** — but clicking it downloads **nothing**, because it routes through the *validating* export, which fails on exactly that data. Clicking **Reset to demo data** then destroys it. `snapshot.readRaw` exists, is routed and unit-tested, but no UI code calls it. | ❌ reproduced against `dist/` |
+| 7.1 | ~~**Raw export of a corrupt snapshot is broken**~~ | **Fixed.** The button used to route through the *validating* export, which fails on exactly the data it exists to rescue: it downloaded nothing, and **Reset to demo data** beside it then destroyed the data. It now calls `snapshot.readRaw` and downloads the stored bytes unvalidated, to a timestamped filename. Confirm in a browser that a file actually lands in Downloads and that its contents are the corrupt JSON verbatim. | ✅ auto, ❓ (that the file reaches disk) |
 
 To reproduce: DevTools on the panel →
 `chrome.storage.local.set({'sf-releaselens.snapshot.v1': {schemaVersion: 42}})` →

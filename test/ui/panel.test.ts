@@ -179,6 +179,84 @@ describe('start', () => {
       expect(labels).toEqual(['Retry', 'Export raw data', 'Reset to demo data']);
     });
 
+    describe('Export raw data', () => {
+      /*
+       * This button used to route through `snapshot.export`, which validates on
+       * the way out and so failed on precisely the corrupt data it exists to
+       * rescue: it downloaded nothing, silently, and the button beside it then
+       * destroyed the data. It must read the bytes unvalidated.
+       */
+      function stubDownload() {
+        const createObjectURL = vi.fn(() => 'blob:fake');
+        vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL: vi.fn() });
+        const anchors: HTMLAnchorElement[] = [];
+        vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+          this: HTMLAnchorElement,
+        ) {
+          anchors.push(this);
+        });
+        return anchors;
+      }
+
+      function renderCorrupt(responses: Record<string, StubResponse>) {
+        return renderPanel({
+          'snapshot.load': () =>
+            Promise.reject(
+              new RemoteError({
+                code: 'UNSUPPORTED_SCHEMA_VERSION',
+                name: 'UnsupportedSchemaVersionError',
+                message: 'Stored data uses schema version 42.',
+              }),
+            ),
+          ...responses,
+        });
+      }
+
+      function clickExportRaw(): void {
+        const button = [...root.querySelectorAll('.notice__actions .button')].find(
+          (candidate) => candidate.textContent === 'Export raw data',
+        );
+        (button as HTMLButtonElement).click();
+      }
+
+      it('reads the stored bytes unvalidated and downloads them', async () => {
+        const anchors = stubDownload();
+        const { sent } = renderCorrupt({
+          'snapshot.readRaw': { raw: { schemaVersion: 42, oops: true } },
+        });
+        await settle();
+
+        clickExportRaw();
+        await settle();
+
+        expect(sent).toContainEqual({ type: 'snapshot.readRaw' });
+        // The validating export would have failed on this data.
+        expect(sent.some((request) => request.type === 'snapshot.export')).toBe(false);
+        expect(anchors).toHaveLength(1);
+        expect(anchors[0]?.getAttribute('download')).toMatch(
+          /^sf-releaselens-raw-[\d-]+T[\d-]+Z\.json$/,
+        );
+
+        vi.unstubAllGlobals();
+      });
+
+      it('says so rather than downloading an empty file when nothing is stored', async () => {
+        const anchors = stubDownload();
+        renderCorrupt({ 'snapshot.readRaw': { raw: undefined } });
+        await settle();
+
+        clickExportRaw();
+        await settle();
+
+        expect(anchors).toHaveLength(0);
+        expect(root.querySelector('.notice--error')?.textContent).toContain(
+          'There is nothing in storage to export',
+        );
+
+        vi.unstubAllGlobals();
+      });
+    });
+
     it('offers only Retry for a failure that resetting would not fix', async () => {
       renderPanel({
         'snapshot.load': () =>

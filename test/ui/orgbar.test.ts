@@ -36,6 +36,7 @@ function stubHandlers() {
     grantOrgPermission: vi.fn(),
     decide: vi.fn(),
     exportSnapshot: vi.fn(),
+    exportRawSnapshot: vi.fn(),
     importSnapshot: vi.fn(),
     reset: vi.fn(),
     setActor: vi.fn(),

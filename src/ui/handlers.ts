@@ -20,6 +20,14 @@ export interface Handlers {
   grantOrgPermission(): void;
   decide(approvalId: string, outcome: ApprovalDecisionOutcome, comment: string | null): void;
   exportSnapshot(): void;
+  /**
+   * Downloads exactly what is in storage, without validating it.
+   *
+   * Separate from {@link exportSnapshot} on purpose: the normal export
+   * validates on its way out, so it fails on precisely the corrupt data this
+   * is for. Offered only from the load-error state.
+   */
+  exportRawSnapshot(): void;
   importSnapshot(): void;
   reset(seed: SeedKind): void;
   setActor(actor: Actor): void;
