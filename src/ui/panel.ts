@@ -14,7 +14,7 @@
 
 import type { Actor, ApprovalDecisionOutcome } from '../core/types.js';
 import type { SeedKind } from '../data/datasource.js';
-import { toSerialisedError, type Client } from './client.js';
+import { RemoteError, toSerialisedError, type Client } from './client.js';
 import { captureFocus, el, restoreFocus } from './dom.js';
 import { countPendingForActor } from '../core/approvals.js';
 import type { Handlers } from './handlers.js';
@@ -49,7 +49,30 @@ export interface Panel {
   onExternalChange(): void;
 }
 
-export function start(root: HTMLElement, client: Client): Panel {
+/**
+ * The `chrome.permissions` surface the panel needs.
+ *
+ * Requested from **here**, not from the service worker: `permissions.request`
+ * requires a user gesture, and a worker handling a message does not have one.
+ * Injected so tests need no browser.
+ */
+export interface PanelPermissions {
+  request(origins: readonly string[]): Promise<boolean>;
+}
+
+/** Origins needed before the OAuth flow can run. */
+export function connectOrigins(loginUrl: string): string[] {
+  const login = `${new URL(loginUrl).origin}/*`;
+  // The instance URL is not known until after sign-in, and the token POST that
+  // discovers it already needs an origin grant — so the instance pattern has to
+  // be requested up front. `*.my.salesforce.com` is broader than a single
+  // origin, which is a deliberate, documented trade-off (DATASOURCE.md §4):
+  // one prompt inside the user's click, rather than a second prompt afterwards
+  // that Chrome would refuse for want of a gesture.
+  return [login, 'https://*.my.salesforce.com/*'];
+}
+
+export function start(root: HTMLElement, client: Client, permissions?: PanelPermissions): Panel {
   let state: ViewState = INITIAL_STATE;
 
   function dispatch(action: Action): void {
@@ -68,6 +91,22 @@ export function start(root: HTMLElement, client: Client): Panel {
       .send({ type: 'snapshot.load' })
       .then((snapshot) => dispatch({ type: 'load/succeeded', snapshot }))
       .catch((cause: unknown) => dispatch({ type: 'load/failed', error: toSerialisedError(cause) }));
+  }
+
+  /**
+   * Asks Chrome for the origins the flow needs, inside the click that started
+   * it. A malformed login URL is reported as a refusal rather than throwing.
+   */
+  async function requestConnectPermission(loginUrl: string): Promise<boolean> {
+    if (permissions === undefined) return true;
+    let origins: string[];
+    try {
+      origins = connectOrigins(loginUrl);
+    } catch (cause) {
+      void cause;
+      return false;
+    }
+    return permissions.request(origins);
   }
 
   /** Loads the org status. Never blocks the first paint. */
@@ -98,8 +137,18 @@ export function start(root: HTMLElement, client: Client): Panel {
 
     connectOrg(loginUrl: string, clientId: string): void {
       dispatch({ type: 'org/actionStarted', action: 'connecting' });
-      client
-        .send({ type: 'org.connect', loginUrl, clientId })
+      requestConnectPermission(loginUrl)
+        .then((granted) => {
+          if (!granted) {
+            throw new RemoteError({
+              code: 'HOST_PERMISSION_REVOKED',
+              name: 'HostPermissionRevokedError',
+              message:
+                'Chrome did not grant this extension access to the Salesforce org, so sign-in was not started.',
+            });
+          }
+          return client.send({ type: 'org.connect', loginUrl, clientId });
+        })
         .then((result) =>
           dispatch({ type: 'org/actionSucceeded', status: result.org, snapshot: result.snapshot }),
         )

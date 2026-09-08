@@ -4,7 +4,15 @@
   "version": "0.1.0",
   "description": "Release dashboard, metadata inspector and approvals helper for Salesforce release managers.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "sidePanel"],
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "identity"
+  ],
+  "optional_host_permissions": [
+    "https://*.salesforce.com/*",
+    "https://*.my.salesforce.com/*"
+  ],
   "background": {
     "service_worker": "background/service-worker.js",
     "type": "module"

@@ -185,8 +185,10 @@ describe('org.info', () => {
 });
 
 describe('org.connect', () => {
-  it('requests the host permission for exactly one origin, at connect time', async () => {
-    // Decision 4: the extension installs asking for nothing.
+  it('verifies the host permission rather than requesting it', async () => {
+    // `permissions.request` needs a user gesture, which a worker handling a
+    // message does not have — the panel obtains the grant inside the click and
+    // the worker only confirms it. Requesting here would silently fail.
     const permissions = fakePermissions(true);
     const { router } = build({ permissions });
 
@@ -196,7 +198,23 @@ describe('org.connect', () => {
       clientId: '3MVG9',
     });
 
-    expect(permissions.requested).toEqual([[ORIGIN_PATTERN]]);
+    expect(permissions.requested).toEqual([]);
+  });
+
+  it('refuses to keep a session Chrome is not granting access for', async () => {
+    const session = fakeSession();
+    const { router } = build({ session, permissions: fakePermissions(false) });
+
+    const response = await router.handle({
+      type: 'org.connect',
+      loginUrl: 'https://login.salesforce.com',
+      clientId: '3MVG9',
+    });
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) expect(response.error.code).toBe('HOST_PERMISSION_REVOKED');
+    expect(session.disconnectCalls).toBe(1);
+    expect(ORIGIN_PATTERN).toBe('https://acme.my.salesforce.com/*');
   });
 
   it('remembers the consumer key, which is not a secret', async () => {
@@ -227,22 +245,6 @@ describe('org.connect', () => {
     expect(connection.requestCount()).toBe(0);
   });
 
-  it('disconnects again when the permission prompt is refused', async () => {
-    // Keeping a session Chrome will not let us use would leave the panel
-    // claiming a connection that cannot work.
-    const session = fakeSession();
-    const { router } = build({ session, permissions: fakePermissions(false) });
-
-    const response = await router.handle({
-      type: 'org.connect',
-      loginUrl: 'https://login.salesforce.com',
-      clientId: '3MVG9',
-    });
-
-    expect(response.ok).toBe(false);
-    if (!response.ok) expect(response.error.code).toBe('HOST_PERMISSION_REVOKED');
-    expect(session.disconnectCalls).toBe(1);
-  });
 });
 
 describe('org.disconnect', () => {

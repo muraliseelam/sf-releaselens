@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SerialisedError } from '../../src/background/messages.js';
 import { RemoteError } from '../../src/ui/client.js';
 import type { Client } from '../../src/ui/client.js';
-import { start } from '../../src/ui/panel.js';
+import { connectOrigins, start } from '../../src/ui/panel.js';
 import { makeApproval, makeRelease, makeSnapshot, realisticSnapshot } from '../fixtures/snapshot.js';
 
 type SentRequest = { type: string; [key: string]: unknown };
@@ -494,6 +494,70 @@ describe('start', () => {
       });
     });
   }
+});
+
+describe('org permissions are requested from the panel, not the worker', () => {
+  it('asks for the login origin and the instance pattern before signing in', () => {
+    // `permissions.request` needs a user gesture, which the service worker does
+    // not have when it handles a message.
+    expect(connectOrigins('https://login.salesforce.com')).toEqual([
+      'https://login.salesforce.com/*',
+      'https://*.my.salesforce.com/*',
+    ]);
+    expect(connectOrigins('https://test.salesforce.com/')).toContain(
+      'https://test.salesforce.com/*',
+    );
+  });
+
+  it('requests the origins before sending org.connect', async () => {
+    const request = vi.fn(() => Promise.resolve(true));
+    const { client, sent } = stubClient({
+      'snapshot.load': realisticSnapshot(),
+      'org.connect': { snapshot: realisticSnapshot(), org: { connected: true, hasHostPermission: true } },
+    });
+    const panel = start(root, client, { request });
+    await settle();
+
+    panel.handlers.connectOrg('https://login.salesforce.com', '3MVG9');
+    await settle();
+
+    expect(request).toHaveBeenCalledWith([
+      'https://login.salesforce.com/*',
+      'https://*.my.salesforce.com/*',
+    ]);
+    expect(sent).toContainEqual({
+      type: 'org.connect',
+      loginUrl: 'https://login.salesforce.com',
+      clientId: '3MVG9',
+    });
+  });
+
+  it('does not start sign-in when Chrome refuses the prompt', async () => {
+    const { client, sent } = stubClient({ 'snapshot.load': realisticSnapshot() });
+    const panel = start(root, client, { request: () => Promise.resolve(false) });
+    await settle();
+
+    panel.handlers.connectOrg('https://login.salesforce.com', '3MVG9');
+    // The refusal path is async-permission -> throw -> catch, so it needs a few
+    // more microtask turns than a single request/response.
+    await settle();
+    await settle();
+
+    expect(sent.some((request) => request.type === 'org.connect')).toBe(false);
+    expect(root.querySelector('.notice--error')?.textContent).toContain('did not grant');
+  });
+
+  it('treats a malformed login URL as a refusal rather than throwing', async () => {
+    const { client, sent } = stubClient({ 'snapshot.load': realisticSnapshot() });
+    const panel = start(root, client, { request: () => Promise.resolve(true) });
+    await settle();
+
+    panel.handlers.connectOrg('not a url', '3MVG9');
+    await settle();
+    await settle();
+
+    expect(sent.some((request) => request.type === 'org.connect')).toBe(false);
+  });
 });
 
 describe('error flattening at the panel boundary', () => {

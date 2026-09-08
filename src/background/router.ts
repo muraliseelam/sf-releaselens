@@ -187,11 +187,13 @@ export function createRouter(options: RouterOptions): Router {
           throw new OrgNotConnectedError('determine the org instance URL');
         }
 
-        // Ask for the host permission only now, and only for this one origin.
+        // The panel already obtained the grant inside the user's click —
+        // `permissions.request` needs a gesture, which a worker handling a
+        // message does not have. Verify rather than request, and refuse to keep
+        // a session Chrome will not let us use.
         const granted =
-          (await options.permissions?.request([originPatternFor(info.instanceUrl)])) ?? false;
+          (await options.permissions?.contains([originPatternFor(info.instanceUrl)])) ?? false;
         if (!granted) {
-          // Do not keep a session Chrome will not let us use.
           await options.orgSession.disconnect();
           throw new HostPermissionRevokedError(new URL(info.instanceUrl).origin);
         }

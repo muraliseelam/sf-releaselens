@@ -15,7 +15,12 @@ if (root === null) {
   throw new Error('sf-releaselens: #root is missing from sidepanel.html; the build is incomplete.');
 }
 
-const panel = start(root, createChromeClient());
+const panel = start(root, createChromeClient(), {
+  // `permissions.request` needs a user gesture, which the service worker does
+  // not have when it handles a message — so it is requested here, inside the
+  // click that started the connect flow.
+  request: (origins) => chrome.permissions.request({ origins: [...origins] }),
+});
 
 /** Another window recorded a decision; pick it up without blanking this one. */
 chrome.runtime.onMessage.addListener((message: unknown) => {

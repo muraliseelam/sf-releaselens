@@ -137,26 +137,88 @@ Test coverage, from `npm run test:coverage`: **96.7% lines, 91.5% branches** acr
 Every exported function has direct tests; `main.ts` and `service-worker.ts` are excluded
 because they are `chrome.*` wiring with no logic of their own.
 
+## Security and what this extension can see
+
+### Two modes, and the difference matters
+
+| | **Local mode** (default) | **Org-connected mode** |
+| --- | --- | --- |
+| Where data comes from | The shipped **demo dataset**, or a file you imported | Your Salesforce org's deploy history |
+| Network access | **None.** No host permission is granted. | `GET` only, to the one org you connected |
+| Is the data real? | **No.** The five releases and 57 components in `src/data/seed.ts` are fictional. | Yes for releases and components; see the gaps below |
+| Approvals | Local, unauthenticated | **Still local, still unauthenticated** |
+
+The extension **installs requesting no host permissions at all** and cannot reach
+any network until you connect an org, at which point Chrome prompts you for that
+org's origin. Nothing is read from the org until you press **Refresh**: there is
+no polling, no timer, and no background fetch anywhere in the codebase.
+
+### It cannot write to your org
+
+The interface used to reach Salesforce has `get` and two query methods, and no
+`post`, `patch` or `delete` member. A contributor cannot give a read path a write
+side effect without changing that interface, which is a visible diff in review. A
+lint rule additionally restricts `fetch` to exactly two files — the org transport
+and the OAuth token exchange — so every outbound request in the product is
+visible in two files.
+
+The OAuth scopes requested are `api` and `refresh_token`, and nothing else.
+
+### Token handling
+
+| Token | Where it lives | Survives browser close? |
+| --- | --- | --- |
+| Access token | Service-worker memory only. Never written to any storage area. | No |
+| Refresh token | `chrome.storage.session` only — memory-backed, never written to disk. | No |
+| Consumer Key | `chrome.storage.local`. A public identifier, not a secret. | Yes |
+
+There is no client secret: the extension is a PKCE public client and will not
+accept one. Every auth error message passes through a three-layer redactor before
+it reaches an `Error`, and a test asserts that no token value can appear in a
+serialized error.
+
+Auth is OAuth against a Connected App **you** create in your own org — see
+[`docs/CONNECTED-APP.md`](docs/CONNECTED-APP.md). We deliberately do *not* publish
+a shared Connected App, and we deliberately do *not* read a session out of an open
+Salesforce tab.
+
+For environments where even this is too much, `docs/DATASOURCE.md` §4 Option C
+records a posture we have **not** built: a local companion process that shells out
+to the `sf` CLI and inherits its auth, so the extension holds no credential at all.
+
+### Approvals are not an audit trail
+
+Connecting an org does **not** change this. Salesforce has no deployment-approval
+object, so approvals stay entirely local: the "acting as" profile is a switcher,
+not an authenticated identity, and any decision can be altered by exporting the
+JSON, editing it, and importing it back. The extension never writes an approval —
+or anything else — to your org.
+
+If you need an approval trail that stands up to an audit, this is not it, and
+saying otherwise would make it worse than the Slack thread it replaces.
+
+### Permissions
+
+| Permission | Why |
+| --- | --- |
+| `storage` | The snapshot, the org cache, and the Consumer Key. |
+| `sidePanel` | Opening the panel from the toolbar icon. |
+| `identity` | The OAuth flow, via `chrome.identity.launchWebAuthFlow`. |
+| `optional_host_permissions` | Requested **only** when you connect an org. Never granted at install. |
+
+No content scripts. No `tabs` permission. The extension cannot read the page you
+are on.
+
 ## Configuration
 
-There is nothing to configure, and nothing to authenticate. State lives in one
-`chrome.storage.local` key, `sf-releaselens.snapshot.v1`.
-
-| Manifest permission | Why |
-| --- | --- |
-| `storage` | The snapshot. Nothing else is stored. |
-| `sidePanel` | Opening the panel from the toolbar icon. |
-
-There are **no `host_permissions`, no content scripts and no network access**. The
-extension cannot read the page you are on.
-
-Data gets in three ways:
+Data gets in four ways:
 
 | Input | Notes |
 | --- | --- |
-| Demo dataset | Seeded on first run. Replaceable with **Start empty**. |
+| Demo dataset | Seeded on first run in local mode. Fictional. Replaceable with **Start empty**. |
 | A previous export | **Import** → any `.json` this extension exported. Your local profile is preserved rather than overwritten by the exporter's. |
-| `sf project deploy report --json` | **Import** → the same button detects the shape. Maps `componentSuccesses` / `componentFailures` onto components; failures become error-level warnings. |
+| `sf project deploy report --json` | **Import** → the same button detects the shape. |
+| A connected org | **Connect org…**, then **Refresh**. Reads `Organization`, recent `DeployRequest` records with their components, and `ApexCodeCoverageAggregate`. |
 
 Development commands:
 
@@ -178,16 +240,26 @@ Stated plainly, because they determine whether this is useful to you:
   edit by exporting, changing the JSON and re-importing. If you need an approval trail that
   stands up to an audit, this is not it, and pretending otherwise would be worse than the
   Slack thread it replaces.
-- **No live org connection.** v1 reads snapshots you give it. The `DataSource` interface is
-  the seam a Salesforce adapter would implement (`docs/DESIGN.md` §6); it would additionally
-  need OAuth via `chrome.identity`, `host_permissions` for the org domain, and a decision
-  about where approvals live, since Salesforce has no native deployment-approval object.
+- **Never tested against a live Salesforce org.** The org integration is complete and fully
+  unit-tested against a fake connection, but nobody has yet pointed it at a real org. See
+  the "requires a live org" section of `docs/QA-CHECKLIST.md` for exactly what that leaves
+  unverified.
 - **Nothing is shared between machines.** Two people running this see two independent
   snapshots. Sharing means exporting and importing a file.
-- **A deploy report carries no dependency graph.** Imported components therefore have no
-  `dependsOn` edges, and the inspector's dependency panes will be empty for them. The demo
-  dataset has edges so the feature is visible; real ones must come from an export that has
-  them.
+- **No dependency graph from an org or a deploy report.** Both list components, not edges.
+  Org-sourced and imported components therefore carry *no* dependency data, and the
+  inspector says so rather than showing an empty list — "unknown" and "none" are different
+  answers, and the second would tell you a component is safe to change. Only the demo
+  dataset has edges.
+- **Org releases show a deploy id until you name them.** Salesforce has no release name, so
+  a local overlay keyed by deploy id supplies one; with no entry the deploy id is shown, and
+  a name is never invented. **There is no UI to edit that overlay yet** — it is read from
+  `chrome.storage.local` under `sf-releaselens.release-overlay.v1`.
+- **`riskLevel` is a local judgement.** The org has no such field; it is defaulted from the
+  deploy outcome.
+- **A refresh reads the ten most recent deployments**, at one API call each plus three more.
+  Older releases stay in the cache but are not re-read. A refresh is refused outright if the
+  org is at or above 95% of its daily API budget.
 - **Coverage is only as good as the snapshot.** Unknown coverage renders as "Coverage
   unknown" and is never shown as 0%, but nothing here computes coverage.
 - **Not verified against a live Chrome install in CI.** The build verifies that every path
