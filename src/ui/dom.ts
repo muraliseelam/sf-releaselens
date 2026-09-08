@@ -83,16 +83,44 @@ export function captureFocus(root: Document): FocusSnapshot | null {
   return { id: active.id, selectionStart: null, selectionEnd: null };
 }
 
-export function restoreFocus(root: Document, snapshot: FocusSnapshot | null): void {
-  if (snapshot === null) return;
+/**
+ * @returns whether focus actually landed. False means the control the user was
+ *          on no longer exists — a card that was approved and moved queue, a
+ *          row filtered away — and focus is now on the document body, which for
+ *          a keyboard user means starting again from the top of the panel.
+ */
+export function restoreFocus(root: Document, snapshot: FocusSnapshot | null): boolean {
+  if (snapshot === null) return false;
   const target = root.getElementById(snapshot.id);
-  if (!(target instanceof HTMLElement)) return;
-
+  if (!(target instanceof HTMLElement)) return false;
   target.focus();
+  // `focus()` is silent about failure, and several things make it fail: the
+  // control was disabled by the state change that triggered this render (an
+  // Approve button now reading "Recording…"), or it stopped being focusable
+  // (a container that only carried tabindex while it was busy). Either way the
+  // user is now on the document body, so report it and let the caller recover.
+  if (root.activeElement !== target) return false;
+
   if (
     (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
     snapshot.selectionStart !== null
   ) {
     target.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd);
   }
+  return true;
+}
+
+/**
+ * Last resort when the focused control has gone: move focus to whatever the
+ * view marked as the thing that replaced it — usually the notice explaining
+ * what just happened.
+ *
+ * Only called when focus *was* somewhere, so it never steals focus on the
+ * first paint or from a user who has not touched the keyboard.
+ */
+export function focusFallback(root: Document): boolean {
+  const target = root.querySelector('[data-focus-fallback]');
+  if (!(target instanceof HTMLElement)) return false;
+  target.focus();
+  return true;
 }

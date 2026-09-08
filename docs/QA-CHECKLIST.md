@@ -122,6 +122,27 @@ To reproduce: DevTools on the panel →
 `chrome.storage.local.set({'sf-releaselens.snapshot.v1': {schemaVersion: 42}})` →
 reload the panel.
 
+## 7a. Keyboard and screen reader
+
+The ARIA contract is unit-tested — roving tabindex, unique ids, live-region
+text, accessible names — but "the attribute is present" and "a screen reader
+says something useful" are different claims, and only the second one matters.
+Everything here needs a real browser, and the last two need a real screen
+reader.
+
+| # | Check | Expected | Status |
+| --- | --- | --- | --- |
+| 7a.1 | Reach everything with Tab | From the address bar, Tab through the panel. Every control is reachable, in visual order, with **no** keyboard trap. | ❓ (ids ✅ auto) |
+| 7a.2 | Visible focus ring | Every focused control shows a 2px accent outline. Check the chips and the list rows especially — they have custom backgrounds. | ❓ |
+| 7a.3 | Tab strip arrows | Focus a tab, then Left/Right/Home/End. Selection follows focus, wraps at both ends, and **the page does not scroll**. | ✅ auto |
+| 7a.4 | One Tab stop for three tabs | Tab into the strip, then Tab again. Focus leaves the strip rather than visiting each tab. | ✅ auto |
+| 7a.5 | Focus survives activation | Space or Enter on a status chip, then a component row. Focus stays on the control you activated, not the top of the panel. | ✅ auto |
+| 7a.6 | Focus survives a decision | Keyboard-approve something. Focus lands on the outcome notice, not on the document body. | ✅ auto |
+| 7a.7 | Reject with no comment | Keyboard-reject with an empty comment. The refusal is announced and focus does not jump away from the comment box. | ❓ |
+| 7a.8 | Announcements | With NVDA or VoiceOver: the load announces the counts, a decision announces the outcome, a failure interrupts. **Typing in the search box must announce nothing** — the panel re-renders on every keystroke, and a live region that repeats itself is worse than none. | ❓ |
+| 7a.9 | Names, not positions | Browse by button with a screen reader. Every "Approve" says what it approves; every chip says what its number counts. | ✅ auto (names), ❓ (as read aloud) |
+| 7a.10 | Zoom to 200% | Nothing is clipped, and the panel does not scroll horizontally. | ❓ |
+
 ## 8. Org connection (all ❓ — never run against a real org)
 
 Prerequisite: a Connected App per [`CONNECTED-APP.md`](CONNECTED-APP.md). Use a

@@ -16,7 +16,7 @@ import {
 } from '../../core/approvals.js';
 import type { Approval, Snapshot } from '../../core/types.js';
 import { el } from '../dom.js';
-import { absoluteTime, approvalStatusLabel, relativeTime } from '../format.js';
+import { absoluteTime, approvalStatusLabel, pluralise, relativeTime } from '../format.js';
 import type { Handlers } from '../handlers.js';
 import type { ViewState } from '../state.js';
 
@@ -141,16 +141,28 @@ function renderQueue(
   options: QueueOptions,
   emptyText: string,
 ): HTMLElement {
+  const headingId = `queue-${title.toLowerCase().replace(/[^a-z]+/g, '-')}`;
+
   return el('div', { className: 'queue' }, [
-    el('h2', { className: 'queue__title' }, [
+    el('h2', { className: 'queue__title', attrs: { id: headingId } }, [
       title,
-      el('span', { className: 'queue__count', text: String(approvals.length) }),
+      el('span', {
+        className: 'queue__count',
+        text: String(approvals.length),
+        // The bare number beside the heading reads as part of the title
+        // otherwise: "Waiting on you 3".
+        attrs: { 'aria-hidden': 'true' },
+      }),
+      el('span', {
+        className: 'sr-only',
+        text: `, ${pluralise(approvals.length, 'approval')}`,
+      }),
     ]),
     approvals.length === 0
       ? el('p', { className: 'muted', text: emptyText })
       : el(
           'ul',
-          { className: 'list' },
+          { className: 'list', attrs: { 'aria-labelledby': headingId } },
           approvals.map((approval) =>
             renderApproval(approval, snapshot, handlers, now, options),
           ),
@@ -169,7 +181,24 @@ function renderApproval(
   const busy = options.busyApprovalId === approval.id;
   const draft = options.drafts[approval.id] ?? '';
 
-  return el('li', { className: 'card' }, [
+  const releaseLabel =
+    release === undefined ? `unknown release ${approval.releaseId}` : `${release.name} ${release.version}`;
+
+  return el('li', {
+    className: 'card',
+    attrs: {
+      id: `approval-${approval.id}`,
+      role: 'group',
+      'aria-label': `${approval.stage} for ${releaseLabel}, ${approvalStatusLabel(approval.status)}`,
+      /*
+       * While the decision is in flight its buttons are disabled, and a
+       * disabled control cannot hold focus. Without somewhere to put it, the
+       * keyboard user is dropped on the document body mid-action. The card is
+       * that somewhere; `busy` is exclusive, so at most one card claims it.
+       */
+      ...(busy ? { tabindex: '-1', 'data-focus-fallback': '' } : {}),
+    },
+  }, [
     el('div', { className: 'card__head' }, [
       el('span', { className: 'card__stage', text: approval.stage }),
       el('span', {
@@ -187,7 +216,11 @@ function renderApproval(
         : el('button', {
             className: 'link link--small',
             text: 'view components',
-            attrs: { type: 'button' },
+            attrs: {
+              id: `approval-view-${approval.id}`,
+              type: 'button',
+              'aria-label': `View the components in ${release.name} ${release.version}`,
+            },
             on: {
               click: () =>
                 handlers.dispatch({ type: 'dashboard/releaseOpened', releaseId: release.id }),
@@ -241,7 +274,7 @@ function renderActions(
       id: `comment-${approval.id}`,
       rows: '2',
       placeholder: 'Comment (required to reject)',
-      'aria-label': `Comment on ${approval.stage}`,
+      'aria-label': `Comment on ${approval.stage} for ${releaseName(approval, snapshot)}`,
       ...(busy ? { disabled: 'disabled' } : {}),
     },
     on: {
@@ -259,19 +292,34 @@ function renderActions(
     handlers.decide(approval.id, outcome, draft.trim() === '' ? null : draft);
   };
 
+  // Every card renders a button reading "Approve". Listing the buttons on the
+  // page — which is how a screen reader user navigates — would give three
+  // identical entries, so each one names what it acts on.
+  const target = `${approval.stage} for ${releaseName(approval, snapshot)}`;
+
   return el('div', { className: 'card__actions' }, [
     comment,
     el('div', { className: 'card__buttons' }, [
       el('button', {
         className: 'button button--primary',
         text: busy ? 'Recording…' : 'Approve',
-        attrs: { type: 'button', ...(busy || !mayApprove ? { disabled: 'disabled' } : {}) },
+        attrs: {
+          id: `approve-${approval.id}`,
+          type: 'button',
+          'aria-label': `Approve ${target}`,
+          ...(busy || !mayApprove ? { disabled: 'disabled' } : {}),
+        },
         on: { click: act('approved') },
       }),
       el('button', {
         className: 'button button--danger',
         text: 'Reject',
-        attrs: { type: 'button', ...(busy || !mayApprove ? { disabled: 'disabled' } : {}) },
+        attrs: {
+          id: `reject-${approval.id}`,
+          type: 'button',
+          'aria-label': `Reject ${target}. A comment is required.`,
+          ...(busy || !mayApprove ? { disabled: 'disabled' } : {}),
+        },
         on: { click: act('rejected') },
       }),
       !mayCancel
@@ -280,7 +328,12 @@ function renderActions(
             className: 'button button--quiet',
             text: 'Cancel request',
             title: 'Withdraw the approval request you raised',
-            attrs: { type: 'button', ...(busy ? { disabled: 'disabled' } : {}) },
+            attrs: {
+              id: `cancel-${approval.id}`,
+              type: 'button',
+              'aria-label': `Withdraw the request for ${target}`,
+              ...(busy ? { disabled: 'disabled' } : {}),
+            },
             on: { click: act('cancelled') },
           }),
     ]),
@@ -293,20 +346,46 @@ function renderActions(
   ]);
 }
 
+/**
+ * The outcome of a decision.
+ *
+ * Marked as the focus fallback because deciding an approval removes the card
+ * the user was standing on — it moves to the decided queue — so focus would
+ * otherwise land on the document body. It is announced through the panel's
+ * live region rather than by this node's role, which a full re-render would
+ * make unreliable.
+ */
+function releaseName(approval: Approval, snapshot: Snapshot): string {
+  const release = snapshot.releases.find((candidate) => candidate.id === approval.releaseId);
+  return release === undefined ? `unknown release ${approval.releaseId}` : `${release.name} ${release.version}`;
+}
+
 function renderFeedback(
   variant: string,
   message: string,
   title: string,
   handlers: Handlers,
 ): HTMLElement {
-  return el('div', { className: `notice ${variant}`, attrs: { role: 'status' } }, [
-    el('strong', { text: title }),
-    el('p', { text: message }),
-    el('button', {
-      className: 'button button--quiet',
-      text: 'Dismiss',
-      attrs: { type: 'button' },
-      on: { click: () => handlers.dispatch({ type: 'approvals/feedbackDismissed' }) },
-    }),
-  ]);
+  return el(
+    'div',
+    {
+      className: `notice ${variant}`,
+      attrs: {
+        id: 'approvals-feedback',
+        role: 'status',
+        tabindex: '-1',
+        'data-focus-fallback': '',
+      },
+    },
+    [
+      el('strong', { text: title }),
+      el('p', { text: message }),
+      el('button', {
+        className: 'button button--quiet',
+        text: 'Dismiss',
+        attrs: { id: 'approvals-dismiss', type: 'button', 'aria-label': `Dismiss: ${title}` },
+        on: { click: () => handlers.dispatch({ type: 'approvals/feedbackDismissed' }) },
+      }),
+    ],
+  );
 }

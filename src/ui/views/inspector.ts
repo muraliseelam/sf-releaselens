@@ -22,6 +22,7 @@ import {
   absoluteTime,
   coverageLabel,
   operationLabel,
+  pluralise,
   relativeTime,
 } from '../format.js';
 import type { Handlers } from '../handlers.js';
@@ -129,6 +130,8 @@ function renderControls(
       { className: 'chips', attrs: { role: 'group', 'aria-label': 'Filter by operation' } },
       METADATA_OPERATIONS.map((operation) =>
         facetChip(
+          'operation',
+          operation,
           operationLabel(operation),
           facets.operations.find((facet) => facet.value === operation)?.count ?? 0,
           query.operations.includes(operation),
@@ -145,7 +148,7 @@ function renderControls(
         ...facets.types
           .slice(0, MAX_TYPE_FACETS)
           .map((facet) =>
-            facetChip(facet.value, facet.count, query.types.includes(facet.value), () =>
+            facetChip('type', facet.value, facet.value, facet.count, query.types.includes(facet.value), () =>
               handlers.dispatch({ type: 'inspector/typeToggled', value: facet.value }),
             ),
           ),
@@ -154,7 +157,7 @@ function renderControls(
         ...query.types
           .filter((type) => !facets.types.slice(0, MAX_TYPE_FACETS).some((f) => f.value === type))
           .map((type) =>
-            facetChip(type, 0, true, () =>
+            facetChip('type', type, type, 0, true, () =>
               handlers.dispatch({ type: 'inspector/typeToggled', value: type }),
             ),
           ),
@@ -181,7 +184,7 @@ function renderControls(
         ? el('button', {
             className: 'button button--quiet',
             text: 'Clear filters',
-            attrs: { type: 'button' },
+            attrs: { id: 'inspector-clear-filters', type: 'button' },
             on: { click: () => handlers.dispatch({ type: 'inspector/filtersCleared' }) },
           })
         : null,
@@ -196,7 +199,22 @@ function renderItemRow(item: MetadataItem, selected: boolean, handlers: Handlers
       'button',
       {
         className: `row row--compact${selected ? ' row--selected' : ''}`,
-        attrs: { type: 'button', 'aria-pressed': String(selected) },
+        attrs: {
+          id: `item-${item.id}`,
+          type: 'button',
+          'aria-pressed': String(selected),
+          // The row is a toggle, and which way it will go is not visible from
+          // the name alone.
+          'aria-label': [
+            item.fullName,
+            item.type,
+            operationLabel(item.operation),
+            severity === null ? null : `${severity} warning`,
+            selected ? 'selected, activate to close the detail' : 'activate to open the detail',
+          ]
+            .filter((part) => part !== null)
+            .join(', '),
+        },
         on: {
           click: () =>
             handlers.dispatch({
@@ -242,7 +260,7 @@ function renderDetail(
       el('button', {
         className: 'button button--quiet',
         text: 'Close',
-        attrs: { type: 'button', 'aria-label': 'Close component detail' },
+        attrs: { id: 'detail-close', type: 'button', 'aria-label': 'Close component detail' },
         on: { click: () => handlers.dispatch({ type: 'inspector/itemSelected', itemId: null }) },
       }),
     ]),
@@ -294,7 +312,7 @@ function renderDetail(
               text: 'No dependencies recorded. This component stands alone in this snapshot.',
             })
           : el('ul', { className: 'links' }, [
-              ...resolved.map((dependency) => dependencyLink(dependency, handlers)),
+              ...resolved.map((dependency) => dependencyLink(dependency, 'out', handlers)),
               ...external.map((name) =>
                 el('li', {}, [
                   el('span', { className: 'link link--external', text: name }),
@@ -331,7 +349,7 @@ function renderDetail(
             el(
               'ul',
               { className: 'links' },
-              dependents.map((dependent) => dependencyLink(dependent, handlers)),
+              dependents.map((dependent) => dependencyLink(dependent, 'in', handlers)),
             ),
             uncheckedDependents === 0
               ? null
@@ -359,12 +377,24 @@ function countLabel(count: number, noun: string): string {
   return count === 1 ? `1 ${noun}` : `${count} ${noun}s`;
 }
 
-function dependencyLink(item: MetadataItem, handlers: Handlers): HTMLElement {
+function dependencyLink(
+  item: MetadataItem,
+  direction: 'out' | 'in',
+  handlers: Handlers,
+): HTMLElement {
   return el('li', {}, [
     el('button', {
       className: 'link',
       text: item.fullName,
-      attrs: { type: 'button' },
+      attrs: {
+        // Two lists can name the same component — a cycle puts an item in both
+        // "depends on" and "depended on by" — so the id carries the direction,
+        // or the two buttons would share one id and focus restoration would
+        // land on whichever came first.
+        id: `dep-${direction}-${item.id}`,
+        type: 'button',
+        'aria-label': `${item.fullName}, ${item.type}. Show this component.`,
+      },
       title: `Show ${item.fullName}`,
       on: { click: () => handlers.dispatch({ type: 'inspector/itemSelected', itemId: item.id }) },
     }),
@@ -380,6 +410,8 @@ function field(label: string, value: string, title?: string): HTMLElement[] {
 }
 
 function facetChip(
+  group: string,
+  value: string,
   label: string,
   count: number,
   selected: boolean,
@@ -389,7 +421,14 @@ function facetChip(
     'button',
     {
       className: `chip${selected ? ' chip--on' : ''}${count === 0 && !selected ? ' chip--zero' : ''}`,
-      attrs: { type: 'button', 'aria-pressed': String(selected) },
+      attrs: {
+        // Stable across re-renders so focus survives toggling the chip. The
+        // group prefix keeps a type named "add" distinct from the operation.
+        id: `chip-${group}-${value}`,
+        type: 'button',
+        'aria-pressed': String(selected),
+        'aria-label': `${label}: ${pluralise(count, 'component')}`,
+      },
       on: { click: onClick },
     },
     [label, el('span', { className: 'chip__count', text: String(count) })],
@@ -416,7 +455,7 @@ function renderEmpty(filtered: boolean, totalItems: number, handlers: Handlers):
       el('button', {
         className: 'button',
         text: 'Clear filters',
-        attrs: { type: 'button' },
+        attrs: { id: 'inspector-clear-filters-empty', type: 'button' },
         on: { click: () => handlers.dispatch({ type: 'inspector/filtersCleared' }) },
       }),
     ]);

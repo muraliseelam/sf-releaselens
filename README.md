@@ -271,6 +271,29 @@ saying otherwise would make it worse than the Slack thread it replaces.
 No content scripts. No `tabs` permission. The extension cannot read the page you
 are on.
 
+## Accessibility
+
+The panel is usable with a keyboard alone, and its ARIA contract is unit-tested
+rather than assumed:
+
+- **Tab strip** follows the ARIA tabs pattern — one Tab stop for the whole strip,
+  arrow keys to move, Home and End to jump, selection following focus.
+- **Focus survives a re-render.** The panel rebuilds its body on every state
+  change and restores focus by id, so activating a chip, a row or an approval
+  leaves you where you were. When the control you were on genuinely disappears —
+  an approved card moving to the decided queue — focus moves to the notice that
+  explains what happened, not to the top of the panel.
+- **Two live regions**, created once outside the rebuilt subtree, so they still
+  announce: polite for counts and outcomes, assertive for failures. Identical
+  text is never rewritten, so typing in the search box stays silent.
+- **Names, not positions.** Every "Approve" button says what it approves; every
+  chip count says what it counts; decorative elements are hidden from the
+  accessibility tree.
+
+What is *not* verified: how any of it actually sounds. Nobody has run this
+through NVDA or VoiceOver — see §7a of `docs/QA-CHECKLIST.md` for what that
+leaves open.
+
 ## Configuration
 
 Data gets in four ways:

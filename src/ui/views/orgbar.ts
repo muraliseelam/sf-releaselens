@@ -63,7 +63,9 @@ function renderConnected(status: OrgStatus, input: OrgBarInput): HTMLElement {
         text: busy === 'refreshing' ? 'Refreshing…' : 'Refresh',
         title: 'Read the org now. Nothing refreshes on its own.',
         attrs: {
+          id: 'org-refresh',
           type: 'button',
+          'aria-label': `Refresh from ${host}. Reads the org now; nothing refreshes on its own.`,
           ...(busy !== null || !status.hasHostPermission ? { disabled: 'disabled' } : {}),
         },
         on: { click: () => handlers.refreshOrg() },
@@ -72,7 +74,12 @@ function renderConnected(status: OrgStatus, input: OrgBarInput): HTMLElement {
         className: 'button button--quiet',
         text: busy === 'disconnecting' ? 'Disconnecting…' : 'Disconnect',
         title: 'Revoke the token and return to local data',
-        attrs: { type: 'button', ...(busy !== null ? { disabled: 'disabled' } : {}) },
+        attrs: {
+          id: 'org-disconnect',
+          type: 'button',
+          'aria-label': `Disconnect from ${host}. Revokes the token and returns to local data.`,
+          ...(busy !== null ? { disabled: 'disabled' } : {}),
+        },
         on: { click: () => handlers.disconnectOrg() },
       }),
     ]),
@@ -95,12 +102,23 @@ function renderDisconnected(connecting: boolean, handlers: Handlers): HTMLElemen
         className: 'button',
         text: 'Refresh',
         title: 'Connect an org first. There is nothing to refresh from in local mode.',
-        attrs: { type: 'button', disabled: 'disabled' },
+        attrs: {
+          id: 'org-refresh',
+          type: 'button',
+          disabled: 'disabled',
+          // A disabled control gives no reason on its own; say it in the name.
+          'aria-label': 'Refresh, unavailable: connect an org first.',
+        },
       }),
       el('button', {
         className: 'button button--primary',
         text: connecting ? 'Connecting…' : 'Connect org…',
-        attrs: { type: 'button', ...(connecting ? { disabled: 'disabled' } : {}) },
+        attrs: {
+          id: 'org-connect',
+          type: 'button',
+          'aria-expanded': 'false',
+          ...(connecting ? { disabled: 'disabled' } : {}),
+        },
         on: { click: () => handlers.dispatch({ type: 'org/connectFormToggled', open: true }) },
       }),
     ]),
@@ -179,12 +197,16 @@ function renderConnectForm(input: OrgBarInput): HTMLElement {
       el('button', {
         className: 'button button--primary',
         text: busy === 'connecting' ? 'Opening sign-in…' : 'Sign in',
-        attrs: { type: 'submit', ...(ready && busy === null ? {} : { disabled: 'disabled' }) },
+        attrs: {
+          id: 'org-signin',
+          type: 'submit',
+          ...(ready && busy === null ? {} : { disabled: 'disabled' }),
+        },
       }),
       el('button', {
         className: 'button button--quiet',
         text: 'Cancel',
-        attrs: { type: 'button' },
+        attrs: { id: 'org-connect-cancel', type: 'button', 'aria-label': 'Cancel connecting an org' },
         on: { click: () => handlers.dispatch({ type: 'org/connectFormToggled', open: false }) },
       }),
     ]),
@@ -308,7 +330,9 @@ function actionButton(label: string, variant: string, onClick: () => void): HTML
   return el('button', {
     className: `button ${variant}`,
     text: label,
-    attrs: { type: 'button' },
+    // Derived from the label so it survives a re-render: these buttons appear
+    // inside error notices, exactly where a keyboard user is most likely to be.
+    attrs: { id: `org-action-${label.toLowerCase().replace(/[^a-z]+/g, '-')}`, type: 'button' },
     on: { click: onClick },
   });
 }

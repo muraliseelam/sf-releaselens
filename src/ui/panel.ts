@@ -15,7 +15,8 @@
 import type { Actor, ApprovalDecisionOutcome } from '../core/types.js';
 import type { SeedKind } from '../data/datasource.js';
 import { RemoteError, toSerialisedError, type Client } from './client.js';
-import { captureFocus, el, restoreFocus } from './dom.js';
+import { captureFocus, el, focusFallback, restoreFocus } from './dom.js';
+import { pluralise } from './format.js';
 import { countPendingForActor } from '../core/approvals.js';
 import type { Handlers } from './handlers.js';
 import {
@@ -28,6 +29,7 @@ import {
   type Tab,
   type ViewState,
 } from './state.js';
+import { describeAnnouncement } from './announce.js';
 import { renderOrgBar } from './views/orgbar.js';
 import { renderApprovals } from './views/approvals.js';
 import { renderDashboard } from './views/dashboard.js';
@@ -74,6 +76,31 @@ export function connectOrigins(loginUrl: string): string[] {
 
 export function start(root: HTMLElement, client: Client, permissions?: PanelPermissions): Panel {
   let state: ViewState = INITIAL_STATE;
+
+  /*
+   * The panel rebuilds its body on every state change. A live region that is
+   * destroyed and recreated on each rebuild announces nothing dependably, so
+   * these two live outside the rebuilt subtree and are only ever written to.
+   * `mount` is the part that gets replaced.
+   */
+  const mount = el('div', { className: 'mount' });
+  const politeRegion = el('div', {
+    className: 'sr-only',
+    attrs: { id: 'panel-status', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' },
+  });
+  const alertRegion = el('div', {
+    className: 'sr-only',
+    attrs: { id: 'panel-alert', role: 'alert', 'aria-atomic': 'true' },
+  });
+  root.replaceChildren(mount, politeRegion, alertRegion);
+
+  function announce(): void {
+    const { polite, assertive } = describeAnnouncement(state);
+    // Writing the same text again would make some screen readers repeat
+    // themselves on every keystroke. Only a real change is spoken.
+    if (politeRegion.textContent !== polite) politeRegion.textContent = polite;
+    if (alertRegion.textContent !== assertive) alertRegion.textContent = assertive;
+  }
 
   function dispatch(action: Action): void {
     state = reduce(state, action);
@@ -225,8 +252,12 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
 
   function render(): void {
     const focus = captureFocus(document);
-    root.replaceChildren(renderShell(state, handlers));
-    restoreFocus(document, focus);
+    mount.replaceChildren(renderShell(state, handlers));
+    // When the control the user was on has gone — an approved card that moved
+    // queue, a row a filter removed — put focus on whatever replaced it rather
+    // than dropping the keyboard user back at the top of the panel.
+    if (!restoreFocus(document, focus) && focus !== null) focusFallback(document);
+    announce();
   }
 
   render();
@@ -244,11 +275,13 @@ function renderShell(state: ViewState, handlers: Handlers): HTMLElement {
     el('header', { className: 'shell__header' }, [
       el('h1', { className: 'shell__title', text: 'sf-releaselens' }),
       el('div', { className: 'shell__actions' }, [
-        toolbarButton('Reload', 'Re-read the snapshot from storage', () => handlers.reload()),
-        toolbarButton('Import', 'Import an export or an sf deploy report', () =>
+        toolbarButton('toolbar-reload', 'Reload', 'Re-read the snapshot from storage', () =>
+          handlers.reload(),
+        ),
+        toolbarButton('toolbar-import', 'Import', 'Import an export or an sf deploy report', () =>
           handlers.importSnapshot(),
         ),
-        toolbarButton('Export', 'Download the current snapshot as JSON', () =>
+        toolbarButton('toolbar-export', 'Export', 'Download the current snapshot as JSON', () =>
           handlers.exportSnapshot(),
         ),
       ]),
@@ -263,7 +296,7 @@ function renderShell(state: ViewState, handlers: Handlers): HTMLElement {
           el('button', {
             className: 'button button--quiet',
             text: 'Start empty',
-            attrs: { type: 'button' },
+            attrs: { id: 'demo-start-empty', type: 'button' },
             on: { click: () => handlers.reset('empty') },
           }),
         ])
@@ -279,18 +312,33 @@ function renderShell(state: ViewState, handlers: Handlers): HTMLElement {
     el(
       'nav',
       { className: 'tabs', attrs: { role: 'tablist', 'aria-label': 'Panel sections' } },
-      TABS.map((tab) =>
-        el(
+      TABS.map((tab) => {
+        const selected = state.tab === tab;
+        return el(
           'button',
           {
-            className: `tab${state.tab === tab ? ' tab--on' : ''}`,
+            className: `tab${selected ? ' tab--on' : ''}`,
             attrs: {
               id: `tab-${tab}`,
               type: 'button',
               role: 'tab',
-              'aria-selected': String(state.tab === tab),
+              'aria-selected': String(selected),
+              'aria-controls': 'panel-body',
+              /*
+               * Roving tabindex, as the ARIA tabs pattern requires: one Tab
+               * press moves into the tab strip, and the arrow keys move
+               * between tabs. Without it a keyboard user pays three Tab
+               * presses to get past a three-tab strip on every pass.
+               */
+              tabindex: selected ? '0' : '-1',
+              ...(tab === 'approvals' && pendingForMe > 0
+                ? { 'aria-label': `${TAB_LABELS[tab]}, ${pluralise(pendingForMe, 'approval')} waiting on you` }
+                : {}),
             },
-            on: { click: () => handlers.dispatch({ type: 'tab/selected', tab }) },
+            on: {
+              click: () => handlers.dispatch({ type: 'tab/selected', tab }),
+              keydown: (event) => onTabKeydown(event, tab, handlers),
+            },
           },
           [
             TAB_LABELS[tab],
@@ -298,16 +346,78 @@ function renderShell(state: ViewState, handlers: Handlers): HTMLElement {
               ? el('span', {
                   className: 'tab__badge',
                   text: String(pendingForMe),
+                  attrs: { 'aria-hidden': 'true' },
                   title: `${pendingForMe} approval(s) waiting on you`,
                 })
               : null,
           ],
-        ),
-      ),
+        );
+      }),
     ),
 
-    el('div', { className: 'shell__body' }, [renderBody(state, handlers)]),
+    el(
+      'div',
+      {
+        className: 'shell__body',
+        attrs: {
+          id: 'panel-body',
+          role: 'tabpanel',
+          'aria-labelledby': `tab-${state.tab}`,
+          // Focusable so that following the tab's aria-controls, or paging
+          // past the tab strip, lands somewhere. -1 keeps it out of the Tab
+          // order itself.
+          tabindex: '-1',
+        },
+      },
+      [renderBody(state, handlers)],
+    ),
   ]);
+}
+
+/**
+ * Arrow, Home and End keys across the tab strip, wrapping at both ends.
+ *
+ * Selection follows focus, which is the right choice here: switching tab is
+ * cheap, reversible and has no side effect, so making the user press Enter as
+ * well would be ceremony. Focus lands on the newly selected tab because the
+ * re-render restores focus by id, and the selected tab is the one holding
+ * `tabindex="0"`.
+ */
+function onTabKeydown(event: Event, current: Tab, handlers: Handlers): void {
+  if (!(event instanceof KeyboardEvent)) return;
+  const index = TABS.indexOf(current);
+  const last = TABS.length - 1;
+
+  let next: number;
+  switch (event.key) {
+    case 'ArrowRight':
+    case 'ArrowDown':
+      next = index === last ? 0 : index + 1;
+      break;
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      next = index === 0 ? last : index - 1;
+      break;
+    case 'Home':
+      next = 0;
+      break;
+    case 'End':
+      next = last;
+      break;
+    default:
+      return;
+  }
+
+  // Stop ArrowDown and friends scrolling the panel underneath.
+  event.preventDefault();
+  const tab = TABS[next];
+  if (tab === undefined) return;
+
+  handlers.dispatch({ type: 'tab/selected', tab });
+  // The dispatch re-rendered and put focus back where it was — on the tab the
+  // user just left. In this pattern focus follows the arrow key, so move it.
+  const target = document.getElementById(`tab-${tab}`);
+  if (target instanceof HTMLElement) target.focus();
 }
 
 function renderBody(state: ViewState, handlers: Handlers): HTMLElement {
@@ -350,44 +460,64 @@ function renderError(
   const recoverable =
     error.code === 'SNAPSHOT_VALIDATION' || error.code === 'UNSUPPORTED_SCHEMA_VERSION';
 
-  return el('div', { className: 'notice notice--error', attrs: { role: 'alert' } }, [
-    el('strong', { text: 'Could not load release data' }),
-    el('p', { text: error.message }),
-    el('p', { className: 'muted', text: `Error code: ${error.code}` }),
-    el('div', { className: 'notice__actions' }, [
-      el('button', {
-        className: 'button button--primary',
-        text: 'Retry',
-        attrs: { type: 'button' },
-        on: { click: () => handlers.reload() },
-      }),
-      recoverable
-        ? el('button', {
-            className: 'button',
-            text: 'Export raw data',
-            title: 'Download exactly what is stored, before changing anything',
-            attrs: { type: 'button' },
-            on: { click: () => handlers.exportSnapshot() },
-          })
-        : null,
-      recoverable
-        ? el('button', {
-            className: 'button button--danger',
-            text: 'Reset to demo data',
-            attrs: { type: 'button' },
-            on: { click: () => handlers.reset('demo') },
-          })
-        : null,
-    ]),
-  ]);
+  return el(
+    'div',
+    {
+      className: 'notice notice--error',
+      // The body it replaced is gone, so this is where a keyboard user should
+      // land. Announcement goes through the panel's persistent live region,
+      // not this node's role, which a full re-render would make unreliable.
+      attrs: { id: 'load-error', role: 'alert', tabindex: '-1', 'data-focus-fallback': '' },
+    },
+    [
+      el('strong', { text: 'Could not load release data' }),
+      el('p', { text: error.message }),
+      el('p', { className: 'muted', text: `Error code: ${error.code}` }),
+      el('div', { className: 'notice__actions' }, [
+        el('button', {
+          className: 'button button--primary',
+          text: 'Retry',
+          attrs: { id: 'error-retry', type: 'button', 'aria-label': 'Retry loading release data' },
+          on: { click: () => handlers.reload() },
+        }),
+        recoverable
+          ? el('button', {
+              className: 'button',
+              text: 'Export raw data',
+              title: 'Download exactly what is stored, before changing anything',
+              attrs: {
+                id: 'error-export-raw',
+                type: 'button',
+                'aria-label': 'Export raw data: download exactly what is stored, before changing anything',
+              },
+              on: { click: () => handlers.exportSnapshot() },
+            })
+          : null,
+        recoverable
+          ? el('button', {
+              className: 'button button--danger',
+              text: 'Reset to demo data',
+              attrs: {
+                id: 'error-reset',
+                type: 'button',
+                'aria-label': 'Reset to demo data. This discards the stored snapshot.',
+              },
+              on: { click: () => handlers.reset('demo') },
+            })
+          : null,
+      ]),
+    ],
+  );
 }
 
-function toolbarButton(label: string, title: string, onClick: () => void): HTMLElement {
+function toolbarButton(id: string, label: string, title: string, onClick: () => void): HTMLElement {
   return el('button', {
     className: 'button button--quiet',
     text: label,
     title,
-    attrs: { type: 'button' },
+    // The title is a tooltip, which a screen reader may or may not read; the
+    // label alone ("Export") does not say what is exported.
+    attrs: { id, type: 'button', 'aria-label': `${label}: ${title}` },
     on: { click: onClick },
   });
 }

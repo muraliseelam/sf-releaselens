@@ -541,10 +541,12 @@ describe('renderApprovals', () => {
   it('splits approvals into the three queues with counts', () => {
     const view = renderApprovals(state(), snapshot, handlers, NOW);
 
+    // The visible count is a bare number beside the heading; the trailing
+    // clause is the screen-reader-only text that says what it counts.
     expect(texts(view, '.queue__title')).toEqual([
-      'Waiting on you1',
-      'Waiting on others1',
-      'Recently decided2',
+      'Waiting on you1, 1 approval',
+      'Waiting on others1, 1 approval',
+      'Recently decided2, 2 approvals',
     ]);
   });
 

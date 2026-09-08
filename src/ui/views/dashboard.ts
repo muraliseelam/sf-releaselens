@@ -115,7 +115,17 @@ function statusChip(
     'button',
     {
       className: `chip${selected ? ' chip--on' : ''}${count === 0 ? ' chip--zero' : ''}`,
-      attrs: { type: 'button', 'aria-pressed': String(selected) },
+      attrs: {
+        // Stable id so a full re-render can put focus back on the chip the
+        // keyboard user just activated. Without it, every Enter press drops
+        // focus to the document body.
+        id: `chip-status-${value}`,
+        type: 'button',
+        'aria-pressed': String(selected),
+        // The visible chip is "Blocked 1"; a screen reader would read that as
+        // two unrelated tokens. Say what the number counts.
+        'aria-label': `${label}: ${pluralise(count, 'release')}`,
+      },
       on: {
         click: () => handlers.dispatch({ type: 'dashboard/statusFiltered', status: value }),
       },
@@ -143,7 +153,21 @@ function renderReleaseRow(
       'button',
       {
         className: `row${isAttention(release) ? ' row--attention' : ''}`,
-        attrs: { type: 'button' },
+        attrs: {
+          id: `release-${release.id}`,
+          type: 'button',
+          // The row's visible content is four lines of chips and metadata,
+          // which a screen reader would read as a run-on. Lead with the
+          // sentence a release manager actually needs.
+          'aria-label': [
+            `${release.name} ${release.version}`,
+            releaseStatusLabel(release.status),
+            pluralise(componentCount, 'component'),
+            pendingApprovals > 0 ? pluralise(pendingApprovals, 'pending approval') : null,
+          ]
+            .filter((part) => part !== null)
+            .join(', '),
+        },
         title: 'Open this release in the metadata inspector',
         on: {
           click: () => handlers.dispatch({ type: 'dashboard/releaseOpened', releaseId: release.id }),
@@ -203,7 +227,7 @@ function renderEmpty(unfiltered: boolean, handlers: Handlers): HTMLElement {
       el('button', {
         className: 'button',
         text: 'Import JSON…',
-        attrs: { type: 'button' },
+        attrs: { id: 'dashboard-import', type: 'button' },
         on: { click: () => handlers.importSnapshot() },
       }),
     ]);
@@ -213,7 +237,7 @@ function renderEmpty(unfiltered: boolean, handlers: Handlers): HTMLElement {
     el('button', {
       className: 'button',
       text: 'Show all releases',
-      attrs: { type: 'button' },
+      attrs: { id: 'dashboard-show-all', type: 'button' },
       on: { click: () => handlers.dispatch({ type: 'dashboard/statusFiltered', status: 'all' }) },
     }),
   ]);

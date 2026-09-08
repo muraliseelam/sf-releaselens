@@ -849,10 +849,34 @@ body {
   font-size: 12px;
 }
 
+/*
+ * Visually hidden, still read aloud. The live regions use this: they must stay
+ * in the accessibility tree, so `display: none` and `visibility: hidden` are
+ * both wrong — either would stop them being announced at all.
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .muted {
   color: var(--text-dim);
 }
 
+/*
+ * One focus ring for everything, defined once. `:focus-visible` rather than
+ * `:focus` so a mouse click does not leave a ring behind, and 2px rather than
+ * the 1px default because the panel is dense and a hairline outline is lost
+ * against a row border.
+ */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
