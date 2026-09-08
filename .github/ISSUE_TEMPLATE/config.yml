@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/muraliseelam/sf-releaselens/security/advisories/new
+    about: Report privately, never as a public issue. See SECURITY.md.
+  - name: Question about the design
+    url: https://github.com/muraliseelam/sf-releaselens/blob/main/docs/DESIGN.md
+    about: The architecture, data model and failure-mode table are written down.

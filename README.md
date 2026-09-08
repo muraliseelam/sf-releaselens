@@ -4,6 +4,14 @@ A Manifest V3 Chrome side panel that joins Salesforce release status, deployment
 and promotion approvals into one surface, so a release manager stops reassembling them from
 four browser tabs.
 
+[![CI](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml/badge.svg)](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/muraliseelam/sf-releaselens?sort=semver)](https://github.com/muraliseelam/sf-releaselens/releases/latest)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+
+> **Status: pre-1.0, and never yet run against a live Salesforce org.** Everything below is
+> either verified by tests or explicitly marked as unverified. Read
+> [Limitations and known gaps](#limitations-and-known-gaps) before you rely on it.
+
 ## The problem
 
 Tracking a promotion train across dev → UAT → production means holding four things in your
@@ -29,16 +37,31 @@ state visible and actionable in one panel.
 
 ## Install
 
+Not on the Chrome Web Store yet — see [`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) for
+what that still needs. Two ways to load it today, both unpacked.
+
+**From a release** (nothing to build):
+
+1. Download `sf-releaselens.zip` from the
+   [latest release](https://github.com/muraliseelam/sf-releaselens/releases/latest) and
+   unzip it.
+2. Open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked**, and
+   select the unzipped directory.
+
+**From source** (what you want if you are going to read it, which you should):
+
 ```bash
-git clone https://github.com/your-org/sf-releaselens.git
+git clone https://github.com/muraliseelam/sf-releaselens.git
 cd sf-releaselens
 npm install
 npm run build
 ```
 
-Then load it: open `chrome://extensions`, turn on **Developer mode**, choose **Load
-unpacked**, and select the `dist/` directory. Chrome 116 or later is required for the side
-panel API.
+Then **Load unpacked** → the `dist/` directory.
+
+Chrome 116 or later is required for the side panel API. The build is deterministic and
+`npm run package` produces the same zip the release attaches, so you can rebuild a release
+from its tag and compare it byte-for-byte against the published artefact.
 
 ## 60-second quickstart
 
@@ -57,6 +80,35 @@ panel API.
 5. Press **Export** to download the snapshot as JSON, or **Import** to replace it with your
    own `sf project deploy report --json` output. **Start empty** on the demo banner clears
    the sample data.
+
+## What it looks like
+
+<!-- DEMO GIF: not recorded yet. Replace this block with:
+     ![sf-releaselens walkthrough](docs/media/demo.gif)
+     and delete the note below. -->
+
+**Not recorded yet.** A screen recording is the single highest-value thing missing from
+this README, and it needs a human with a browser. When recording:
+
+- **Roughly 20 seconds, no audio, looping.** Longer than that and nobody watches to the
+  end; a loop that restarts cleanly reads as intentional.
+- **1280×800, light theme**, side panel open beside a Salesforce tab so the panel's width
+  is obvious. Not the panel alone on a white field.
+- **Reset to the demo dataset first** (**Start empty**, reload, reinstall the sample set)
+  so the numbers match the ones quoted in the quickstart above.
+- **Follow the quickstart, in order.** Dashboard headline → click the red **Blocked** chip
+  → click through to the inspector → type `payment` → open `PaymentGatewayAdapter` and let
+  the coverage, the warning and the dependency panel land → **Approvals** → approve one
+  with a comment and hold on the release-status change it caused.
+- **Pause about a second on each state change.** The instinct is to move at the speed you
+  read your own UI; that is roughly twice as fast as a stranger can follow.
+- **No real org name, username, instance URL or deploy id in frame** at any point. The demo
+  dataset is fictional by construction; a connected-org shot is not.
+- Save as `docs/media/demo.gif`, under 5 MB so GitHub renders it inline rather than
+  linking it.
+
+Still frames for the store listing are specified separately, in
+[`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) §3.
 
 ## Architecture
 
@@ -78,7 +130,7 @@ flowchart TD
         SA["StorageArea port"]
         CS["ChromeStorageArea"]
         MS["MemoryStorageArea (tests)"]
-        SFDS["SalesforceDataSource (not built)"]
+        SFDS["SalesforceDataSource"]
     end
     subgraph CORE["core/ - pure domain"]
         RS["releases: summarise, derive status"]
@@ -132,12 +184,16 @@ once for the results, once per facet group with that group's own filter lifted �
 what makes a facet chip's count trustworthy. At 5,000 components it stays inside a 16 ms
 frame; the inspector also caps rendering at 200 rows and says so in the caption.
 
-Test coverage, from `npm run test:coverage`: **96.7% lines, 91.5% branches** across
-`core/`, `data/`, the message layer and the whole UI layer — **343 tests** in 20 files.
-Every exported function has direct tests; `main.ts` and `service-worker.ts` are excluded
-because they are `chrome.*` wiring with no logic of their own.
+Test coverage, from `npm run test:coverage`: **94.2% lines, 89.2% branches** across
+`core/`, `data/`, the auth and message layers and the whole UI layer — **524 tests** in 27
+files. Every exported function has direct tests; `main.ts`, `handlers.ts` and
+`service-worker.ts` are excluded because they are `chrome.*` wiring with no logic of their
+own. CI fails below 90% statements or 85% branches, so those numbers cannot quietly slide.
 
 ## Security and what this extension can see
+
+Summarised here; the full threat model and the disclosure process are in
+[`SECURITY.md`](SECURITY.md).
 
 ### Two modes, and the difference matters
 
@@ -271,11 +327,21 @@ Stated plainly, because they determine whether this is useful to you:
 - **Not verified against a live Chrome install in CI.** The build verifies that every path
   the manifest references exists, and the logic is covered by unit and integration tests,
   but there is no automated end-to-end load of the packaged extension.
-- **No icons.** The extension ships without icon assets, so Chrome shows a default puzzle
-  piece in the toolbar. Add PNGs and an `icons` block to `src/manifest.json` if you fork it —
-  `scripts/build.mjs` already verifies those paths.
+- **No demo recording.** See "What it looks like" above; the screenshots and the GIF are
+  both still to be captured by a human.
 - **The inspector renders at most 200 rows** per result set. The count is shown, but the
   201st component is only reachable by narrowing the filters.
+
+## Contributing
+
+Issues and pull requests are welcome. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers the
+layout, the non-negotiables and how commits become releases; the pull request template
+lists what CI will check before a human looks at it.
+
+Found a security issue? **Do not open a public issue.** Follow
+[`SECURITY.md`](SECURITY.md), which also contains the full threat model — what this
+extension can reach, what it stores and where, and what it explicitly does not protect you
+from.
 
 ## Licence
 

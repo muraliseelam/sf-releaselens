@@ -1,0 +1,99 @@
+name: Bug report
+description: Something behaves differently from what the README or the docs say.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste an access token, refresh token, Consumer Key, org username,
+        instance URL or deploy id.** If the bug *is* a leak of one of those, stop
+        and follow [SECURITY.md](../../SECURITY.md) instead — report it privately
+        and describe the shape rather than the value.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The version in `chrome://extensions`, or the commit you built from.
+      placeholder: 0.2.0
+    validations:
+      required: true
+
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome version and OS
+      placeholder: Chrome 131 on Windows 11
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which data was loaded?
+      description: This changes almost every code path, so it is the first thing worth knowing.
+      options:
+        - Demo dataset (the one that ships)
+        - An imported file (a previous export)
+        - An imported file (sf project deploy report --json)
+        - A connected Salesforce org
+        - Empty (after Start empty)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface?
+      options:
+        - Dashboard
+        - Inspector
+        - Approvals
+        - Org connection / sign-in
+        - Import / export
+        - Build or tooling
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+      description: One sentence each is plenty.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: >
+        Numbered, starting from a state someone else can reach — ideally
+        "install, open the panel on the demo dataset, then…".
+      placeholder: |
+        1. Open the side panel on the demo dataset
+        2. Click the Blocked chip
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      description: >
+        `chrome://extensions` → **Details** → **Inspect views: service worker**
+        for the worker, or right-click the panel → **Inspect** for the UI. Errors
+        are already redacted, but read them before pasting.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have removed any org name, username, instance URL, deploy id or token from this report.
+          required: true
+        - label: I checked the "Limitations and known gaps" section of the README, and this is not one of them.
+          required: true

@@ -1,0 +1,70 @@
+name: Feature request
+description: Propose something this should do that it does not do yet.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Some things are **deliberately** out of scope, and a proposal that runs
+        into one of them needs to argue with the decision rather than around it:
+
+        - **Writing anything to a Salesforce org.** The read-only boundary is the
+          main reason this is installable in a regulated org.
+        - **Background polling, timers or scheduled refresh.** Reads happen when
+          the user asks.
+        - **Telemetry or analytics of any kind.**
+        - **A hosted service, a shared Connected App, or any server operated by
+          this project.**
+        - **Treating approvals as an audit trail.** They are local and
+          unauthenticated by construction.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        What you were trying to do, and what made it hard. Describe the situation,
+        not the solution — the best fix is often not the one either of us thought
+        of first.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where would this live?
+      options:
+        - Dashboard
+        - Inspector
+        - Approvals
+        - Org connection
+        - Import / export
+        - Docs
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
+      description: A workaround, another tool, or "nothing, I just lose the time".
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This does not require writing to a Salesforce org.
+          required: false
+        - label: This does not require a background poll, a timer, or a server.
+          required: false
+        - label: I am willing to open a pull request for this.
+          required: false
