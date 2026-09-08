@@ -30,7 +30,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describeOrg } from './org-harness.mjs';
+import { deployReport, describeOrg } from './org-harness.mjs';
 
 const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OUT = join(projectRoot, 'test', 'fixtures', 'org');
@@ -254,6 +254,18 @@ async function main() {
       ),
     );
   }
+  /*
+   * The CLI's own report for the same deploy.
+   *
+   * `data/transfer.ts` maps this when a user imports a file, and its shape had
+   * never been checked against a real one either — the hand-written fixture
+   * invented a `createdByName` on each component that no real report has.
+   */
+  captured.cliDeployReport =
+    deployIds.length === 0
+      ? { ok: false, code: 'NO_DEPLOYS', message: 'this org has no deploy history' }
+      : await attempt(() => deployReport(alias, deployIds[0]));
+
   // The endpoint the code used to read, kept so the fixture records *why* it
   // was wrong rather than only that it changed.
   captured.toolingDetailKeys = await attempt(async () => {

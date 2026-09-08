@@ -198,7 +198,7 @@
     "value": {
       "DailyApiRequests": {
         "Max": 15000,
-        "Remaining": 14284
+        "Remaining": 13672
       }
     }
   },
@@ -631,9 +631,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:00:00.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false,
-                "problemType": null
+                "forPackageManifestFile": false
               },
               {
                 "componentType": "",
@@ -650,9 +650,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:04:12.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": true,
-                "problemType": null
+                "forPackageManifestFile": true
               }
             ],
             "retrieveResult": null,
@@ -663,9 +663,9 @@
               "apexLogId": null,
               "flowCoverageWarnings": [],
               "numTestsRun": 0,
+              "numFailures": 0,
               "codeCoverage": [],
               "flowCoverage": [],
-              "numFailures": 0,
               "codeCoverageWarnings": []
             },
             "allComponentMessages": [
@@ -684,9 +684,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-02T14:20:00.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false,
-                "problemType": null
+                "forPackageManifestFile": false
               },
               {
                 "componentType": "",
@@ -703,9 +703,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:00:00.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": true,
-                "problemType": null
+                "forPackageManifestFile": true
               }
             ]
           },
@@ -765,8 +765,8 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-02T14:20:00.000+0000",
-                "forPackageManifestFile": false,
                 "knownPackagingProblem": false,
+                "forPackageManifestFile": false,
                 "problemType": null
               },
               {
@@ -784,8 +784,8 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:00:00.000+0000",
-                "forPackageManifestFile": true,
                 "knownPackagingProblem": false,
+                "forPackageManifestFile": true,
                 "problemType": null
               }
             ],
@@ -806,8 +806,8 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:04:12.000+0000",
-                "forPackageManifestFile": false,
                 "knownPackagingProblem": false,
+                "forPackageManifestFile": false,
                 "problemType": null
               },
               {
@@ -825,8 +825,8 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-02T14:20:00.000+0000",
-                "forPackageManifestFile": true,
                 "knownPackagingProblem": false,
+                "forPackageManifestFile": true,
                 "problemType": null
               }
             ],
@@ -838,8 +838,8 @@
               "flowCoverageWarnings": [],
               "numTestsRun": 0,
               "flowCoverage": [],
-              "codeCoverage": [],
               "numFailures": 0,
+              "codeCoverage": [],
               "codeCoverageWarnings": []
             }
           },
@@ -899,9 +899,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:04:12.000+0000",
-                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false
+                "forPackageManifestFile": false,
+                "problemType": null
               },
               {
                 "componentType": "ConnectedApp",
@@ -918,9 +918,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-02T14:20:00.000+0000",
-                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false
+                "forPackageManifestFile": false,
+                "problemType": null
               },
               {
                 "componentType": "",
@@ -937,24 +937,12 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:00:00.000+0000",
-                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": true
+                "forPackageManifestFile": true,
+                "problemType": null
               }
             ],
             "retrieveResult": null,
-            "runTestResult": {
-              "successes": [],
-              "failures": [],
-              "totalTime": 0,
-              "apexLogId": null,
-              "flowCoverageWarnings": [],
-              "numTestsRun": 0,
-              "codeCoverageWarnings": [],
-              "codeCoverage": [],
-              "numFailures": 0,
-              "flowCoverage": []
-            },
             "allComponentMessages": [
               {
                 "componentType": "ConnectedApp",
@@ -971,9 +959,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:04:12.000+0000",
-                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false
+                "forPackageManifestFile": false,
+                "problemType": null
               },
               {
                 "componentType": "ConnectedApp",
@@ -990,9 +978,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-02T14:20:00.000+0000",
-                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false
+                "forPackageManifestFile": false,
+                "problemType": null
               },
               {
                 "componentType": "",
@@ -1009,11 +997,23 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:00:00.000+0000",
-                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": true
+                "forPackageManifestFile": true,
+                "problemType": null
               }
-            ]
+            ],
+            "runTestResult": {
+              "successes": [],
+              "failures": [],
+              "totalTime": 0,
+              "apexLogId": null,
+              "flowCoverageWarnings": [],
+              "numTestsRun": 0,
+              "codeCoverage": [],
+              "flowCoverage": [],
+              "numFailures": 0,
+              "codeCoverageWarnings": []
+            }
           },
           "createdDate": "2026-09-01T09:04:12.000+0000",
           "startDate": "2026-09-02T14:20:00.000+0000",
@@ -1033,6 +1033,74 @@
       }
     }
   ],
+  "cliDeployReport": {
+    "ok": true,
+    "value": {
+      "status": 0,
+      "result": {
+        "checkOnly": false,
+        "completedDate": "2026-09-02T14:20:00.000+0000",
+        "createdBy": "synthetic-57",
+        "createdByName": "Alex Fixture",
+        "createdDate": "2026-09-01T09:00:00.000+0000",
+        "details": {
+          "componentSuccesses": [
+            {
+              "changed": true,
+              "componentType": "InstalledPackage",
+              "created": true,
+              "createdDate": "2026-09-01T09:04:12.000+0000",
+              "deleted": false,
+              "fileName": "synth/C59.xml",
+              "fullName": "SynthComp60",
+              "success": true
+            },
+            {
+              "changed": true,
+              "componentType": "",
+              "created": false,
+              "createdDate": "2026-09-02T14:20:00.000+0000",
+              "deleted": false,
+              "fileName": "synth/C61.xml",
+              "fullName": "SynthComp62",
+              "success": true
+            }
+          ],
+          "runTestResult": {
+            "numFailures": 0,
+            "numTestsRun": 0,
+            "totalTime": 0,
+            "codeCoverage": [],
+            "codeCoverageWarnings": [],
+            "failures": [],
+            "flowCoverage": [],
+            "flowCoverageWarnings": [],
+            "successes": []
+          },
+          "componentFailures": []
+        },
+        "done": true,
+        "id": "0AfSYNTH00000003AAA",
+        "ignoreWarnings": false,
+        "lastModifiedDate": "2026-09-01T09:00:00.000+0000",
+        "numberComponentErrors": 0,
+        "numberComponentsDeployed": 1,
+        "numberComponentsTotal": 1,
+        "numberFiles": "synthetic-63",
+        "numberTestErrors": 0,
+        "numberTestsCompleted": 0,
+        "numberTestsTotal": 0,
+        "rollbackOnError": true,
+        "runTestsEnabled": false,
+        "startDate": "2026-09-01T09:04:12.000+0000",
+        "status": "Succeeded",
+        "success": true,
+        "zipSize": "synthetic-64",
+        "files": []
+      },
+      "warnings": []
+    }
+  },
   "toolingDetailKeys": {
     "ok": true,
     "value": {

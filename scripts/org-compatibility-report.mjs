@@ -224,10 +224,21 @@ See the reasoning for pinning in \`docs/DATASOURCE.md\`; the refresh now reads
 
 ## What could not be measured
 
-**Pagination.** No org here has enough \`DeployRequest\` or
+**Pagination.** \`queryMore\` has never run against a live org, and it was not
+for want of trying. No org here has enough \`DeployRequest\` or
 \`ApexCodeCoverageAggregate\` rows to cross Salesforce's 2,000-record page
-boundary, so \`queryMore\` was never exercised against a live org. It is covered
-by unit tests against a fake, and that is the honest status.
+boundary. The obvious substitute — \`EntityDefinition\`, which exceeds 2,000 in
+four of these orgs — refuses outright:
+
+\`\`\`
+EXCEEDED_ID_LIMIT: EntityDefinition does not support queryMore(),
+use LIMIT to restrict the results to a single batch
+\`\`\`
+
+Nothing else queryable here is large enough. So the continuation path is covered
+by unit tests against a fake and by nothing else, and it will stay that way
+until somebody points this at an org with more than ten deploys' worth of
+history. **That is the largest untested path in the data layer.**
 
 **The OAuth flow.** These tests borrow the Salesforce CLI's token. The
 extension's own \`chrome.identity.launchWebAuthFlow\` against a customer-created
@@ -235,6 +246,27 @@ Connected App has still never run — see \`docs/LIVE-ORG-RUNBOOK.md\`.
 
 **A sandbox.** All of these are production or developer-edition orgs. Nothing
 here has been read from a \`*.sandbox.my.salesforce.com\` instance.
+
+## Running the contract suite
+
+\`\`\`bash
+npm run test:org                          # every connected org
+npm run test:org -- --target-org nsorg    # one
+\`\`\`
+
+Fourteen tests, each walking every connected org. Roughly 100 live API calls in
+about 100 seconds for seven orgs — enough to notice, nowhere near a daily limit
+(the smallest org here allows 15,000 requests a day).
+
+It **skips** cleanly with no CLI, no authenticated org, or a name that matches
+none, saying which. A skip is the right answer to "no org available", and
+turning it into a failure would make the suite unusable for anyone without one.
+
+One flake was observed in seven runs and did not reproduce. The per-request
+timeout is now 20 seconds rather than the product's 30, so a slow instance fails
+as \`ORG_UNREACHABLE\` naming the org rather than as an anonymous runner
+timeout — the cause could not be identified after the fact, which is the
+argument for making it legible next time.
 
 ## Re-running
 

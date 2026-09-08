@@ -198,7 +198,7 @@
     "value": {
       "DailyApiRequests": {
         "Max": 101000,
-        "Remaining": 100575
+        "Remaining": 100330
       }
     }
   },
@@ -398,9 +398,9 @@
               "apexLogId": null,
               "flowCoverageWarnings": [],
               "numTestsRun": 0,
-              "flowCoverage": [],
               "numFailures": 0,
               "codeCoverage": [],
+              "flowCoverage": [],
               "codeCoverageWarnings": []
             }
           },
@@ -533,8 +533,8 @@
               "apexLogId": null,
               "flowCoverageWarnings": [],
               "numTestsRun": 0,
-              "codeCoverage": [],
               "flowCoverage": [],
+              "codeCoverage": [],
               "numFailures": 0,
               "codeCoverageWarnings": []
             }
@@ -550,13 +550,84 @@
           "createdByName": "Alex Fixture",
           "canceledBy": null,
           "canceledByName": null,
-          "runTestResult": null,
           "runTestsEnabled": false,
+          "runTestResult": null,
           "done": true
         }
       }
     }
   ],
+  "cliDeployReport": {
+    "ok": true,
+    "value": {
+      "status": 0,
+      "result": {
+        "checkOnly": false,
+        "completedDate": "2026-09-01T09:04:12.000+0000",
+        "createdBy": "synthetic-29",
+        "createdByName": "Alex Fixture",
+        "createdDate": "2026-09-02T14:20:00.000+0000",
+        "details": {
+          "componentFailures": [
+            {
+              "changed": false,
+              "componentType": "InstalledPackage",
+              "created": false,
+              "createdDate": "2026-09-01T09:00:00.000+0000",
+              "deleted": false,
+              "fileName": "synth/C31.xml",
+              "fullName": "SynthComp32",
+              "problem": "Synthesised problem text for a fixture.",
+              "problemType": "Error",
+              "success": false
+            }
+          ],
+          "componentSuccesses": [
+            {
+              "changed": true,
+              "componentType": "",
+              "created": false,
+              "createdDate": "2026-09-01T09:04:12.000+0000",
+              "deleted": false,
+              "fileName": "synth/C34.xml",
+              "fullName": "SynthComp35",
+              "success": true
+            }
+          ],
+          "runTestResult": {
+            "numFailures": 0,
+            "numTestsRun": 0,
+            "totalTime": 0,
+            "codeCoverage": [],
+            "codeCoverageWarnings": [],
+            "failures": [],
+            "flowCoverage": [],
+            "flowCoverageWarnings": [],
+            "successes": []
+          }
+        },
+        "done": true,
+        "id": "0AfSYNTH00000003AAA",
+        "ignoreWarnings": false,
+        "lastModifiedDate": "2026-09-02T14:20:00.000+0000",
+        "numberComponentErrors": 1,
+        "numberComponentsDeployed": 0,
+        "numberComponentsTotal": 1,
+        "numberFiles": "synthetic-36",
+        "numberTestErrors": 0,
+        "numberTestsCompleted": 0,
+        "numberTestsTotal": 0,
+        "rollbackOnError": true,
+        "runTestsEnabled": false,
+        "startDate": "2026-09-01T09:00:00.000+0000",
+        "status": "Failed",
+        "success": false,
+        "zipSize": "synthetic-37",
+        "files": []
+      },
+      "warnings": []
+    }
+  },
   "toolingDetailKeys": {
     "ok": true,
     "value": {

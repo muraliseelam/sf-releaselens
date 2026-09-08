@@ -198,7 +198,7 @@
     "value": {
       "DailyApiRequests": {
         "Max": 50000,
-        "Remaining": 49647
+        "Remaining": 49464
       }
     }
   },
@@ -240,6 +240,11 @@
     }
   },
   "deployDetails": [],
+  "cliDeployReport": {
+    "ok": false,
+    "code": "NO_DEPLOYS",
+    "message": "this org has no deploy history"
+  },
   "toolingDetailKeys": {
     "ok": true,
     "value": null

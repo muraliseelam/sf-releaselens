@@ -147,6 +147,17 @@ function classifyHost(instanceUrl) {
 }
 
 /**
+ * `sf project deploy report --json` for one deploy.
+ *
+ * Read-only: it reports on a deploy that already happened and starts nothing.
+ * Captured because `data/transfer.ts` maps this shape when a user imports a
+ * file, and that mapping had never been checked against a real report either.
+ */
+export async function deployReport(alias, jobId) {
+  return sf(['project', 'deploy', 'report', '--target-org', alias, '--job-id', jobId, '--json']);
+}
+
+/**
  * Strips anything credential-shaped out of a value before it is printed or
  * written anywhere.
  *

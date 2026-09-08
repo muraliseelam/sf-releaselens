@@ -98,6 +98,16 @@ function connect(org: OrgUnderTest): OrgConnection {
     apiVersion: API_VERSION,
     // The token is never stored on the connection; it is asked for per request.
     getAccessToken: () => Promise.resolve(org.accessToken),
+    /*
+     * Shorter than the product's 30s default.
+     *
+     * Each of these tests walks every connected org, so one slow instance can
+     * spend the whole test budget and fail as an anonymous runner timeout. A
+     * per-request limit turns that into `ORG_UNREACHABLE` naming the org, which
+     * is the difference between "something timed out" and "this org is slow".
+     * Observed once in seven runs across seven orgs.
+     */
+    timeoutMs: 20_000,
   });
 }
 
@@ -125,7 +135,9 @@ function dataSourceFor(org: OrgUnderTest) {
 function forEachOrg(
   name: string,
   body: (org: OrgUnderTest) => Promise<void>,
-  timeout = 120_000,
+  // Inherited from the config rather than fixed here: the budget has to cover
+  // every connected org, and how many that is depends on who is running it.
+  timeout = 180_000,
 ): void {
   it(name, async (context) => {
     if (skipReason !== undefined) context.skip(skipReason);
