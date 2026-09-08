@@ -1,3 +1,13 @@
+## [0.4.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.3.1...v0.4.0) (2026-09-08)
+
+### Features
+
+* **assets:** generate launch screenshots and a walkthrough video from the real extension ([2686a75](https://github.com/muraliseelam/sf-releaselens/commit/2686a75262885feb5212d91398d4baa61be4bf5b))
+
+### Documentation
+
+* refresh the measured numbers and name the real fix for a stale dist ([131700f](https://github.com/muraliseelam/sf-releaselens/commit/131700fa2edc6c314e03448649f564c1bdb92030))
+
 ## [0.3.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.3.0...v0.3.1) (2026-09-08)
 
 ### Bug fixes
