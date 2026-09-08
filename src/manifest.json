@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "sf-releaselens",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Release dashboard, metadata inspector and approvals helper for Salesforce release managers.",
   "minimum_chrome_version": "116",
   "permissions": [

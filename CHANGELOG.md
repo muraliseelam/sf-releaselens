@@ -1,3 +1,13 @@
+## [0.5.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.0...v0.5.1) (2026-09-08)
+
+### Bug fixes
+
+* **org:** read deploy components from the endpoint that has them ([7fcb6ad](https://github.com/muraliseelam/sf-releaselens/commit/7fcb6adf3ac8e5bfe70496c15dff23b2e30370b7))
+
+### Documentation
+
+* refresh the counts, and tell contributors how the browser suite works ([0190264](https://github.com/muraliseelam/sf-releaselens/commit/0190264f6739d1f2c2ea54fa65444e125a373fbf))
+
 ## [0.5.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.4.1...v0.5.0) (2026-09-08)
 
 ### Features
