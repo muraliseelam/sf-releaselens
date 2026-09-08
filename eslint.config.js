@@ -99,6 +99,8 @@ export default [
         process: 'readonly',
         Buffer: 'readonly',
         createImageBitmap: 'readonly',
+        performance: 'readonly',
+        PerformanceNavigationTiming: 'readonly',
       },
     },
     rules: {

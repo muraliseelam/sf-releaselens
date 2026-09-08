@@ -176,6 +176,12 @@ At **1,000 components across 20 releases**, which is a large quarterly release:
 | Search, text + type + operation facets | 0.68 ms | 1.18 ms |
 | Merge a refresh into the cache | 0.03 ms | 0.06 ms |
 
+**Size and startup**, measured in a real Chromium: the packaged extension is **83.6 KB**
+zipped (250 KB unpacked, 41 files, zero runtime dependencies), and the panel is readable
+**225 ms** after opening — 239 ms if Chrome had evicted the service worker and has to start
+it first. Both are budgeted and gated in CI; `npm run size` fails the build if the package
+outgrows its budget.
+
 The filtered search is the slowest core path because facet counts are computed three times —
 once for the results, once per facet group with that group's own filter lifted — which is
 what makes a facet chip's count trustworthy. The inspector caps rendering at 200 rows and
@@ -314,6 +320,7 @@ npm run build          # tsc + copy assets + verify every manifest path exists
 npm run test           # vitest, ~5 seconds
 npm run test:coverage  # vitest with v8 coverage thresholds
 npm run test:e2e       # real Chromium with dist/ loaded, ~90 seconds
+npm run size           # fail if the packaged extension outgrew its budget
 npm run lint           # eslint, type-checked rules
 npm run check          # everything except the browser suite
 node bench/bench.mjs   # the numbers above (needs a build first)

@@ -404,6 +404,37 @@ and is here to answer "does it fall over past the expected size" rather than
 The inspector caps rendering at 200 rows and says so in its caption, so the
 render numbers do not grow with the result count the way the search numbers do.
 
+## Size and startup
+
+Separate from the table above, because both are measured in a real browser
+rather than in Node.
+
+| | Measured | Budget | Where |
+| --- | ---: | ---: | --- |
+| Packaged zip | 83.6 KB | 97 KB | \`npm run size\`, gated in CI |
+| Unpacked \`dist/\` | 250.2 KB | 288 KB | same |
+| Shipped files | 41 | 56 | same |
+| Largest single file | 20.9 KB (\`ui/panel.js\`) | 27 KB | same |
+| Time to interactive, worker warm | 225 ms median | 1,500 ms | \`e2e/startup.spec.ts\` |
+| Time to interactive, worker evicted | 239 ms | 4,000 ms | same |
+| \`domInteractive\` | 23 ms | — | same, recorded not asserted |
+
+Time to interactive means the dashboard on screen with real numbers in it, not
+the document having loaded: it includes Chrome starting the extension page, the
+service worker waking if it had been evicted, one message round trip, and
+validating the stored snapshot.
+
+The startup ceilings are six to sixteen times the measured value on purpose. CI
+machines are slower and noisier than a laptop, and a ceiling that fails on a busy
+runner teaches people to re-run the job rather than to read it. They catch a
+regression that doubles the number, which is the regression worth catching.
+
+The size budget has 15% headroom on totals and 25% on any single file. The
+extension ships **zero runtime dependencies**, so every byte is something
+somebody wrote — which is what makes the budget both meaningful and easy to
+keep. Raising it is a deliberate edit in the commit that needs it:
+\`npm run size:update\`.
+
 ## Re-running
 
 \`\`\`bash

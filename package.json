@@ -21,6 +21,8 @@
     "icons": "node scripts/generate-icons.mjs",
     "icons:check": "node scripts/generate-icons.mjs --check",
     "package": "node scripts/package-extension.mjs",
+    "size": "node scripts/check-size.mjs",
+    "size:update": "node scripts/check-size.mjs --update",
     "clean": "tsc --build --clean && node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "lint": "eslint .",
     "typecheck:e2e": "tsc -p tsconfig.e2e.json",

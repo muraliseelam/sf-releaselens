@@ -58,6 +58,12 @@ jobs:
       - name: Package the unpacked extension
         run: npm run package
 
+      # Runs after packaging because it measures the artefact, not the source.
+      # The budget is committed in size-budget.json with its headroom stated;
+      # raising it is a deliberate edit in the commit that needs it.
+      - name: Size budget
+        run: npm run size
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sf-releaselens-unpacked

@@ -17,17 +17,17 @@ All times in milliseconds.
 
 | Operation | 100 p50 | 100 p95 | 1,000 p50 | 1,000 p95 | 10,000 p50 | 10,000 p95 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Parse a stored snapshot | 0.05 | 0.24 | 0.52 | 0.92 | 5.09 | 7.53 |
-| Serialise for export | 0.05 | 0.07 | 0.67 | 1.09 | 9.36 | 11.4 |
-| Read an exported file | 0.13 | 0.19 | 1.19 | 1.61 | 12.8 | 22.8 |
-| Render the dashboard | 0.92 | 2.04 | 2.46 | 5.27 | 6.53 | 14.3 |
-| Render the inspector, unfiltered | 5.09 | 7.10 | 11.2 | 13.7 | 11.2 | 20.2 |
-| Render the approvals queues | 1.21 | 4.01 | 2.72 | 4.55 | 7.86 | 17.1 |
-| Search, no filters | 0.02 | 0.09 | 0.06 | 0.22 | 0.58 | 0.82 |
-| Search, text + type + operation | 0.09 | 0.16 | 0.68 | 0.99 | 7.27 | 8.15 |
-| Resolve one component’s dependencies | <0.01 | 0.03 | 0.08 | 0.36 | 0.92 | 2.07 |
-| Summarise releases by status | <0.01 | <0.01 | <0.01 | <0.01 | <0.01 | <0.01 |
-| Merge a refresh into the cache | <0.01 | 0.01 | 0.03 | 0.07 | 0.21 | 0.46 |
+| Parse a stored snapshot | 0.07 | 0.25 | 0.48 | 1.12 | 4.98 | 7.72 |
+| Serialise for export | 0.06 | 0.09 | 0.82 | 1.13 | 8.99 | 11.1 |
+| Read an exported file | 0.13 | 0.20 | 1.09 | 1.67 | 12.4 | 24.2 |
+| Render the dashboard | 0.96 | 2.03 | 2.42 | 6.34 | 6.43 | 15.2 |
+| Render the inspector, unfiltered | 4.86 | 7.26 | 9.97 | 12.4 | 14.7 | 21.8 |
+| Render the approvals queues | 0.86 | 1.55 | 2.57 | 4.58 | 8.73 | 18.6 |
+| Search, no filters | <0.01 | 0.08 | 0.06 | 0.23 | 0.66 | 1.21 |
+| Search, text + type + operation | 0.08 | 0.13 | 0.69 | 1.06 | 9.17 | 31.1 |
+| Resolve one component’s dependencies | 0.02 | 0.02 | 0.08 | 0.20 | 4.43 | 7.93 |
+| Summarise releases by status | <0.01 | <0.01 | <0.01 | <0.01 | 0.02 | 0.12 |
+| Merge a refresh into the cache | <0.01 | <0.01 | 0.03 | 0.06 | 0.96 | 2.32 |
 
 ## What changed as a result
 
@@ -74,6 +74,37 @@ and is here to answer "does it fall over past the expected size" rather than
 
 The inspector caps rendering at 200 rows and says so in its caption, so the
 render numbers do not grow with the result count the way the search numbers do.
+
+## Size and startup
+
+Separate from the table above, because both are measured in a real browser
+rather than in Node.
+
+| | Measured | Budget | Where |
+| --- | ---: | ---: | --- |
+| Packaged zip | 83.6 KB | 97 KB | `npm run size`, gated in CI |
+| Unpacked `dist/` | 250.2 KB | 288 KB | same |
+| Shipped files | 41 | 56 | same |
+| Largest single file | 20.9 KB (`ui/panel.js`) | 27 KB | same |
+| Time to interactive, worker warm | 225 ms median | 1,500 ms | `e2e/startup.spec.ts` |
+| Time to interactive, worker evicted | 239 ms | 4,000 ms | same |
+| `domInteractive` | 23 ms | — | same, recorded not asserted |
+
+Time to interactive means the dashboard on screen with real numbers in it, not
+the document having loaded: it includes Chrome starting the extension page, the
+service worker waking if it had been evicted, one message round trip, and
+validating the stored snapshot.
+
+The startup ceilings are six to sixteen times the measured value on purpose. CI
+machines are slower and noisier than a laptop, and a ceiling that fails on a busy
+runner teaches people to re-run the job rather than to read it. They catch a
+regression that doubles the number, which is the regression worth catching.
+
+The size budget has 15% headroom on totals and 25% on any single file. The
+extension ships **zero runtime dependencies**, so every byte is something
+somebody wrote — which is what makes the budget both meaningful and easy to
+keep. Raising it is a deliberate edit in the commit that needs it:
+`npm run size:update`.
 
 ## Re-running
 
