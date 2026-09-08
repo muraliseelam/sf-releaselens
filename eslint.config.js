@@ -114,6 +114,15 @@ export default [
   },
   {
     files: ['test/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...WEB_GLOBALS,
+        // Property tests read FC_RUNS to widen a hunt, and clone fixtures so a
+        // mutation in one case cannot reach the next.
+        process: 'readonly',
+        structuredClone: 'readonly',
+      },
+    },
     rules: {
       // Tests deliberately construct malformed payloads to prove the validator
       // rejects them, and deliberately narrow `unknown` responses by assertion.

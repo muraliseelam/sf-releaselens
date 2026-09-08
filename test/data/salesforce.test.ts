@@ -200,6 +200,44 @@ describe('refresh() maps the org', () => {
   });
 });
 
+describe('a mapping failure blames the org, not the stored snapshot', () => {
+  /**
+   * The panel offers "Reset to demo data" beside a snapshot-validation error,
+   * because that error normally means the local store is corrupt. If a bad org
+   * response produced the same error, a release manager would reset — and lose
+   * their local approvals — over a problem that arrived down the wire.
+   *
+   * Two `DeployRequest` rows with the same Id is the reachable version of this:
+   * a query that pages can overlap, and the mapper keys releases by deploy id.
+   */
+  const duplicated = () =>
+    connectionFor({
+      deploys: [DEPLOY_SUCCEEDED, DEPLOY_SUCCEEDED],
+      details: { [DEPLOY_SUCCEEDED.Id]: DEPLOY_SUCCEEDED_DETAIL },
+    });
+
+  it('reports ORG_RESPONSE_INVALID rather than SNAPSHOT_VALIDATION', async () => {
+    const { dataSource } = build(duplicated());
+
+    await expect(dataSource.refresh()).rejects.toBeInstanceOf(OrgResponseInvalidError);
+  });
+
+  it('says the local data is untouched, because it is', async () => {
+    const { dataSource, storage } = build(duplicated());
+
+    await expect(dataSource.refresh()).rejects.toThrow(/local data and approvals are untouched/);
+    // Not merely claimed — nothing was written.
+    expect(await storage.read(ORG_SNAPSHOT_KEY)).toBeUndefined();
+  });
+
+  it('keeps the failing field in the message, so the cause is still findable', async () => {
+    const { dataSource } = build(duplicated());
+
+    await expect(dataSource.refresh()).rejects.toThrow(/DeployRequest -> releases/);
+    await expect(dataSource.refresh()).rejects.toThrow(/duplicate id/);
+  });
+});
+
 describe('honest gaps', () => {
   it('marks every org item as having unavailable dependencies', async () => {
     // An empty dependsOn here means "unknown", not "none" — the inspector must

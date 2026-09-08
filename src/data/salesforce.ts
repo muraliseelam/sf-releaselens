@@ -22,7 +22,11 @@
  */
 
 import type { Clock, IdFactory } from '../core/clock.js';
-import { ApiLimitExhaustedError, OrgResponseInvalidError } from '../core/errors.js';
+import {
+  ApiLimitExhaustedError,
+  OrgResponseInvalidError,
+  SnapshotValidationError,
+} from '../core/errors.js';
 import {
   applyApprovalDecision,
   appendAudit,
@@ -165,7 +169,7 @@ export function createSalesforceDataSource(deps: SalesforceDataSourceDeps): Data
 
       // Round-trips through the same validator as stored data, so a mapping bug
       // is caught here rather than surfacing as a corrupt cache later.
-      return writeCache(parseSnapshot(JSON.parse(JSON.stringify(audited))));
+      return writeCache(validateMapping(audited));
     },
 
     async decide(command: DecisionCommand): Promise<DecisionResult> {
@@ -380,6 +384,39 @@ function toItems(deploy: DeployRequestRow, deps: SnapshotDeps): MetadataItem[] {
     // `package.xml` comes back as a component with an empty type; it is a
     // manifest, not metadata.
     .filter((item) => item.type.length > 0 && item.fullName.length > 0);
+}
+
+/**
+ * Validates a snapshot this file just built from an org response.
+ *
+ * The check itself is `parseSnapshot`, deliberately — one validator, no second
+ * implementation to drift. What differs is the error. A validation failure here
+ * is a statement about the *org's* response, not about the user's stored data,
+ * and `SnapshotValidationError` says "Snapshot is not valid at ...", which a
+ * release manager reads as "my local data is corrupt". The panel then offers
+ * them Reset to demo data, and they lose their local approvals to fix a problem
+ * that was never theirs.
+ *
+ * Found by the property test in `salesforce.property.test.ts`: roughly one
+ * fuzzed org response in six was mapped into something the validator rejected,
+ * and every one of them reported the wrong culprit.
+ */
+function validateMapping(candidate: Snapshot): Snapshot {
+  // Through JSON first: the validator's contract is over plain data, and this
+  // is the same trip the snapshot makes into storage.
+  const plain: unknown = JSON.parse(JSON.stringify(candidate));
+  try {
+    return parseSnapshot(plain);
+  } catch (cause) {
+    if (cause instanceof SnapshotValidationError) {
+      throw new OrgResponseInvalidError(
+        cause.path.replace(/^snapshot\./, 'DeployRequest -> '),
+        `${cause.detail}. The org's deploy records could not be mapped onto a release snapshot, ` +
+          'so nothing was changed. Your local data and approvals are untouched.',
+      );
+    }
+    throw cause;
+  }
 }
 
 function applyCoverage(items: MetadataItem[], coverage: ReadonlyMap<string, number>): void {

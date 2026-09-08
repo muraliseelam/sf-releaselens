@@ -215,7 +215,26 @@ Same posture as the existing code: refuse clearly rather than degrade silently.
 | Host permission revoked | Detect via `chrome.permissions.contains`; prompt to re-grant. |
 | API limit ≥95% | Refuse refresh with the current usage numbers, do not "try anyway". |
 | Org unreachable | Keep the cached snapshot on screen, banner the staleness with the last-refresh time. **Never** blank the panel. |
-| Org returns a shape we cannot parse | Same rule as stored data: refuse, name the field, keep the cache. |
+| Org returns a shape we cannot parse | Same rule as stored data: refuse, name the field, keep the cache. **Reported as `ORG_RESPONSE_INVALID`, never as `SNAPSHOT_VALIDATION`** — see the note below. |
+
+### The mapped snapshot is validated, and a failure there is the org's fault
+
+`refresh()` runs the snapshot it built through `parseSnapshot`, the same
+validator that guards stored data, so a mapping bug cannot reach the cache.
+
+The error that comes out of that check is deliberately rewritten. A raw
+`SnapshotValidationError` reads "Snapshot is not valid at …", which a release
+manager reads as *my local data is corrupt* — and the panel offers **Reset to
+demo data** right beside it. Resetting would destroy their local approvals to
+fix a problem that arrived down the wire. So a mapping failure is re-thrown as
+`ORG_RESPONSE_INVALID`, keeping the failing field but saying plainly that the
+org's records could not be mapped and that nothing local was touched.
+
+This was found by the property test in `test/data/salesforce.property.test.ts`,
+not by review: about one fuzzed org response in six mapped to something the
+validator rejected, and every one of them named the wrong culprit. The reachable
+real-world trigger is two `DeployRequest` rows with the same Id, which a paged
+query can produce.
 
 ## 9. Scope and cost
 
