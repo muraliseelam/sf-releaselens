@@ -1,3 +1,9 @@
+## [0.2.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.1.0...v0.2.0) (2026-09-08)
+
+### Features
+
+* add semantic-release, a reproducible package step and store listing copy ([2374a06](https://github.com/muraliseelam/sf-releaselens/commit/2374a0601d399d0e288de40eed3000c59c3ddc7c))
+
 # Changelog
 
 All notable changes to this project are documented here.
