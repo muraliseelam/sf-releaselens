@@ -67,7 +67,56 @@ const router = createRouter({
     orgAlias: 'imported',
     owner: 'Local user',
   },
+  // Read here rather than in the router: these are the only facts about the
+  // running browser the worker can see, and the router has no `chrome.*`.
+  diagnosticEnvironment: {
+    extensionVersion: chrome.runtime.getManifest().version,
+    browserMajorVersion: browserMajorVersion(),
+    platform: platformName(),
+    apiVersion: API_VERSION,
+  },
+  diagnosticStorage: localStorageArea,
 });
+
+/**
+ * Chrome's major version and nothing else.
+ *
+ * The full user-agent string carries a build number and the OS version, which
+ * narrows a reporter down considerably. The major version answers every
+ * question a bug report actually asks of it.
+ */
+function browserMajorVersion(): string {
+  const brand = userAgentData()?.brands.find((entry) => entry.brand === 'Chromium');
+  if (brand !== undefined) return brand.version;
+  const match = /Chrome\/(\d+)/.exec(navigator.userAgent);
+  return match?.[1] ?? 'unknown';
+}
+
+/** `Windows`, `macOS`, `Linux` — never a version or a device name. */
+function platformName(): string {
+  const platform = userAgentData()?.platform;
+  if (platform !== undefined && platform !== '') return platform;
+  if (navigator.userAgent.includes('Windows')) return 'Windows';
+  if (navigator.userAgent.includes('Mac OS')) return 'macOS';
+  if (navigator.userAgent.includes('Linux')) return 'Linux';
+  return 'unknown';
+}
+
+/**
+ * `navigator.userAgentData`, which `@types/chrome`'s lib does not declare.
+ *
+ * Narrowed to the two fields used, so this cannot quietly become a route to
+ * `getHighEntropyValues` — the API's whole purpose is that the detailed
+ * fields require an explicit, auditable request.
+ */
+interface UserAgentDataLite {
+  readonly brands: readonly { readonly brand: string; readonly version: string }[];
+  readonly platform?: string;
+}
+
+function userAgentData(): UserAgentDataLite | undefined {
+  return (navigator as Navigator & { userAgentData?: UserAgentDataLite }).userAgentData;
+}
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   router.handle(message).then(sendResponse, (cause: unknown) => {

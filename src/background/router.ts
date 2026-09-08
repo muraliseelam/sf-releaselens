@@ -16,6 +16,10 @@ import {
   isReleaseLensError,
 } from '../core/errors.js';
 import type { OrgSession } from '../auth/oauth.js';
+import {
+  buildDiagnostics,
+  type DiagnosticEnvironment,
+} from '../core/diagnostics.js';
 import type { StorageArea } from '../data/storage.js';
 import type { SnapshotDeps } from '../core/snapshot.js';
 import type { DataSource } from '../data/datasource.js';
@@ -28,6 +32,7 @@ import {
 import {
   UnknownMessageError,
 } from '../core/errors.js';
+import type { Snapshot } from '../core/types.js';
 import type { OrgStatus } from './messages.js';
 import {
   isRequest,
@@ -72,6 +77,14 @@ export interface RouterOptions {
    * targeted — a deploy report carries a deploy id, not an org name.
    */
   readonly deployImportDefaults: Omit<DeployReportOptions, 'actor'>;
+  /** Versions the worker can see and this module cannot. */
+  readonly diagnosticEnvironment: DiagnosticEnvironment;
+  /**
+   * The local storage area, read only to measure key sizes for a diagnostic
+   * report. Separate from the data source on purpose: this must never become a
+   * second read path for snapshot data.
+   */
+  readonly diagnosticStorage?: StorageArea;
 }
 
 export interface Router {
@@ -80,6 +93,21 @@ export interface Router {
 
 /** Where the Connected App consumer key is remembered. Never a token. */
 export const ORG_SETTINGS_KEY = 'sf-releaselens.org-settings.v1';
+
+/**
+ * The local-storage keys a diagnostic report measures the size of.
+ *
+ * Deliberately a literal list rather than `storage.get(null)`: an enumeration
+ * would pick up a key some future version writes, and a report that grows new
+ * fields on its own is a report nobody can promise anything about. The session
+ * area — where the refresh token lives — is absent by construction.
+ */
+const DIAGNOSTIC_STORAGE_KEYS = [
+  'sf-releaselens.snapshot.v1',
+  'sf-releaselens.org-snapshot.v1',
+  'sf-releaselens.release-overlay.v1',
+  ORG_SETTINGS_KEY,
+] as const;
 
 export function createRouter(options: RouterOptions): Router {
   const { deps } = options;
@@ -103,6 +131,35 @@ export function createRouter(options: RouterOptions): Router {
    * can revoke it in chrome://extensions at any moment, and a stale "connected"
    * badge would send them to a Refresh button that cannot work.
    */
+  /** The snapshot, or null when it cannot be loaded — which is itself a finding. */
+  async function loadSnapshotOrNull(): Promise<Snapshot | null> {
+    try {
+      return await (await currentDataSource()).load();
+    } catch (cause) {
+      void cause;
+      return null;
+    }
+  }
+
+  /**
+   * Which storage keys exist and roughly how big each is.
+   *
+   * Sizes come from re-serialising, which is an approximation of what Chrome
+   * stores; it is enough to answer "is the cache enormous" without reading a
+   * single value into the report.
+   */
+  async function measureStorage(): Promise<{ key: string; bytes: number }[]> {
+    const measured: { key: string; bytes: number }[] = [];
+    for (const key of DIAGNOSTIC_STORAGE_KEYS) {
+      const area = key === ORG_SETTINGS_KEY ? options.settingsStorage : options.diagnosticStorage;
+      if (area === undefined) continue;
+      const value = await area.read(key).catch(() => undefined);
+      if (value === undefined) continue;
+      measured.push({ key, bytes: JSON.stringify(value).length });
+    }
+    return measured;
+  }
+
   async function orgStatus(): Promise<OrgStatus> {
     const info = await options.orgSession?.info();
     const clientId = await readClientId();
@@ -233,6 +290,33 @@ export function createRouter(options: RouterOptions): Router {
       case 'snapshot.readRaw':
         return { raw: await (await currentDataSource()).readRaw() } satisfies PayloadFor<'snapshot.readRaw'>;
 
+      /*
+       * A report that is safe to paste into a public issue: counts, versions,
+       * shapes and durations, built field by field in `core/diagnostics.ts`
+       * rather than copied from org data. See that file for what it excludes
+       * and why an allow-list is the only version of this worth shipping.
+       */
+      case 'diagnostics.collect': {
+        const status = await orgStatus();
+        return buildDiagnostics({
+          now: deps.clock.now(),
+          environment: options.diagnosticEnvironment,
+          org: {
+            connected: status.connected,
+            hasHostPermission: status.hasHostPermission,
+            loginUrl: status.loginUrl,
+            instanceUrl: status.instanceUrl,
+            connectedAt: status.connectedAt,
+            hasClientId: status.clientId !== undefined,
+          },
+          // Deliberately the *loaded* snapshot rather than the raw stored bytes:
+          // a report about a snapshot too corrupt to load is still useful, and
+          // is the case where `snapshot.present: false` is the finding.
+          snapshot: await loadSnapshotOrNull(),
+          storage: await measureStorage(),
+        }) satisfies PayloadFor<'diagnostics.collect'>;
+      }
+
       case 'snapshot.export': {
         const snapshot = await (await currentDataSource()).exportSnapshot();
         return {
@@ -309,6 +393,7 @@ const KNOWN_TYPES = new Set<RequestType>([
   'org.disconnect',
   'org.grantPermission',
   'snapshot.readRaw',
+  'diagnostics.collect',
   'snapshot.export',
   'snapshot.import',
   'snapshot.reset',

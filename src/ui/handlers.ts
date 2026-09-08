@@ -28,6 +28,11 @@ export interface Handlers {
    * is for. Offered only from the load-error state.
    */
   exportRawSnapshot(): void;
+  /**
+   * Downloads a diagnostic report: counts, versions and shapes, with no org
+   * data in it. Safe to attach to a public issue.
+   */
+  downloadDiagnostics(): void;
   importSnapshot(): void;
   reset(seed: SeedKind): void;
   setActor(actor: Actor): void;

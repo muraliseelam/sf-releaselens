@@ -10,6 +10,7 @@
  *     which is exactly how "something went wrong" with no detail happens.
  */
 
+import type { DiagnosticReport } from '../core/diagnostics.js';
 import type { DecisionResult } from '../core/snapshot.js';
 import type { SeedKind } from '../data/datasource.js';
 import type { Actor, ApprovalDecisionOutcome, Snapshot } from '../core/types.js';
@@ -22,6 +23,7 @@ export type Request =
   | { readonly type: 'org.disconnect' }
   | { readonly type: 'org.grantPermission' }
   | { readonly type: 'snapshot.readRaw' }
+  | { readonly type: 'diagnostics.collect' }
   | { readonly type: 'snapshot.export' }
   | { readonly type: 'snapshot.import'; readonly text: string }
   | { readonly type: 'snapshot.reset'; readonly seed: SeedKind }
@@ -75,6 +77,7 @@ export interface ResponsePayloads {
   'org.disconnect': SnapshotWithStatus;
   'org.grantPermission': OrgStatus;
   'snapshot.readRaw': { readonly raw: unknown };
+  'diagnostics.collect': DiagnosticReport;
   'snapshot.export': ExportPayload;
   'snapshot.import': Snapshot;
   'snapshot.reset': Snapshot;

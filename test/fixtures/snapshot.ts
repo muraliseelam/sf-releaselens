@@ -12,6 +12,7 @@ import type { SnapshotDeps } from '../../src/core/snapshot.js';
 import {
   CURRENT_SCHEMA_VERSION,
   type Actor,
+  type AuditEntry,
   type Approval,
   type ApprovalStatus,
   type Environment,
@@ -139,6 +140,7 @@ export function makeSnapshot(options: {
   releases?: readonly Release[];
   items?: readonly MetadataItem[];
   approvals?: readonly Approval[];
+  auditLog?: readonly AuditEntry[];
   isDemoData?: boolean;
 } = {}): Snapshot {
   return {
@@ -148,7 +150,7 @@ export function makeSnapshot(options: {
     releases: options.releases ?? [makeRelease()],
     items: options.items ?? [],
     approvals: options.approvals ?? [],
-    auditLog: [],
+    auditLog: options.auditLog ?? [],
     isDemoData: options.isDemoData ?? false,
   };
 }

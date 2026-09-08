@@ -18,6 +18,7 @@ import { RemoteError, toSerialisedError, type Client } from './client.js';
 import { captureFocus, el, focusFallback, restoreFocus } from './dom.js';
 import { pluralise } from './format.js';
 import { countPendingForActor } from '../core/approvals.js';
+import { diagnosticsFilename } from '../core/diagnostics.js';
 import type { Handlers } from './handlers.js';
 import {
   INITIAL_STATE,
@@ -247,6 +248,16 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
           download(rawExportName(), JSON.stringify(payload.raw, null, 2));
         })
         .catch((cause: unknown) => dispatch({ type: 'load/failed', error: toSerialisedError(cause) }));
+    },
+
+    downloadDiagnostics(): void {
+      client
+        .send({ type: 'diagnostics.collect' })
+        .then((report) => {
+          download(diagnosticsFilename(report.generatedAt), `${JSON.stringify(report, null, 2)}
+`);
+        })
+        .catch((cause: unknown) => dispatch({ type: 'org/actionFailed', error: toSerialisedError(cause) }));
     },
 
     importSnapshot(): void {

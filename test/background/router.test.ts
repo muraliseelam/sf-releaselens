@@ -28,6 +28,13 @@ function build() {
       orgAlias: 'imported',
       owner: 'Local user',
     },
+    diagnosticEnvironment: {
+      extensionVersion: '0.0.0-test',
+      browserMajorVersion: '131',
+      platform: 'Linux',
+      apiVersion: '62.0',
+    },
+    diagnosticStorage: storage,
   });
 }
 

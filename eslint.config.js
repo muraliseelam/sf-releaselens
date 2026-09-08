@@ -23,6 +23,7 @@ const WEB_GLOBALS = {
   crypto: 'readonly',
   document: 'readonly',
   window: 'readonly',
+  navigator: 'readonly',
   URL: 'readonly',
   Blob: 'readonly',
 };

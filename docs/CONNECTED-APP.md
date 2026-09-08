@@ -3,6 +3,10 @@
 sf-releaselens has no Salesforce identity of its own. To connect an org you
 create a Connected App **in that org**, and the extension signs in against it.
 
+> Doing this for the first time? [`LIVE-ORG-RUNBOOK.md`](LIVE-ORG-RUNBOOK.md)
+> walks the whole sequence end to end, including what correct output looks like at
+> each step and what usually goes wrong first.
+
 That is deliberate. The alternative — us publishing a Connected App everyone
 uses — would make this project an identity party in your org's trust chain,
 with a client id we control and a revocation switch we hold. A Connected App you

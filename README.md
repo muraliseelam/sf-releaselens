@@ -228,6 +228,16 @@ visible in two files.
 
 The OAuth scopes requested are `api` and `refresh_token`, and nothing else.
 
+### Reporting a bug without leaking your org
+
+The org strip has a **Diagnostics** button. It downloads a report built from
+counts, versions, enums and durations — never copied from org data — so it is
+safe to attach to a public issue. No token, Consumer Key, org name, instance
+URL, username, deploy id, release name, component name, file path or approval
+comment is in it, and the report prints that list on itself so you can check
+rather than trust. `test/core/diagnostics.test.ts` asserts it against a payload
+containing every one of them.
+
 ### Token handling
 
 | Token | Where it lives | Survives browser close? |
@@ -341,9 +351,10 @@ Stated plainly, because they determine whether this is useful to you:
   stands up to an audit, this is not it, and pretending otherwise would be worse than the
   Slack thread it replaces.
 - **Never tested against a live Salesforce org.** The org integration is complete and fully
-  unit-tested against a fake connection, but nobody has yet pointed it at a real org. See
-  the "requires a live org" section of `docs/QA-CHECKLIST.md` for exactly what that leaves
-  unverified.
+  unit-tested against a fake connection, but nobody has yet pointed it at a real org.
+  [`docs/LIVE-ORG-RUNBOOK.md`](docs/LIVE-ORG-RUNBOOK.md) is the exact sequence for doing it,
+  including what is most likely to break first; `docs/QA-CHECKLIST.md` §9 tracks what stays
+  unverified until someone does.
 - **Nothing is shared between machines.** Two people running this see two independent
   snapshots. Sharing means exporting and importing a file.
 - **No dependency graph from an org or a deploy report.** Both list components, not edges.

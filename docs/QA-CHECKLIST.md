@@ -194,6 +194,13 @@ Prerequisite: a Connected App per [`CONNECTED-APP.md`](CONNECTED-APP.md). Use a
 
 ## 9. Requires a live org
 
+**Step-by-step instructions for this section are in
+[`LIVE-ORG-RUNBOOK.md`](LIVE-ORG-RUNBOOK.md)** — the Connected App settings, what
+correct output looks like at each step, the failure modes most likely on first
+contact, and how to produce a diagnostics file that is safe to attach to a
+public issue.
+
+
 Everything below is **unverifiable without a real Salesforce org and a real
 Chrome**. It is listed rather than faked into a passing test.
 

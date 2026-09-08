@@ -82,6 +82,7 @@ function renderConnected(status: OrgStatus, input: OrgBarInput): HTMLElement {
         },
         on: { click: () => handlers.disconnectOrg() },
       }),
+      diagnosticsButton(handlers),
     ]),
   ]);
 }
@@ -121,8 +122,34 @@ function renderDisconnected(connecting: boolean, handlers: Handlers): HTMLElemen
         },
         on: { click: () => handlers.dispatch({ type: 'org/connectFormToggled', open: true }) },
       }),
+      diagnosticsButton(handlers),
     ]),
   ]);
+}
+
+/**
+ * Downloads a report that is safe to attach to a public issue.
+ *
+ * Present in both org states, because half the questions worth asking are about
+ * a connection that never completed. The title says what it contains, so nobody
+ * has to take "safe to share" on trust before clicking it — `core/diagnostics.ts`
+ * builds it field by field from counts and versions rather than filtering org
+ * data out afterwards.
+ */
+function diagnosticsButton(handlers: Handlers): HTMLElement {
+  return el('button', {
+    className: 'button button--quiet',
+    text: 'Diagnostics',
+    title:
+      'Download a report for a bug: versions, counts and shapes. No org name, ' +
+      'URL, token, release name or component name is included.',
+    attrs: {
+      id: 'org-diagnostics',
+      type: 'button',
+      'aria-label': 'Download a diagnostic report. Contains no org data.',
+    },
+    on: { click: () => handlers.downloadDiagnostics() },
+  });
 }
 
 function renderConnectForm(input: OrgBarInput): HTMLElement {

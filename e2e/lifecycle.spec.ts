@@ -162,6 +162,78 @@ test.describe('rescuing a corrupt snapshot', () => {
   });
 });
 
+test.describe('diagnostics', () => {
+  /**
+   * The unit tests prove the report is built from counts. This proves the
+   * button in the panel produces that report, in a real browser, as a real
+   * download — and that what lands on disk carries no org data.
+   */
+  test('downloads a report with versions and counts and no org data', async ({ panel }) => {
+    const [download] = await Promise.all([
+      panel.page.waitForEvent('download'),
+      panel.page.locator('#org-diagnostics').click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/^sf-releaselens-diagnostics-.*\.json$/);
+    const text = await readDownload(download);
+    const report = JSON.parse(text) as {
+      report: string;
+      environment: { extensionVersion: string; browserMajorVersion: string; platform: string };
+      org: { connected: boolean; loginHost: string; instanceHostPattern: string };
+      snapshot: { present: boolean; counts: Record<string, number> };
+      storage: { key: string }[];
+    };
+
+    expect(report.report).toBe('sf-releaselens-diagnostics');
+    // Facts only a real browser can supply.
+    expect(report.environment.browserMajorVersion).toMatch(/^\d+$/);
+    expect(report.environment.platform).not.toBe('unknown');
+    expect(report.environment.extensionVersion).toMatch(/^\d+\.\d+\.\d+$/);
+
+    // The demo dataset, described in counts.
+    expect(report.snapshot.present).toBe(true);
+    expect(report.snapshot.counts['releases']).toBe(5);
+    expect(report.snapshot.counts['items']).toBe(57);
+    expect(report.org.connected).toBe(false);
+    expect(report.storage.map((entry) => entry.key)).toEqual(['sf-releaselens.snapshot.v1']);
+
+    // And none of the names the demo dataset is full of.
+    for (const forbidden of [
+      'Payment Retry Hotfix',
+      'PaymentGatewayAdapter',
+      'Sam Okafor',
+      'salesforce.com',
+      'rel-billing-q3',
+    ]) {
+      expect(text, `${forbidden} leaked into the diagnostics`).not.toContain(forbidden);
+    }
+  });
+
+  test('works when the snapshot is too corrupt to load, which is when it is needed', async ({
+    panel,
+  }) => {
+    const worker = await panel.worker();
+    await worker.evaluate(async () => {
+      await chrome.storage.local.set({ 'sf-releaselens.snapshot.v1': { schemaVersion: 42 } });
+    });
+    await panel.reloadPanel();
+    await expect(panel.page.locator('#load-error')).toBeVisible();
+
+    const [download] = await Promise.all([
+      panel.page.waitForEvent('download'),
+      panel.page.locator('#org-diagnostics').click(),
+    ]);
+    const report = JSON.parse(await readDownload(download)) as {
+      snapshot: { present: boolean };
+      storage: { key: string; bytes: number }[];
+    };
+
+    // The snapshot could not be loaded — which is the finding, not a failure.
+    expect(report.snapshot.present).toBe(false);
+    expect(report.storage[0]?.key).toBe('sf-releaselens.snapshot.v1');
+  });
+});
+
 test.describe('storage boundaries', () => {
   test('writes nothing to session storage while no org is connected', async ({ panel }) => {
     const worker = await panel.worker();
