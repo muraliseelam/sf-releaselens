@@ -33,11 +33,12 @@
     "test:e2e:org": "npm run build && node scripts/build-org-test-extension.mjs && playwright test --project=org",
     "test:e2e:ui": "playwright test --ui",
     "test:org": "node scripts/run-org-tests.mjs",
-    "assets": "npm run build && playwright test --project=capture && node scripts/compose-store-shots.mjs",
+    "assets": "npm run build && playwright test --project=capture && node scripts/compose-store-shots.mjs && node scripts/build-promo-tiles.mjs",
     "demo-gif": "node scripts/build-demo-gif.mjs",
     "evidence": "node scripts/collect-evidence.mjs",
     "bench": "node --expose-gc bench/bench.mjs",
-    "check": "npm run lint && npm run typecheck:e2e && npm run icons:check && npm run build && npm run test"
+    "check": "npm run lint && npm run typecheck:e2e && npm run icons:check && npm run build && npm run verify:package && npm run test",
+    "verify:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

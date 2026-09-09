@@ -58,6 +58,13 @@ jobs:
       - name: Package the unpacked extension
         run: npm run package
 
+      # Also after packaging, so the archive's own entries are screened and not
+      # just dist/. Catches the drift no reviewer would: a permission added
+      # without a justification in docs/STORE-LISTING.md, or a justification
+      # left behind by a permission that was removed.
+      - name: Chrome Web Store policy
+        run: npm run verify:package
+
       # Runs after packaging because it measures the artefact, not the source.
       # The budget is committed in size-budget.json with its headroom stated;
       # raising it is a deliberate edit in the commit that needs it.

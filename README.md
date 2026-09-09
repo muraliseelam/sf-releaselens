@@ -70,8 +70,13 @@ state visible and actionable in one panel.
 
 ## Install
 
-Not on the Chrome Web Store yet — see [`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) for
-what that still needs. Two ways to load it today, both unpacked.
+Not on the Chrome Web Store yet. What is left is a paid developer account and a
+privacy policy at a stable URL, not code:
+[`docs/STORE-SUBMISSION.md`](docs/STORE-SUBMISSION.md) is the checklist, and
+`npm run check` verifies the package against store policy on every commit — including
+that every permission the manifest requests is justified in the listing, and that no
+justification survives a permission being removed. Two ways to load it today, both
+unpacked.
 
 **From a release** (nothing to build):
 

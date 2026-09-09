@@ -48,6 +48,9 @@ build-assets/
     3-component-detail.png
     4-approvals.png
     5-org-connection.png
+  promo/                       the two tiles the store asks for
+    small-tile-440x280.png     required; a listing without one is rejected
+    marquee-1400x560.png       optional, unless you want to be featured
   video/
     walkthrough.webm           the whole run, about 30 seconds
 ```
@@ -67,6 +70,22 @@ one that generates the icons. No image dependency is installed for this. The
 codec reads all five PNG scanline filters and both 8-bit colour types Chromium
 emits; it writes filter 0 only, because the icon check compares bytes and a
 deterministic encoder is worth more there than a smaller file.
+
+## The tiles
+
+`scripts/build-promo-tiles.mjs` draws both promotional tiles from
+`scripts/icon-design.mjs` — the same definition the icon and the SVG come from
+— using the same PNG codec. So a tile cannot depict an icon the extension does
+not ship, which is the failure mode of every hand-exported tile.
+
+**Neither carries text.** The store's guidance is to keep promotional images
+free of it, and there is no font renderer here; letterforms plotted by hand
+would look worse than their absence. The tiles are the icon on the plate colour
+with a slight vertical lift, because flat `#1b2430` at 1400x560 reads as a
+rendering failure rather than a choice.
+
+The small tile is **required**: a listing without one is rejected.
+`STORE-LISTING.md` used to call it optional, which was wrong.
 
 ## The org shot
 

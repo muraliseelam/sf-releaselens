@@ -110,3 +110,49 @@ export function createZip(entries) {
 
   return Buffer.concat([...locals, centralDirectory, end]);
 }
+
+/**
+ * Lists the entry names in an archive, from its central directory.
+ *
+ * Reading the central directory rather than walking local headers is what the
+ * format intends: it is the authoritative index, and an archive whose local
+ * headers disagree with it is exactly the kind of thing worth noticing.
+ *
+ * Scope matches the writer: no ZIP64, no archive comment longer than the
+ * search window below.
+ *
+ * @param {Buffer} buffer
+ * @returns {string[]} forward-slash paths, in central-directory order
+ */
+export function readZipEntryNames(buffer) {
+  const end = findEndOfCentralDirectory(buffer);
+  const count = buffer.readUInt16LE(end + 10);
+  let offset = buffer.readUInt32LE(end + 16);
+  const names = [];
+
+  for (let index = 0; index < count; index += 1) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) {
+      throw new Error(`ZIP central directory record ${index} has a bad signature.`);
+    }
+    const nameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    names.push(buffer.toString('utf8', offset + 46, offset + 46 + nameLength));
+    offset += 46 + nameLength + extraLength + commentLength;
+  }
+
+  return names;
+}
+
+/**
+ * The end-of-central-directory record, found by scanning backwards.
+ *
+ * It has no fixed position because it is followed by a variable-length comment,
+ * so the format itself requires a backwards scan for the signature.
+ */
+function findEndOfCentralDirectory(buffer) {
+  for (let offset = buffer.length - 22; offset >= 0; offset -= 1) {
+    if (buffer.readUInt32LE(offset) === 0x06054b50) return offset;
+  }
+  throw new Error('Not a ZIP archive: no end-of-central-directory record.');
+}
