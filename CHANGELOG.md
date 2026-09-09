@@ -1,3 +1,13 @@
+## [0.5.2](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.1...v0.5.2) (2026-09-09)
+
+### Bug fixes
+
+* **org:** a passing validation is not "Scheduled", and a truncated dashboard says so ([fb21ad6](https://github.com/muraliseelam/sf-releaselens/commit/fb21ad6755047f694aca9b78866ef971e4d56174))
+
+### Documentation
+
+* record what seven real orgs return, and mark the runbook by evidence ([58a6745](https://github.com/muraliseelam/sf-releaselens/commit/58a6745075ea221182b5b984475087477453867b))
+
 ## [0.5.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.0...v0.5.1) (2026-09-08)
 
 ### Bug fixes
