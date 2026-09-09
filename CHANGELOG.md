@@ -1,3 +1,9 @@
+## [0.5.3](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.2...v0.5.3) (2026-09-09)
+
+### Bug fixes
+
+* **hosts:** one host classifier, ordered specific-first, and scratch orgs included ([e122ff8](https://github.com/muraliseelam/sf-releaselens/commit/e122ff8cd8405baf891f61a92d0ec5d3f564183e))
+
 ## [0.5.2](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.1...v0.5.2) (2026-09-09)
 
 ### Bug fixes
