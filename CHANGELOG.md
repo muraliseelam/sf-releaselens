@@ -1,3 +1,9 @@
+## [0.8.2](https://github.com/muraliseelam/sf-releaselens/compare/v0.8.1...v0.8.2) (2026-09-09)
+
+### Bug fixes
+
+* self-review of the night's 7,200 lines, and what it found ([2bad958](https://github.com/muraliseelam/sf-releaselens/commit/2bad95886a3c6dfe517a89b00995a9cf5e19cf6a))
+
 ## [0.8.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.8.0...v0.8.1) (2026-09-09)
 
 ### Bug fixes
