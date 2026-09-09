@@ -561,7 +561,12 @@ describe('the pinned API version', () => {
 
     // The list is a diagnostic. Failing the refresh because a nicety could not
     // be read would trade a capability for a warning.
-    await expect(dataSource.refresh()).resolves.toBeDefined();
+    //
+    // Asserted on the releases: a refresh that quietly returned nothing would
+    // also resolve, and that is the outcome this test exists to rule out.
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.releases).toHaveLength(1);
   });
 });
 
@@ -781,8 +786,12 @@ describe('merge semantics', () => {
     await dataSource.refresh();
 
     // `load` re-parses, so this would throw if the mapping produced anything
-    // the rest of the app would refuse.
-    await expect(dataSource.load()).resolves.toBeDefined();
+    // the rest of the app would refuse — and it must give back what was
+    // refreshed, not an empty snapshot that also happens to parse.
+    const reloaded = await dataSource.load();
+
+    expect(reloaded.releases).toHaveLength(1);
+    expect(reloaded.items.length).toBeGreaterThan(0);
     expect(await area.read(ORG_SNAPSHOT_KEY)).toBeDefined();
   });
 });
@@ -800,17 +809,29 @@ describe('API budget guard (§8)', () => {
     expect(connection.calls.filter((c) => c.kind !== 'get')).toHaveLength(0);
   });
 
+  /*
+   * These two assert on the releases rather than on the promise resolving. A
+   * guard that refused everything would fail loudly; a guard that let the
+   * refresh through but returned nothing would resolve, and "resolved" was all
+   * these used to check.
+   */
   it('proceeds below the threshold', async () => {
-    const { dataSource } = build(connectionFor({ limits: HEALTHY_LIMITS }));
+    const { dataSource, connection } = build(connectionFor({ limits: HEALTHY_LIMITS }));
 
-    await expect(dataSource.refresh()).resolves.toBeDefined();
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.releases).toHaveLength(1);
+    // And it went to the org rather than short-circuiting to a cached read.
+    expect(connection.calls.length).toBeGreaterThan(1);
   });
 
   it('proceeds when the org does not report a daily API limit', async () => {
     // We cannot tell, and refusing on a guess would block every refresh.
     const { dataSource } = build(connectionFor({ limits: {} }));
 
-    await expect(dataSource.refresh()).resolves.toBeDefined();
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.releases).toHaveLength(1);
   });
 
   it('uses the documented threshold', () => {
