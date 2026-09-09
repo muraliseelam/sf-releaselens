@@ -1,18 +1,47 @@
 # sf-releaselens
 
-A Manifest V3 Chrome side panel that joins Salesforce release status, deployment metadata
-and promotion approvals into one surface, so a release manager stops reassembling them from
-four browser tabs.
+![sf-releaselens: the release dashboard, the metadata inspector and an approval being recorded](docs/media/demo.gif)
+
+**A Chrome side panel for Salesforce release managers.** What is in flight, what is
+actually in a release, and what is waiting on you — in one surface, beside the org tab you
+already have open, instead of across four.
 
 [![CI](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml/badge.svg)](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml)
-[![End-to-end](https://img.shields.io/badge/e2e-45%20checks%20in%20real%20Chromium-brightgreen)](e2e/)
 [![Release](https://img.shields.io/github/v/release/muraliseelam/sf-releaselens?sort=semver)](https://github.com/muraliseelam/sf-releaselens/releases/latest)
+[![Validated against 10 real orgs](https://img.shields.io/badge/validated-10%20real%20Salesforce%20orgs-brightgreen)](docs/ORG-COMPATIBILITY.md)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-> **Status: pre-1.0.** The data layer is verified against seven real Salesforce orgs; the
-> OAuth sign-in has never been performed. Everything below is
-> either verified by tests or explicitly marked as unverified. Read
-> [Limitations and known gaps](#limitations-and-known-gaps) before you rely on it.
+**It reads. It does not write.** The interface it uses to reach Salesforce has no `post`,
+`patch` or `delete` member at all, it takes no host permission until you connect an org,
+and it never polls.
+
+---
+
+### The honest part
+
+The data layer has been run against **ten real Salesforce orgs** — production, developer
+edition, namespaced and scratch — with the shipping code, not a reimplementation.
+`npm run test:org` does it on demand and [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md)
+records what those orgs actually returned.
+
+Doing that found **eight defects that 646 passing tests against mocks could not**, because
+the mocks had been written from the same assumptions as the code. Among them:
+
+| What the mocks believed | What ten orgs actually do |
+| --- | --- |
+| Component details are on the Tooling `DeployRequest` record | They are not there at all — every org-sourced release had **zero components** |
+| A component carries `createdByName` | Not one of 36 does. Every component read "unknown" |
+| A passing check-only deploy is "Scheduled" | Nothing is scheduled. It was a **validation that deployed nothing** |
+| `TestLevel` tells you something | `null` in all 29 rows, every org |
+| Coverage is always readable | One org rejects the query outright, which used to fail the whole refresh |
+
+The full list, with what each one now does instead, is in
+[`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md).
+
+> **Status: pre-1.0.** The OAuth sign-in has now been completed once, by hand, against a
+> live org. Everything else below is either covered by a test or explicitly marked as
+> unverified — see [Limitations and known gaps](#limitations-and-known-gaps) before you rely
+> on any of it.
 
 ## The problem
 
@@ -85,27 +114,15 @@ from its tag and compare it byte-for-byte against the published artefact.
 
 ## What it looks like
 
-<!-- DEMO GIF: replace this whole block with the line below once the GIF exists.
-     ![sf-releaselens walkthrough](docs/media/demo.gif) -->
+The GIF at the top is the whole product: the dashboard sorting the blocked release first,
+the inspector narrowing 57 components to one, and an approval being recorded with the
+release-status change it caused.
 
-Run it yourself, or generate the assets:
-
-```bash
-npm run assets
-```
-
-That drives the real extension in a real Chromium for about 40 seconds and writes
-`build-assets/video/walkthrough.webm` plus eight screenshots — dashboard, filtered
-inspector, component detail, an approval being recorded, and the *dependency data is not
-available* state. Nothing is hand-composed, so nothing here can show a state the product
-does not actually reach.
-
-**The inline GIF is the one asset still missing**, because converting the video needs
-ffmpeg and a human to look at the result.
-[`docs/ASSETS.md`](docs/ASSETS.md) has the exact two commands and the size budget.
-
-Still frames for the store listing come out of the same run:
-[`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) §3.
+It is **generated, not composed**. `npm run assets` drives the real extension in a real
+Chromium and records what comes back, so a frame cannot show a state the product does not
+reach; `npm run demo-gif` assembles the recording. Details and the size budget:
+[`docs/ASSETS.md`](docs/ASSETS.md). Still frames for the store listing come out of the same
+run: [`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) §3.
 
 ## Architecture
 
@@ -193,9 +210,10 @@ Benchmarking found and fixed one real scaling bug: the dashboard computed each r
 component count by filtering the whole item list, once per row, which is quadratic in
 (releases × components). See the "What changed as a result" section of the benchmarks.
 
-Test coverage, from `npm run test:coverage`: **93.8% lines, 90.5% branches** across
-`core/`, `data/`, the auth and message layers and the whole UI layer — **602 unit tests** in
-31 files, plus **45 end-to-end checks** in a real Chromium. Every exported function has
+Test coverage, from `npm run test:coverage`: **697 unit tests** in 34 files across `core/`,
+`data/`, the auth and message layers and the whole UI layer, plus **45 end-to-end checks** in
+a real Chromium, **26 more** replaying captured Salesforce payloads through the real UI, and
+**17 contract tests** that run against a live org on demand. Every exported function has
 direct tests; `main.ts`, `handlers.ts` and `service-worker.ts` are excluded because they are
 `chrome.*` wiring with no logic of their own. CI fails below 90% statements or 85% branches,
 so those numbers cannot quietly slide.
@@ -354,12 +372,13 @@ Stated plainly, because they determine whether this is useful to you:
   edit by exporting, changing the JSON and re-importing. If you need an approval trail that
   stands up to an audit, this is not it, and pretending otherwise would be worse than the
   Slack thread it replaces.
-- **The data layer has been run against seven real Salesforce orgs; the OAuth flow has
-  not.** `npm run test:org` drives the shipping code against orgs the `sf` CLI is
-  authenticated to, and [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md) records what
-  those orgs actually return. That found five real defects the mocked suite had missed. What
-  is still unverified is the half that needs a person: creating a Connected App, and
-  completing `chrome.identity.launchWebAuthFlow` — the org tests borrow the CLI's token.
+- **The data layer is validated against ten real Salesforce orgs; the OAuth sign-in has been
+  done once, by hand.** `npm run test:org` drives the shipping code against orgs the `sf` CLI
+  is authenticated to, and [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md) records
+  what those orgs actually return. That found eight real defects the mocked suite had missed.
+  The sign-in itself — a Connected App plus `chrome.identity.launchWebAuthFlow` — has been
+  completed once against a live org and is **not** automated: the org tests borrow the CLI's
+  token, and Chrome's permission prompt cannot be driven by a test in any mode.
   [`docs/LIVE-ORG-RUNBOOK.md`](docs/LIVE-ORG-RUNBOOK.md) marks which steps are measured and
   which are not.
 - **Nothing is shared between machines.** Two people running this see two independent
