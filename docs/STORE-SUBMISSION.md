@@ -144,7 +144,7 @@ Neither clause changes what is uploaded today.
 ## Order of operations
 
 1. `npm run check` — includes `verify:package` against a fresh build.
-2. `npm run test:e2e` — 50 browser tests against `dist/`.
+2. `npm run test:e2e` — the browser suite against `dist/`.
 3. `npm run package` — produces `sf-releaselens.zip`.
 4. `npm run verify:package` again — now the archive exists to be screened.
 5. Load the unpacked zip in Chrome and work `QA-CHECKLIST.md` §1–§7.
