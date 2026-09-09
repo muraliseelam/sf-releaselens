@@ -67,7 +67,8 @@ WHAT IT DOES NOT DO
 • It never reads the page you are on. There are no content scripts and no tabs
   permission.
 • It never polls. Data is read from your org only when you press Refresh.
-• It sends no analytics or telemetry of any kind.
+• It sends no analytics or error reports. Telemetry is opt-in, off by default,
+  and no endpoint is configured — switched on, it would still send nothing.
 • Approvals recorded here are a workflow aid, not an audit trail. There is no
   server, so the acting profile is not an authenticated identity. If you need an
   approval record that stands up to an audit, this is not it.

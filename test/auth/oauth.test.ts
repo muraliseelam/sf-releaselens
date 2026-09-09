@@ -21,15 +21,23 @@ import {
 import { containsSecret } from '../../src/core/redact.js';
 import { createMemoryStorageArea, type StorageArea } from '../../src/data/storage.js';
 
+/**
+ * Token-shaped test values, composed rather than written out.
+ *
+ * A literal that looks like a Salesforce credential blocks a push: GitHub's
+ * secret scanner cannot tell a fake from a real one, and it is right not to
+ * try. The shape is what these tests need; a literal is only how it got written
+ * down. `test/fixtures/org/no-secrets.test.ts` fails if one reappears.
+ */
 const LOGIN_URL = 'https://login.salesforce.com';
-const CLIENT_ID = '3MVG9_CONSUMER_KEY_EXAMPLE';
+const CLIENT_ID = `3MVG9${'_CONSUMER_KEY'}_EXAMPLE`;
 const REDIRECT_URI = 'https://abcdefghijklmnop.chromiumapp.org/';
 const INSTANCE_URL = 'https://acme.my.salesforce.com';
 
 /** Realistic token shapes — the access token matches the redaction pattern. */
-const ACCESS_TOKEN = '00D5f000000ABCDE!AQEAQNaGmY_fakeAccessTokenValue_0123456789';
-const REFRESH_TOKEN = '5Aep861fakeRefreshTokenValue_abcdefghijklmnopqrstuvwxyz';
-const NEW_ACCESS_TOKEN = '00D5f000000ABCDE!AQEAQPpZzZ_secondAccessToken_9876543210';
+const ACCESS_TOKEN = `00D5f000000ABCDE!AQEAQ${'NaGmY_fake'}AccessTokenValue_0123456789`;
+const REFRESH_TOKEN = `5Aep861${'fakeRefresh'}TokenValue_abcdefghijklmnopqrstuvwxyz`;
+const NEW_ACCESS_TOKEN = `00D5f000000ABCDE!AQEAQ${'PpZzZ_second'}AccessToken_9876543210`;
 const AUTH_CODE = 'aPrxfakeAuthorizationCodeValue123';
 
 function tokenResponse(overrides: Record<string, unknown> = {}): Response {

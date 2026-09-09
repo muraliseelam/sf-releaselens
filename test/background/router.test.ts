@@ -4,12 +4,12 @@ import { createFixedClock, createSequentialIdFactory } from '../../src/core/cloc
 import { createRouter, serialiseError } from '../../src/background/router.js';
 import type { Response } from '../../src/background/messages.js';
 import { createLocalDataSource } from '../../src/data/local.js';
-import { createMemoryStorageArea } from '../../src/data/storage.js';
+import { createMemoryStorageArea, type StorageArea } from '../../src/data/storage.js';
 import type { Snapshot } from '../../src/core/types.js';
 import { FIXED_NOW, realisticSnapshot } from '../fixtures/snapshot.js';
 
-function build() {
-  const storage = createMemoryStorageArea();
+function build(injectedStorage?: StorageArea) {
+  const storage = injectedStorage ?? createMemoryStorageArea();
   const deps = {
     clock: createFixedClock(FIXED_NOW),
     newId: createSequentialIdFactory('gen'),
@@ -29,14 +29,126 @@ function build() {
       owner: 'Local user',
     },
     diagnosticEnvironment: {
-      extensionVersion: '0.0.0-test',
+      // A manifest-shaped version. Chrome forbids prerelease suffixes, and the
+      // sanitiser refuses anything else — see the fail-closed test below.
+      extensionVersion: '0.5.3',
       browserMajorVersion: '131',
       platform: 'Linux',
       apiVersion: '62.0',
     },
     diagnosticStorage: storage,
+    settingsStorage: storage,
   });
 }
+
+describe('telemetry is off until somebody turns it on', () => {
+  it('reports disabled on a fresh install, with no id anywhere', async () => {
+    const storage = createMemoryStorageArea();
+    const router = build(storage);
+
+    const info = expectOk<{ enabled: boolean; hasInstallId: boolean; destination: string }>(
+      await router.handle({ type: 'telemetry.info' }),
+    );
+
+    expect(info.enabled).toBe(false);
+    expect(info.hasInstallId).toBe(false);
+    // A user who never opts in has no identifier generated, stored or written.
+    expect(await storage.read('sf-releaselens.telemetry.v1')).toBeUndefined();
+    expect(info.destination).toMatch(/no endpoint/i);
+  });
+
+  it('records nothing while it is off, and says so rather than pretending', async () => {
+    const router = build();
+
+    const result = expectOk<{ recorded: boolean }>(
+      await router.handle({ type: 'telemetry.record', event: { name: 'view.opened', view: 'inspector' } }),
+    );
+
+    expect(result.recorded).toBe(false);
+  });
+
+  it('creates an id only when enabled, and deletes it when disabled', async () => {
+    const storage = createMemoryStorageArea();
+    const router = build(storage);
+
+    const enabled = expectOk<{ enabled: boolean; hasInstallId: boolean }>(
+      await router.handle({ type: 'telemetry.setEnabled', enabled: true }),
+    );
+    expect(enabled).toMatchObject({ enabled: true, hasInstallId: true });
+    const stored = await storage.read('sf-releaselens.telemetry.v1');
+    expect(stored).toMatchObject({ enabled: true });
+
+    const disabled = expectOk<{ enabled: boolean; hasInstallId: boolean }>(
+      await router.handle({ type: 'telemetry.setEnabled', enabled: false }),
+    );
+    expect(disabled).toMatchObject({ enabled: false, hasInstallId: false });
+    // Deleted, not merely unused: re-enabling yields a different id, so two
+    // opt-in periods cannot be joined.
+    expect(await storage.read('sf-releaselens.telemetry.v1')).toBeUndefined();
+  });
+
+  it('records once it is on', async () => {
+    const router = build();
+    await router.handle({ type: 'telemetry.setEnabled', enabled: true });
+
+    const result = expectOk<{ recorded: boolean }>(
+      await router.handle({ type: 'telemetry.record', event: { name: 'view.opened', view: 'approvals' } }),
+    );
+
+    expect(result.recorded).toBe(true);
+  });
+
+  it('fails closed when the version is not manifest-shaped', async () => {
+    const storage = createMemoryStorageArea();
+    const router = createRouter({
+      dataSource: createLocalDataSource({
+        storage,
+        clock: createFixedClock(FIXED_NOW),
+        newId: createSequentialIdFactory('gen'),
+        seedFactory: () => realisticSnapshot(),
+      }),
+      deps: { clock: createFixedClock(FIXED_NOW), newId: createSequentialIdFactory('gen') },
+      deployImportDefaults: {
+        environmentName: 'Imported org',
+        environmentKind: 'sandbox',
+        orgAlias: 'imported',
+        owner: 'Local user',
+      },
+      diagnosticEnvironment: {
+        extensionVersion: '0.0.0-not-a-manifest-version',
+        browserMajorVersion: '131',
+        platform: 'Linux',
+        apiVersion: '62.0',
+      },
+      diagnosticStorage: storage,
+      settingsStorage: storage,
+    });
+    await router.handle({ type: 'telemetry.setEnabled', enabled: true });
+
+    const result = expectOk<{ recorded: boolean }>(
+      await router.handle({ type: 'telemetry.record', event: { name: 'view.opened', view: 'dashboard' } }),
+    );
+
+    // Nothing goes out that the allow-list cannot vouch for, including a field
+    // this build supplied itself.
+    expect(result.recorded).toBe(false);
+  });
+
+  it('refuses an event it does not know, even while enabled', async () => {
+    const router = build();
+    await router.handle({ type: 'telemetry.setEnabled', enabled: true });
+
+    const result = expectOk<{ recorded: boolean }>(
+      await router.handle({
+        type: 'telemetry.record',
+        // A shape a future contributor might add without thinking.
+        event: { name: 'org.refreshed', releases: 12 },
+      }),
+    );
+
+    expect(result.recorded).toBe(false);
+  });
+});
 
 /** Narrows a response, failing the test with the real message when it is not ok. */
 function expectOk<T>(response: Response<unknown>): T {

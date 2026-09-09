@@ -11,6 +11,7 @@
  */
 
 import type { DiagnosticReport } from '../core/diagnostics.js';
+import type { TelemetryEvent, TelemetryInfo } from '../core/telemetry.js';
 import type { DecisionResult } from '../core/snapshot.js';
 import type { SeedKind } from '../data/datasource.js';
 import type { Actor, ApprovalDecisionOutcome, Snapshot } from '../core/types.js';
@@ -32,6 +33,9 @@ export type Request =
   | { readonly type: 'org.grantPermission' }
   | { readonly type: 'snapshot.readRaw' }
   | { readonly type: 'diagnostics.collect' }
+  | { readonly type: 'telemetry.info' }
+  | { readonly type: 'telemetry.setEnabled'; readonly enabled: boolean }
+  | { readonly type: 'telemetry.record'; readonly event: TelemetryEvent }
   | { readonly type: 'snapshot.export' }
   | { readonly type: 'snapshot.import'; readonly text: string }
   | { readonly type: 'snapshot.reset'; readonly seed: SeedKind }
@@ -86,6 +90,10 @@ export interface ResponsePayloads {
   'org.grantPermission': OrgStatus;
   'snapshot.readRaw': { readonly raw: unknown };
   'diagnostics.collect': DiagnosticReport;
+  'telemetry.info': TelemetryInfo;
+  'telemetry.setEnabled': TelemetryInfo;
+  /** Whether the event was recorded. `false` is the normal answer: it is off. */
+  'telemetry.record': { readonly recorded: boolean };
   'snapshot.export': ExportPayload;
   'snapshot.import': Snapshot;
   'snapshot.reset': Snapshot;

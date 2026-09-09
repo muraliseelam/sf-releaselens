@@ -68,6 +68,7 @@ reach, not what it intends to do — an intention is not a control.
 | Local snapshot (`sf-releaselens.snapshot.v1`) | `chrome.storage.local` | Yes | **Start empty** |
 | Org data cache (`sf-releaselens.org-snapshot.v1`) | `chrome.storage.local` | Yes | **Disconnect**, **Start empty** |
 | Release name overlay (`sf-releaselens.release-overlay.v1`) | `chrome.storage.local` | Yes | **Start empty** |
+| Telemetry opt-in and install id (`sf-releaselens.telemetry.v1`) | `chrome.storage.local` | Yes, **only if you turn telemetry on** | Turning telemetry off, which deletes the key |
 
 The Consumer Key of a PKCE public client is a public identifier, not a secret —
 it is embedded in the authorization URL that appears in the browser address bar.
@@ -94,9 +95,24 @@ intentions:
 - **No polling, no timers, no background fetch.** The org is read only when you
   press **Refresh**. There is no `chrome.alarms` permission, so the service
   worker cannot be woken on a schedule even if someone tried.
-- **No telemetry, no analytics, no error reporting.** Nothing is sent anywhere
-  except to the one org you connected. There is no opt-out because there is
-  nothing to opt out of.
+- **No analytics and no error reporting.** Nothing is sent anywhere except to
+  the one org you connected.
+- **Telemetry is opt-in, off by default, and has nowhere to go.** The panel has
+  an unchecked checkbox that would share a random id, the extension version and
+  which of the three tabs you opened — and **no endpoint is configured**, so
+  even switched on it sends nothing. Three things make that checkable rather
+  than promised, in `src/core/telemetry.ts`:
+  - The event type is a **closed union** whose every field is a literal or one
+    of three view names. There is no field an org name could go in.
+  - `sanitiseEnvelope` **rebuilds** each envelope from an allow-list before any
+    transport sees it, so a field added upstream is dropped rather than
+    forwarded. Types are erased at runtime; this is not.
+  - There is **no HTTP transport in the tree**, and the lint rule that confines
+    `fetch` to two files does not include telemetry — so it cannot make a
+    network call even by accident, and CI enforces that.
+
+  A browser test opens all three views with telemetry on and asserts the
+  extension makes no request at all.
 - **No shared Connected App.** The OAuth client is one **you** create in your own
   org, so the maintainer is not in your auth path and cannot be compromised into
   it.

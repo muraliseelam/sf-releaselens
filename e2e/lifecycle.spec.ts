@@ -234,6 +234,83 @@ test.describe('diagnostics', () => {
   });
 });
 
+test.describe('telemetry is off, and off means off', () => {
+  /**
+   * The feature exists in tension with the product's whole security story, so
+   * the browser tests are the ones that check the claim where it is real:
+   * against a live Chromium, watching the network.
+   */
+  test('is unchecked on a fresh install, with no id stored', async ({ panel }) => {
+    const control = panel.page.locator('#telemetry-enabled');
+
+    await expect(control).toBeVisible();
+    await expect(control).not.toBeChecked();
+    // A user who never reads this row has no identifier anywhere.
+    const worker = await panel.worker();
+    expect(await worker.evaluate(() => chrome.storage.local.get('sf-releaselens.telemetry.v1'))).toEqual(
+      {},
+    );
+  });
+
+  test('states what it would send, and that nothing is configured to receive it', async ({
+    panel,
+  }) => {
+    const footer = panel.page.locator('.shell__footer');
+
+    await expect(footer).toContainText('Off by default');
+    await expect(footer).toContainText('random id');
+    await expect(footer).toContainText('which of the three tabs');
+    await expect(footer).toContainText('Never anything from your org');
+    await expect(footer).toContainText('No endpoint is configured');
+  });
+
+  test('makes no network request even with every view opened and telemetry on', async ({
+    panel,
+  }) => {
+    const requests: string[] = [];
+    panel.context.on('request', (request) => requests.push(request.url()));
+
+    await panel.page.locator('#telemetry-enabled').check();
+    await expect(panel.page.locator('#telemetry-enabled')).toBeChecked();
+    for (const tab of ['inspector', 'approvals', 'dashboard']) {
+      await panel.page.locator(`#tab-${tab}`).click();
+    }
+    await panel.page.waitForTimeout(300);
+
+    // The shipped transport discards, and there is no HTTP transport in the
+    // tree at all. Anything leaving the extension origin here is a defect.
+    const external = requests.filter((url) => !url.startsWith('chrome-extension://'));
+    expect(external, `unexpected requests: ${external.join(', ')}`).toEqual([]);
+  });
+
+  test('creates an id when enabled and deletes it when disabled', async ({ panel }) => {
+    const worker = await panel.worker();
+    const read = async (): Promise<Record<string, unknown>> =>
+      worker.evaluate((): Promise<Record<string, unknown>> =>
+        chrome.storage.local.get('sf-releaselens.telemetry.v1'),
+      );
+
+    await panel.page.locator('#telemetry-enabled').check();
+    await expect(panel.page.locator('#telemetry-enabled')).toBeChecked();
+    const enabled = await read();
+    expect(enabled['sf-releaselens.telemetry.v1']).toMatchObject({ enabled: true });
+
+    await panel.page.locator('#telemetry-enabled').uncheck();
+    await expect(panel.page.locator('#telemetry-enabled')).not.toBeChecked();
+    // Deleted rather than left behind with a false flag beside it.
+    expect(await read()).toEqual({});
+  });
+
+  test('survives a reload with the setting the user chose', async ({ panel }) => {
+    await panel.page.locator('#telemetry-enabled').check();
+    await expect(panel.page.locator('#telemetry-enabled')).toBeChecked();
+
+    await panel.reloadPanel();
+
+    await expect(panel.page.locator('#telemetry-enabled')).toBeChecked();
+  });
+});
+
 test.describe('storage boundaries', () => {
   test('writes nothing to session storage while no org is connected', async ({ panel }) => {
     const worker = await panel.worker();
@@ -258,6 +335,7 @@ test.describe('storage boundaries', () => {
 
     // An undocumented key is either a leak or a forgotten migration. Both are
     // worth failing over. Update SECURITY.md's table if this list changes.
+    // Note what is absent: telemetry writes nothing until somebody opts in.
     expect(keys).toEqual(['sf-releaselens.snapshot.v1']);
   });
 

@@ -897,6 +897,24 @@ body {
   border: 0;
 }
 
+/*
+ * The privacy footer. Quiet on purpose: it is a control somebody should be able
+ * to find, not one they should be encouraged to use.
+ */
+.shell__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.shell__footer-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .muted {
   color: var(--text-dim);
 }

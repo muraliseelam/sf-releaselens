@@ -9,6 +9,7 @@
 
 import { createOrgSession } from '../auth/oauth.js';
 import { redact } from '../core/redact.js';
+import { createNoopTransport } from '../core/telemetry.js';
 import { systemClock, systemIdFactory } from '../core/clock.js';
 import { createFetchOrgConnection } from '../data/fetchConnection.js';
 import { createLocalDataSource } from '../data/local.js';
@@ -77,6 +78,15 @@ const router = createRouter({
     apiVersion: API_VERSION,
   },
   diagnosticStorage: localStorageArea,
+  /*
+   * The shipped transport discards.
+   *
+   * This is the line to read if you want to check the claim that nothing is
+   * sent anywhere. There is no HTTP transport in the tree, and the project's
+   * lint rule confines `fetch` to `data/fetchConnection.ts` and `auth/oauth.ts`
+   * — so telemetry cannot make a network call even by accident.
+   */
+  telemetryTransport: createNoopTransport(),
 });
 
 /**

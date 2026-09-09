@@ -53,6 +53,60 @@ const FORBIDDEN: readonly { readonly label: string; readonly pattern: RegExp }[]
  */
 const ID_SHAPE = /\b[0-9a-zA-Z]{15}(?:[0-9a-zA-Z]{3})?\b/g;
 
+/**
+ * Source files that legitimately talk about token shapes.
+ *
+ * They must *describe* the shapes without *containing* them: GitHub's push
+ * protection cannot tell a fake from a real one, and it is right not to try. A
+ * literal that looks like a Salesforce refresh token blocks a push, which is
+ * how this rule was learned.
+ */
+const SOURCE_ROOTS = ['src', 'test', 'e2e', 'scripts', 'docs'];
+
+const CREDENTIAL_SHAPES: readonly { readonly label: string; readonly pattern: RegExp }[] = [
+  { label: 'a Salesforce access token', pattern: /00D[A-Za-z0-9]{12,15}![A-Za-z0-9._\-+=]{20,}/ },
+  { label: 'a Salesforce refresh token', pattern: /5Aep[0-9A-Za-z._-]{25,}/ },
+  { label: 'a Connected App consumer key', pattern: /3MVG9[0-9A-Za-z._-]{20,}/ },
+];
+
+function sourceFiles(directory: string, into: string[] = []): string[] {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      sourceFiles(path, into);
+    } else if (/\.(ts|mjs|js|md|json)$/.test(entry.name)) {
+      into.push(path);
+    }
+  }
+  return into;
+}
+
+describe('no committed file contains a credential-shaped literal', () => {
+  const root = fileURLToPath(new URL('../../../', import.meta.url));
+
+  it.each(SOURCE_ROOTS)('%s/ is clean', (directory) => {
+    const offenders: string[] = [];
+
+    for (const file of sourceFiles(join(root, directory))) {
+      const text = readFileSync(file, 'utf8');
+      for (const { label, pattern } of CREDENTIAL_SHAPES) {
+        const match = pattern.exec(text);
+        if (match !== null) {
+          offenders.push(`${file.slice(root.length)}: ${label} — ${match[0].slice(0, 20)}…`);
+        }
+      }
+    }
+
+    /*
+     * Build the shape at runtime instead. A test that must exercise a token
+     * shape can compose one from parts — the shape is what is under test, and
+     * a literal is only how it got written down.
+     */
+    expect(offenders, offenders.join('; ')).toEqual([]);
+  });
+});
+
 describe('the captured org fixtures carry nothing real', () => {
   it('there are fixtures to check', () => {
     // A guard that silently checks nothing is worse than no guard.

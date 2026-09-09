@@ -10,6 +10,7 @@
 import { EMPTY_QUERY, type MetadataQuery } from '../core/metadata.js';
 import type { DecisionResult } from '../core/snapshot.js';
 import type { MetadataOperation, ReleaseId, ReleaseStatus, Snapshot } from '../core/types.js';
+import type { TelemetryInfo } from '../core/telemetry.js';
 import type { OrgStatus, SerialisedError } from '../background/messages.js';
 
 export const TABS = ['dashboard', 'inspector', 'approvals'] as const;
@@ -66,6 +67,8 @@ export const DEFAULT_LOGIN_URL = 'https://login.salesforce.com';
 
 export interface ViewState {
   readonly tab: Tab;
+  /** Absent until the worker answers; the footer renders nothing until it does. */
+  readonly telemetry: TelemetryInfo | null;
   readonly org: OrgState;
   readonly load: LoadState;
   readonly dashboard: { readonly statusFilter: ReleaseStatus | 'all' };
@@ -75,6 +78,7 @@ export interface ViewState {
 
 export const INITIAL_STATE: ViewState = {
   tab: 'dashboard',
+  telemetry: null,
   load: { status: 'idle' },
   dashboard: { statusFilter: 'all' },
   inspector: { query: EMPTY_QUERY, selectedItemId: null },
@@ -113,6 +117,7 @@ export type Action =
   | { readonly type: 'approvals/decisionFailed'; readonly error: SerialisedError }
   | { readonly type: 'approvals/feedbackDismissed' }
   | { readonly type: 'org/statusLoaded'; readonly status: OrgStatus }
+  | { readonly type: 'telemetry/loaded'; readonly info: TelemetryInfo }
   | { readonly type: 'org/actionStarted'; readonly action: 'connecting' | 'refreshing' | 'disconnecting' }
   | {
       readonly type: 'org/actionSucceeded';
@@ -234,6 +239,9 @@ export function reduce(state: ViewState, action: Action): ViewState {
 
     case 'approvals/feedbackDismissed':
       return { ...state, approvals: { ...state.approvals, error: null, lastOutcome: null } };
+
+    case 'telemetry/loaded':
+      return { ...state, telemetry: action.info };
 
     case 'org/statusLoaded':
       return {

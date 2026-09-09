@@ -20,6 +20,17 @@ import {
   buildDiagnostics,
   type DiagnosticEnvironment,
 } from '../core/diagnostics.js';
+import {
+  TELEMETRY_COLLECTS,
+  createNoopTransport,
+  newInstallId,
+  parseSettings,
+  sanitiseEnvelope,
+  type TelemetryEvent,
+  type TelemetryInfo,
+  type TelemetrySettings,
+  type TelemetryTransport,
+} from '../core/telemetry.js';
 import type { StorageArea } from '../data/storage.js';
 import type { SnapshotDeps } from '../core/snapshot.js';
 import type { DataSource } from '../data/datasource.js';
@@ -88,6 +99,14 @@ export interface RouterOptions {
    * second read path for snapshot data.
    */
   readonly diagnosticStorage?: StorageArea;
+  /**
+   * Where telemetry events would go. The shipped build passes a no-op; a build
+   * that passed anything else would be making a promise this project has not
+   * made. Absent is treated as the no-op.
+   */
+  readonly telemetryTransport?: TelemetryTransport;
+  /** Injected so a test can make the install id deterministic. */
+  readonly cryptoImpl?: Pick<Crypto, 'getRandomValues'>;
 }
 
 export interface Router {
@@ -96,6 +115,9 @@ export interface Router {
 
 /** Where the Connected App consumer key is remembered. Never a token. */
 export const ORG_SETTINGS_KEY = 'sf-releaselens.org-settings.v1';
+
+/** Where the opt-in flag and the install id live. Documented in SECURITY.md. */
+export const TELEMETRY_KEY = 'sf-releaselens.telemetry.v1';
 
 /**
  * The local-storage keys a diagnostic report measures the size of.
@@ -110,10 +132,12 @@ const DIAGNOSTIC_STORAGE_KEYS = [
   'sf-releaselens.org-snapshot.v1',
   'sf-releaselens.release-overlay.v1',
   ORG_SETTINGS_KEY,
+  TELEMETRY_KEY,
 ] as const;
 
 export function createRouter(options: RouterOptions): Router {
   const { deps } = options;
+  const transport = options.telemetryTransport ?? createNoopTransport();
 
   /** `https://acme.my.salesforce.com/*` — the single origin we ever request. */
   function originPatternFor(instanceUrl: string): string {
@@ -137,6 +161,48 @@ export function createRouter(options: RouterOptions): Router {
       ...(await readSettings()),
       deployLimit: limit,
     });
+  }
+
+  /** Settings are read fresh each time: consent can be withdrawn at any moment. */
+  async function readTelemetrySettings(): Promise<TelemetrySettings> {
+    return parseSettings(await options.settingsStorage?.read(TELEMETRY_KEY));
+  }
+
+  async function telemetryInfo(): Promise<TelemetryInfo> {
+    const settings = await readTelemetrySettings();
+    return {
+      enabled: settings.enabled,
+      // Whether an id exists, never the id. The panel has no use for it, and
+      // a value the UI never sees is a value the UI cannot leak.
+      hasInstallId: settings.installId !== undefined,
+      destination: transport.describe,
+      collects: TELEMETRY_COLLECTS,
+    };
+  }
+
+  /**
+   * Sends one event, or does not.
+   *
+   * Everything between here and the transport is refusal: off means the
+   * transport is not called at all, and an envelope that cannot be rebuilt from
+   * the allow-list is dropped rather than sent in whatever shape it arrived.
+   */
+  async function record(event: TelemetryEvent): Promise<boolean> {
+    // Read fresh rather than cached: consent can be withdrawn between two
+    // events, and a cached `true` would outlive it.
+    const settings = await readTelemetrySettings();
+    if (!settings.enabled || settings.installId === undefined) return false;
+
+    const envelope = sanitiseEnvelope({
+      installId: settings.installId,
+      extensionVersion: options.diagnosticEnvironment.extensionVersion,
+      event,
+      at: deps.clock.now(),
+    });
+    if (envelope === undefined) return false;
+
+    transport.send(envelope);
+    return true;
   }
 
   async function readClientId(): Promise<string | undefined> {
@@ -352,6 +418,29 @@ export function createRouter(options: RouterOptions): Router {
         }) satisfies PayloadFor<'diagnostics.collect'>;
       }
 
+      case 'telemetry.info':
+        return (await telemetryInfo()) satisfies PayloadFor<'telemetry.info'>;
+
+      case 'telemetry.setEnabled': {
+        /*
+         * The id is created here and nowhere else, on the way in — and deleted
+         * on the way out rather than merely left unused. A user who never
+         * turns this on has no identifier anywhere, and a user who turns it off
+         * and on again is a different one, so the two periods cannot be joined.
+         */
+        if (request.enabled) {
+          const installId = newInstallId(options.cryptoImpl ?? crypto);
+          await options.settingsStorage?.write(TELEMETRY_KEY, { enabled: true, installId });
+          await record({ name: 'telemetry.enabled' });
+        } else {
+          await options.settingsStorage?.remove(TELEMETRY_KEY);
+        }
+        return (await telemetryInfo()) satisfies PayloadFor<'telemetry.setEnabled'>;
+      }
+
+      case 'telemetry.record':
+        return { recorded: await record(request.event) } satisfies PayloadFor<'telemetry.record'>;
+
       case 'snapshot.export': {
         const snapshot = await (await currentDataSource()).exportSnapshot();
         return {
@@ -429,6 +518,9 @@ const KNOWN_TYPES = new Set<RequestType>([
   'org.grantPermission',
   'snapshot.readRaw',
   'diagnostics.collect',
+  'telemetry.info',
+  'telemetry.setEnabled',
+  'telemetry.record',
   'snapshot.export',
   'snapshot.import',
   'snapshot.reset',

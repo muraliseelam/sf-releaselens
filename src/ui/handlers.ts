@@ -7,6 +7,7 @@
 
 import type { Actor, ApprovalDecisionOutcome } from '../core/types.js';
 import type { SeedKind } from '../data/datasource.js';
+import type { TelemetryView } from '../core/telemetry.js';
 import type { Action } from './state.js';
 
 export interface Handlers {
@@ -39,6 +40,15 @@ export interface Handlers {
    * data in it. Safe to attach to a public issue.
    */
   downloadDiagnostics(): void;
+  /** Turns opt-in telemetry on or off. Off is the default and stays it. */
+  setTelemetryEnabled(enabled: boolean): void;
+  /**
+   * Notes that a surface was opened.
+   *
+   * A no-op unless the user turned telemetry on: the worker refuses rather than
+   * records, and the transport it would reach discards anyway.
+   */
+  recordViewOpened(view: TelemetryView): void;
   importSnapshot(): void;
   reset(seed: SeedKind): void;
   setActor(actor: Actor): void;

@@ -137,6 +137,21 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
     return permissions.request(origins);
   }
 
+  /**
+   * Reads whether telemetry is on.
+   *
+   * Asked for rather than assumed, so the footer states the real setting even
+   * if it was changed in another window. Never blocks the first paint.
+   */
+  function loadTelemetry(): void {
+    client
+      .send({ type: 'telemetry.info' })
+      .then((info) => dispatch({ type: 'telemetry/loaded', info }))
+      // A panel that cannot read the setting simply renders no control, which
+      // is the safe direction: no control means no way to turn it on.
+      .catch(() => undefined);
+  }
+
   /** Loads the org status. Never blocks the first paint. */
   function loadOrgStatus(): void {
     client
@@ -250,6 +265,22 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
         .catch((cause: unknown) => dispatch({ type: 'load/failed', error: toSerialisedError(cause) }));
     },
 
+    recordViewOpened(view): void {
+      // Fire and forget, and deliberately not awaited: a telemetry round trip
+      // must never sit between a click and a tab switching.
+      if (state.telemetry?.enabled !== true) return;
+      client
+        .send({ type: 'telemetry.record', event: { name: 'view.opened', view } })
+        .catch(() => undefined);
+    },
+
+    setTelemetryEnabled(enabled: boolean): void {
+      client
+        .send({ type: 'telemetry.setEnabled', enabled })
+        .then((info) => dispatch({ type: 'telemetry/loaded', info }))
+        .catch((cause: unknown) => dispatch({ type: 'org/actionFailed', error: toSerialisedError(cause) }));
+    },
+
     downloadDiagnostics(): void {
       client
         .send({ type: 'diagnostics.collect' })
@@ -301,6 +332,7 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
   render();
   refresh();
   loadOrgStatus();
+  loadTelemetry();
   return { handlers, onExternalChange: () => refresh({ silent: true }) };
 }
 
@@ -374,7 +406,10 @@ function renderShell(state: ViewState, handlers: Handlers): HTMLElement {
                 : {}),
             },
             on: {
-              click: () => handlers.dispatch({ type: 'tab/selected', tab }),
+              click: () => {
+                handlers.dispatch({ type: 'tab/selected', tab });
+                handlers.recordViewOpened(tab);
+              },
               keydown: (event) => onTabKeydown(event, tab, handlers),
             },
           },
@@ -409,6 +444,48 @@ function renderShell(state: ViewState, handlers: Handlers): HTMLElement {
       },
       [renderBody(state, handlers)],
     ),
+
+    renderPrivacyFooter(state, handlers),
+  ]);
+}
+
+/**
+ * The opt-in telemetry control.
+ *
+ * Deliberately plain. It is an unchecked checkbox with a sentence saying
+ * exactly what would be sent and a line saying where — read from the transport
+ * actually in use, not from a constant, so the UI cannot claim "nowhere" while
+ * something else is wired in.
+ *
+ * There is no nag, no banner, no "help us improve", and no pre-tick. A user who
+ * never reads this row is a user who sends nothing, which is the correct
+ * default for a tool that sits next to somebody's production org.
+ */
+function renderPrivacyFooter(state: ViewState, handlers: Handlers): HTMLElement | null {
+  const telemetry = state.telemetry;
+  // Renders nothing until the worker has answered. No control means no way to
+  // turn it on, which is the safe direction to fail in.
+  if (telemetry === null) return null;
+
+  return el('footer', { className: 'shell__footer' }, [
+    el('label', { className: 'toggle', attrs: { for: 'telemetry-enabled' } }, [
+      el('input', {
+        attrs: {
+          id: 'telemetry-enabled',
+          type: 'checkbox',
+          ...(telemetry.enabled ? { checked: 'checked' } : {}),
+        },
+        on: {
+          change: (event) =>
+            handlers.setTelemetryEnabled((event.currentTarget as HTMLInputElement).checked),
+        },
+      }),
+      'Share which tabs I open',
+    ]),
+    el('p', {
+      className: 'muted shell__footer-note',
+      text: `Off by default. If on, it would send ${telemetry.collects.join('; ')}. Never anything from your org. ${telemetry.destination}`,
+    }),
   ]);
 }
 

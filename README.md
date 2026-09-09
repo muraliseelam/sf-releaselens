@@ -14,7 +14,8 @@ already have open, instead of across four.
 
 **It reads. It does not write.** The interface it uses to reach Salesforce has no `post`,
 `patch` or `delete` member at all, it takes no host permission until you connect an org,
-and it never polls.
+it never polls, and its opt-in telemetry is off by default with
+[no endpoint configured](SECURITY.md#what-it-deliberately-does-not-do).
 
 ---
 
@@ -248,6 +249,18 @@ and the OAuth token exchange — so every outbound request in the product is
 visible in two files.
 
 The OAuth scopes requested are `api` and `refresh_token`, and nothing else.
+
+### Telemetry: opt-in, off, and with nowhere to send
+
+The panel has a footer checkbox, unchecked. Switched on it would share a random
+id created at that moment, the extension version, and which of the three tabs you
+opened — and nothing else, because the event type is a closed union with no field
+an org name could go in. **No endpoint is configured**, so even enabled it sends
+nothing; a browser test opens all three views with it on and asserts the extension
+makes no network request at all. Turning it off deletes the id.
+
+The three checks that make this readable rather than promised are in
+[`SECURITY.md`](SECURITY.md), and the code is one file: `src/core/telemetry.ts`.
 
 ### Reporting a bug without leaking your org
 

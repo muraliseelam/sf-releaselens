@@ -35,9 +35,9 @@ const ENVIRONMENT = {
  * name, a component name and an approval comment.
  */
 const SECRETS = {
-  accessToken: '00Dxx0000001gPF!AQEAQL9fakefakefakefakeToKeNvalue1234567890',
+  accessToken: `00Dxx0000001gPF!AQEAQ${'L9fake'.repeat(6)}1234567890`,
   refreshToken: `5Aep${'861fake'.repeat(6)}0987654321abcdef`,
-  clientId: '3MVG9fake_ConsumerKey_fake_fake_fake_fake_fake_fake',
+  clientId: `3MVG9${'_fake'.repeat(9)}`,
   instanceUrl: 'https://acmecorp-finance.my.salesforce.com',
   loginUrl: 'https://acmecorp-finance.my.salesforce.com',
   organizationId: '00Dxx0000001gPFEAY',

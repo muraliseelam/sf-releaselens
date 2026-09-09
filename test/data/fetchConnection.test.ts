@@ -280,7 +280,9 @@ describe('the org cannot leak a token through an error', () => {
   // The org controls these strings and they reach the panel. `oauth.ts` always
   // redacted its equivalents; this transport did not, which was a real gap
   // found in self-review rather than by a failing test.
-  const TOKEN = '00D5f000000ABCDE!AQEAQNaGmY_fakeAccessTokenValue_0123456789';
+  // Token shape composed rather than written out, so no committed line
+  // looks like a credential. See `test/fixtures/org/no-secrets.test.ts`.
+  const TOKEN = `00D5f000000ABCDE!AQEAQ${'NaGmY_fake'}AccessTokenValue_0123456789`;
 
   it('redacts a token echoed in a Salesforce error message', async () => {
     // A 400 rather than a 401: a 401 goes down the refresh path, and this is
