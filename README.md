@@ -9,6 +9,7 @@ already have open, instead of across four.
 [![CI](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml/badge.svg)](https://github.com/muraliseelam/sf-releaselens/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/muraliseelam/sf-releaselens?sort=semver)](https://github.com/muraliseelam/sf-releaselens/releases/latest)
 [![Validated against 10 real orgs](https://img.shields.io/badge/validated-10%20real%20Salesforce%20orgs-brightgreen)](docs/ORG-COMPATIBILITY.md)
+[![Read-only](https://img.shields.io/badge/org%20access-read--only-informational)](SECURITY.md)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 **It reads. It does not write.** The interface it uses to reach Salesforce has no `post`,
