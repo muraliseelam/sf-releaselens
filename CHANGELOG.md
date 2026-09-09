@@ -1,3 +1,9 @@
+## [0.7.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.6.0...v0.7.0) (2026-09-09)
+
+### Features
+
+* **telemetry:** opt-in, default off, and with nowhere to send ([c434042](https://github.com/muraliseelam/sf-releaselens/commit/c434042bb5cdf55c8b5cd8687cb16c95c8bdd4ee))
+
 ## [0.6.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.3...v0.6.0) (2026-09-09)
 
 ### Features
