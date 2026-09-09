@@ -5,30 +5,33 @@
 
 # Org compatibility
 
-What 7 real Salesforce orgs actually return, measured on
-2026-09-08 with the extension's own transport.
+What 10 real Salesforce orgs actually return, measured on
+2026-09-09 with the extension's own transport.
 Every call was a `GET`; nothing was deployed, executed or modified.
 
 **No org is identified here.** Local CLI aliases, host patterns, API versions,
 counts and enum values only — never an org id, instance URL, username, org name,
 deploy id or component name.
 
-| Org (local alias) | Namespace | Host pattern | Org API | Offers v62.0 | Daily API max | Deploys | Statuses seen | `TestLevel` | Details resolved | Components | With an author | Coverage |
-| --- | --- | --- | ---: | :---: | ---: | ---: | --- | --- | ---: | ---: | ---: | --- |
-| `audx-org` | — | `*.my.salesforce.com` | 67.0 | yes | 101000 | 2 | Failed ×2 | null ×2 | 2 | 4 | 0 | INVALID_TYPE |
-| `nsorg` | atexplorer | `*.develop.my.salesforce.com` | 67.0 | yes | 50000 | 0 | — | — | 0 | 0 | 0 | 0 rows |
-| `orgfarm-dev` | — | `*.develop.my.salesforce.com` | 67.0 | yes | 15000 | 0 | — | — | 0 | 0 | 0 | 8 rows |
-| `orgfarm-dev-ed` | — | `*.develop.my.salesforce.com` | 67.0 | yes | 15000 | 10 | Succeeded ×8, Failed ×2 | null ×10 | 3 | 7 | 0 | 8 rows |
-| `partner-pbo` | — | `*.my.salesforce.com` | 67.0 | yes | 101000 | 10 | Succeeded ×7, Failed ×3 | null ×10 | 3 | 6 | 0 | 2 rows |
-| `pbo` | — | `*.my.salesforce.com` | 67.0 | yes | 101000 | 0 | — | — | 0 | 0 | 0 | 2 rows |
-| `pbo2` | — | `*.my.salesforce.com` | 67.0 | yes | 101000 | 0 | — | — | 0 | 0 | 0 | 2 rows |
+| Org (local alias) | Kind | Namespace | Host pattern | Org API | Offers v62.0 | Deploys read / in org | Check-only | Statuses seen | `TestLevel` | Components | With an author | Coverage |
+| --- | --- | --- | --- | ---: | :---: | ---: | ---: | --- | --- | ---: | ---: | --- |
+| `audx-org` | other | — | `*.my.salesforce.com` | 67.0 | yes | 3 / 3 | 1 | Failed ×3 | null ×3 | 6 | 0 | INVALID_TYPE |
+| `nsorg` | other | atexplorer | `*.develop.my.salesforce.com` | 67.0 | yes | 0 / 0 | 0 | — | — | 0 | 0 | 0 rows |
+| `orgfarm-dev` | other | — | `*.develop.my.salesforce.com` | 67.0 | yes | 0 / 0 | 0 | — | — | 0 | 0 | 8 rows |
+| `orgfarm-dev-ed` | other | — | `*.develop.my.salesforce.com` | 67.0 | yes | 10 / 13 | 1 | Succeeded ×8, Failed ×2 | null ×10 | 6 | 0 | 8 rows |
+| `partner-pbo` | other | — | `*.my.salesforce.com` | 67.0 | yes | 10 / 12 | 1 | Succeeded ×8, Failed ×2 | null ×10 | 6 | 0 | 2 rows |
+| `pbo` | other | — | `*.my.salesforce.com` | 67.0 | yes | 0 / 0 | 0 | — | — | 0 | 0 | 2 rows |
+| `pbo2` | other | — | `*.my.salesforce.com` | 67.0 | yes | 0 / 0 | 0 | — | — | 0 | 0 | 2 rows |
+| `dev` | scratch | — | `*.scratch.my.salesforce.com` | 68.0 | yes | 3 / 3 | 0 | Failed ×2, Succeeded ×1 | null ×3 | 8 | 0 | 0 rows |
+| `int` | scratch | — | `*.scratch.my.salesforce.com` | 68.0 | yes | 1 / 1 | 0 | Succeeded ×1 | null ×1 | 4 | 0 | 0 rows |
+| `qa` | scratch | — | `*.scratch.my.salesforce.com` | 68.0 | yes | 2 / 2 | 0 | Succeeded ×2 | null ×2 | 6 | 0 | 8 rows |
 
 ## What this measured that the mocked suite could not
 
-**`TestLevel` is always null.** 22 of 22 rows, every
+**`TestLevel` is always null.** 29 of 29 rows, every
 org. The field was selected and never read; it is no longer selected.
 
-**A component has no author.** 0 of 17 components
+**A component has no author.** 0 of 36 components
 carry a `createdByName`, in either the Metadata API or the CLI's
 `deploy report --json`. The author is on the deploy, and is threaded down from
 there — before that, every org-sourced component read "unknown".
@@ -39,7 +42,7 @@ Component details come from
 `/services/data/vXX/metadata/deployRequest/{id}?includeDetails=true`, and the
 query parameter is required: without it the arrays are present and empty.
 
-**Not every org answers for coverage.** 1 of these 7 rejects
+**Not every org answers for coverage.** 1 of these 10 rejects
 `ApexCodeCoverageAggregate` with `INVALID_TYPE: sObject type
 'ApexCodeCoverageAggregate' is not supported`. That used to fail the whole
 refresh; it now degrades, with the reason written into the refresh's audit
@@ -48,14 +51,40 @@ entry.
 **`problemType` is null on real failures**, with the text in `problem`. A
 warning code is derived rather than read.
 
-**4 of these 7 orgs have never had a deploy.** An empty
+**4 of these 10 orgs have never had a deploy.** An empty
 snapshot is the correct answer and must render as an empty state, not as an
 error or a spinner. That case is now a unit test, a contract test and a browser
 test, because it is the most likely first experience a new user has.
 
-**Every org runs API 67.0 and still serves 62.0**, the version this build pins.
-See the reasoning for pinning in `docs/DATASOURCE.md`; the refresh now reads
-`/services/data/` once and refuses clearly if the pinned version is ever gone.
+**A check-only deploy is not a deployment, and used to say it was scheduled.**
+3 of the deploys read are check-only runs: Salesforce validated the
+package and deployed nothing. They mapped to `scheduled`, which on a release
+dashboard says a deploy is queued — Salesforce has no such concept here. They
+are now `validated`, and `Release.checkOnly` marks them whether they passed
+or failed.
+
+**2 of these orgs have more deployments than a refresh reads.** The
+default window is the ten most recent, and the dashboard used to show that
+subset with nothing saying so — in one org the two it hid included a failure.
+The snapshot now records the window and the dashboard says "Showing 10 of 12",
+with a button that states its API cost.
+
+**3 scratch orgs were invisible to this report until now.** Scratch
+orgs report `status: 'Active'` and **no `connectedStatus`**, so the harness's
+`connectedStatus === 'Connected'` filter dropped every one of them. They are
+the primary Salesforce DevOps workflow, and they were the largest gap in the
+previous version of this table.
+
+**Orgs run API 67.0 and 68.0; all of them still serve 62.0**, the version this
+build pins. The scratch orgs are six versions ahead, which is exactly the
+threshold at which a refresh records the drift — the first time that message has
+fired against a real org. See the reasoning for pinning in
+`docs/DATASOURCE.md`.
+
+**Chrome's `*.my.salesforce.com` pattern covers scratch, sandbox and develop
+hosts.** That was confirmed by asking Chrome, not by reading the documentation:
+`e2e/org.spec.ts` puts each host to `chrome.permissions.contains` and pins the
+answer. The manifest needed no change.
 
 ## What could not be measured
 
@@ -79,8 +108,9 @@ history. **That is the largest untested path in the data layer.**
 extension's own `chrome.identity.launchWebAuthFlow` against a customer-created
 Connected App has still never run — see `docs/LIVE-ORG-RUNBOOK.md`.
 
-**A sandbox.** All of these are production or developer-edition orgs. Nothing
-here has been read from a `*.sandbox.my.salesforce.com` instance.
+**A sandbox.** These are production, developer-edition and scratch orgs.
+Nothing here has been read from a `*.sandbox.my.salesforce.com` instance —
+though Chrome confirms the manifest would reach one.
 
 ## Running the contract suite
 
