@@ -65,6 +65,66 @@ export function parseJustifications(markdown) {
   return found;
 }
 
+/**
+ * File extensions this scan can read, and those it deliberately cannot.
+ *
+ * The scan used to read the first list and skip everything else **in silence**,
+ * which meant a `.mjs` arriving in the build tomorrow would be unscanned and
+ * the run would still print `ok` — while its output is pasted into a store
+ * submission as a declaration that the extension contains no remotely hosted
+ * code. A declaration backed by a check that quietly stopped covering part of
+ * the build is worse than one backed by nothing, because nobody is looking.
+ *
+ * So everything is now accounted for: read, or refused. The inert list is
+ * short and explicit, which makes adding an asset type a deliberate edit by
+ * somebody who has considered whether it can execute.
+ */
+export const SCANNABLE_EXTENSIONS = ['.js', '.html', '.css', '.json'];
+export const INERT_EXTENSIONS = [
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.svg',
+  '.ico',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.otf',
+];
+
+/**
+ * Sorts one shipped path into scan / inert / unaccounted-for.
+ *
+ * @param {string} name forward-slash path inside the package
+ * @returns {'scan' | 'inert' | 'unknown'}
+ */
+export function classifyShippedFile(name) {
+  const lower = name.toLowerCase();
+  if (SCANNABLE_EXTENSIONS.some((suffix) => lower.endsWith(suffix))) return 'scan';
+  if (INERT_EXTENSIONS.some((suffix) => lower.endsWith(suffix))) return 'inert';
+  return 'unknown';
+}
+
+/**
+ * Files the scan could not read and cannot vouch for.
+ *
+ * @param {readonly string[]} shipped
+ * @returns {{ check: string, message: string }[]}
+ */
+export function reportUnscannable(shipped) {
+  return shipped
+    .filter((name) => classifyShippedFile(name) === 'unknown')
+    .map((name) => ({
+      check: 'remote-code',
+      message:
+        `${name} was not scanned for remotely hosted code: its extension is on neither the readable ` +
+        `list (${SCANNABLE_EXTENSIONS.join(', ')}) nor the known-inert list. Add it to one in ` +
+        `scripts/lib/store-policy.mjs, having decided whether it can execute.`,
+    }));
+}
+
 /** The contents of the first backtick pair, or undefined if there is none. */
 function backticked(cell) {
   const match = /`([^`]+)`/.exec(cell);

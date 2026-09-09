@@ -958,12 +958,21 @@ describe('the boundary between "no data" and "no org"', () => {
     ['entries that are not objects', ['62.0']],
     ['a null entry', [null]],
   ])('does not block the refresh when the version list has %s', async (_label, versions) => {
-    // Nothing to compare the pinned version against, so nothing to refuse over.
-    // The list exists to produce a warning; failing over it would trade a
-    // capability for a diagnostic.
+    /*
+     * Nothing to compare the pinned version against, so nothing to refuse over.
+     * The list exists to produce a warning; failing over it would trade a
+     * capability for a diagnostic.
+     *
+     * Asserted on the releases, not merely on the promise resolving: a refresh
+     * that returned an empty snapshot would also resolve, and that is the
+     * outcome this test exists to rule out.
+     */
     const { dataSource } = build(connectionFor({ versions }));
 
-    await expect(dataSource.refresh()).resolves.toBeDefined();
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.releases).toHaveLength(1);
+    expect(snapshot.items.length).toBeGreaterThan(0);
   });
 
   it('does not claim drift it cannot measure', async () => {

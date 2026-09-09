@@ -18,6 +18,8 @@ interface Finding {
 }
 
 interface StorePolicyLib {
+  classifyShippedFile: (name: string) => 'scan' | 'inert' | 'unknown';
+  reportUnscannable: (shipped: readonly string[]) => Finding[];
   NAME_LIMIT: number;
   DESCRIPTION_LIMIT: number;
   MIN_JUSTIFICATION: number;
@@ -41,7 +43,9 @@ const {
   DESCRIPTION_LIMIT,
   MIN_JUSTIFICATION,
   checkManifest,
+  classifyShippedFile,
   diffPermissions,
+  reportUnscannable,
   parseJustifications,
   requestedPermissions,
   scanForRemoteCode,
@@ -239,8 +243,19 @@ describe('screening the packaged archive', () => {
     ['ui/panel.d.ts', 'type declaration'],
     ['.env', 'dotfile'],
     ['node_modules/left-pad/index.js', 'node_modules'],
-  ])('fails on %s', (entry) => {
-    expect(screenZipEntries([...shipped, entry], shipped).length).toBeGreaterThan(0);
+  ])('fails on %s, and names it', (entry, why) => {
+    /*
+     * On the entry and the reason, not on the length of the finding list. The
+     * earlier version asserted only that something was found, which passes
+     * unchanged on a screening function that rejects every entry in the
+     * archive — a much worse bug with the same test result.
+     */
+    const findings = screenZipEntries([...shipped, entry], shipped);
+
+    expect(messages(findings)).toContain(entry);
+    expect(messages(findings)).toContain(why);
+    // The legitimate entries are still accepted.
+    expect(screenZipEntries(shipped, shipped)).toEqual([]);
   });
 
   it('fails an entry that is not in dist, which means it came from somewhere else', () => {
@@ -277,5 +292,49 @@ describe('the repository itself', () => {
 
     expect(messages(findings)).toBe('');
     expect(requestedPermissions(manifest).length).toBeGreaterThan(0);
+  });
+});
+
+/*
+ * The scan has to account for the whole build.
+ *
+ * It read four extensions and skipped everything else in silence, so a `.mjs`
+ * arriving in `dist/` tomorrow would go unscanned while the run still printed
+ * `ok` — and that run's output is pasted into a store submission as a
+ * declaration that the extension contains no remotely hosted code. A
+ * declaration backed by a check that quietly stopped covering part of the build
+ * is worse than one backed by nothing, because nobody is looking.
+ */
+describe('every shipped file is accounted for', () => {
+  it.each([
+    ['ui/panel.js', 'scan'],
+    ['ui/sidepanel.html', 'scan'],
+    ['ui/styles.css', 'scan'],
+    ['manifest.json', 'scan'],
+    ['icons/icon-128.png', 'inert'],
+    ['fonts/inter.woff2', 'inert'],
+    ['ui/panel.mjs', 'unknown'],
+    ['background/worker.wasm', 'unknown'],
+    ['README', 'unknown'],
+  ])('classifies %s as %s', (name, expected) => {
+    expect(classifyShippedFile(name)).toBe(expected);
+  });
+
+  it('fails on a file it cannot vouch for, naming it and saying what to do', () => {
+    const findings = reportUnscannable(['ui/panel.js', 'icons/a.png', 'ui/late.mjs']);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain('ui/late.mjs');
+    expect(findings[0]?.message).toContain('was not scanned');
+    expect(findings[0]?.message).toContain('store-policy.mjs');
+  });
+
+  it('says nothing about a build of only readable and known-inert files', () => {
+    expect(reportUnscannable(['manifest.json', 'ui/panel.js', 'icons/icon-16.png'])).toEqual([]);
+  });
+
+  it('is case-insensitive, because Windows builds are', () => {
+    expect(classifyShippedFile('icons/ICON-128.PNG')).toBe('inert');
+    expect(classifyShippedFile('ui/PANEL.JS')).toBe('scan');
   });
 });

@@ -69,8 +69,29 @@ const CREDENTIAL_SHAPES: readonly { readonly label: string; readonly pattern: Re
   { label: 'a Connected App consumer key', pattern: /3MVG9[0-9A-Za-z._-]{20,}/ },
 ];
 
+/**
+ * Every source file under a root, or a named failure.
+ *
+ * A missing directory used to surface as a raw ENOENT from `readdirSync`. A
+ * directory that is absent and one that is clean are different facts, and only
+ * one of them means what a green test appears to mean — so this says which root
+ * and why rather than leaving a filesystem error to be interpreted.
+ */
 function sourceFiles(directory: string, into: string[] = []): string[] {
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = readdirSync(directory, { withFileTypes: true });
+  } catch (cause) {
+    throw new Error(
+      `${directory} does not exist, so this guard covered nothing there. ` +
+        'A root that is absent and a root that is clean are different facts, and only one of ' +
+        'them means what a passing test appears to mean. Fix the path in SOURCE_ROOTS, or ' +
+        'remove the root deliberately.',
+      { cause },
+    );
+  }
+
+  for (const entry of entries) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
       if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;

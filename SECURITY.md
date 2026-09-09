@@ -95,6 +95,14 @@ intentions:
 - **No polling, no timers, no background fetch.** The org is read only when you
   press **Refresh**. There is no `chrome.alarms` permission, so the service
   worker cannot be woken on a schedule even if someone tried.
+- **One outbound link, and it is a link.** The connect form contains an anchor
+  to the Connected App instructions on GitHub, because a side panel cannot open
+  a relative file path and that is the one thing a new user must do first. It is
+  not a request the extension makes: nothing is fetched, nothing loads until you
+  click it, and it carries `rel="noreferrer"` so the destination is not told
+  which extension you came from. It is listed here because a document claiming
+  to name every outbound path loses more from one unexplained omission than it
+  gains from brevity.
 - **No analytics and no error reporting.** Nothing is sent anywhere except to
   the one org you connected.
 - **Telemetry is opt-in, off by default, and has nowhere to go.** The panel has

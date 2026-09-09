@@ -23,9 +23,11 @@ import { fileURLToPath } from 'node:url';
 
 import {
   checkManifest,
+  classifyShippedFile,
   diffPermissions,
   parseJustifications,
   requestedPermissions,
+  reportUnscannable,
   scanForRemoteCode,
   screenZipEntries,
 } from './lib/store-policy.mjs';
@@ -40,8 +42,10 @@ const SOURCE_MANIFEST = join(projectRoot, 'src', 'manifest.json');
 /** Not shipped, so not scanned and not measured. Matches the packager. */
 const NOT_SHIPPED = ['.map', '.d.ts', '.tsbuildinfo'];
 
-/** Text the scanner can read. Anything else is an image or a font. */
-const SCANNABLE = ['.js', '.html', '.css', '.json'];
+/*
+ * Which files the scanner can read is decided in store-policy.mjs, along with
+ * which it may skip. Nothing is skipped silently: see `reportUnscannable`.
+ */
 
 /**
  * A refusal to run at all, as distinct from a finding.
@@ -109,11 +113,16 @@ async function main() {
 
   let scanned = 0;
   for (const path of await walk(DIST)) {
-    if (!SCANNABLE.some((suffix) => path.endsWith(suffix))) continue;
+    if (classifyShippedFile(asPosix(path)) !== 'scan') continue;
     scanned += 1;
     findings.push(...scanForRemoteCode(asPosix(path), await readFile(path, 'utf8')));
   }
-  notes.push(`${scanned} shipped text files scanned for remotely hosted code`);
+  // Every shipped file is accounted for: read, or refused by name.
+  findings.push(...reportUnscannable(shipped));
+  const inert = shipped.length - scanned;
+  notes.push(
+    `${scanned} shipped text files scanned for remotely hosted code, ${inert} known-inert (images, fonts) skipped by name`,
+  );
 
   const zip = await readFile(ZIP).catch(() => undefined);
   if (zip === undefined) {
