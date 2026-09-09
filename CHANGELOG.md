@@ -1,3 +1,9 @@
+## [0.8.1](https://github.com/muraliseelam/sf-releaselens/compare/v0.8.0...v0.8.1) (2026-09-09)
+
+### Bug fixes
+
+* **ui:** an empty dashboard now says why it is empty ([7163ca7](https://github.com/muraliseelam/sf-releaselens/commit/7163ca78fa92c403065ac425709985f5f092a2d8))
+
 ## [0.8.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.7.0...v0.8.0) (2026-09-09)
 
 ### Features
