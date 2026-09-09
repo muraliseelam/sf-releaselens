@@ -107,6 +107,26 @@ describe('connect form', () => {
     expect(view.textContent).toContain('No client secret is used or accepted');
   });
 
+  it('links to the Connected App instructions rather than naming a file path', () => {
+    /*
+     * This was the text "See docs/CONNECTED-APP.md." — unreachable from a side
+     * panel, where there is no checkout and possibly no repository the reader
+     * has ever seen, and it is the one thing that has to happen before anything
+     * else works.
+     */
+    const view = render({ showConnectForm: true });
+    const link = $(view, '#org-connected-app-help') as HTMLAnchorElement | null;
+
+    expect(link).not.toBeNull();
+    const href = link?.getAttribute('href') ?? '';
+    expect(href.startsWith('https://github.com/')).toBe(true);
+    expect(href.endsWith('/docs/CONNECTED-APP.md')).toBe(true);
+    expect(link?.getAttribute('target')).toBe('_blank');
+    // A referrer out of an extension page names the extension id.
+    expect(link?.getAttribute('rel')).toBe('noreferrer');
+    expect(view.textContent).not.toContain('docs/CONNECTED-APP.md');
+  });
+
   it('keeps Sign in disabled until both fields are filled', () => {
     const empty = render({ showConnectForm: true, clientIdDraft: '' });
     const filled = render({ showConnectForm: true, clientIdDraft: '3MVG9' });

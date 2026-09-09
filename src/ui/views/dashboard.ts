@@ -72,7 +72,7 @@ export function renderDashboard(
     ),
 
     visible.length === 0
-      ? renderEmpty(filter === 'all', handlers)
+      ? renderEmpty(filter === 'all', state, snapshot, handlers)
       : el(
           'ul',
           { className: 'list', attrs: { 'aria-label': 'Releases' } },
@@ -294,21 +294,33 @@ function renderReleaseRow(
   ]);
 }
 
-function renderEmpty(unfiltered: boolean, handlers: Handlers): HTMLElement {
+/**
+ * The empty dashboard, which has to explain itself.
+ *
+ * Four of the ten orgs this extension has been validated against have never had
+ * a deploy, so "connected successfully, and there is nothing here" is the most
+ * likely first experience of a working connection — not an edge case.
+ *
+ * This screen used to give one answer to three situations: "Import an sf deploy
+ * report or a previous export to populate the dashboard." To somebody who has
+ * just granted a host permission, completed an OAuth sign-in and pressed
+ * Refresh, that reads as though the connection failed. It had not; their org is
+ * simply quiet, and the honest thing is to say so and stop.
+ */
+function renderEmpty(
+  unfiltered: boolean,
+  state: ViewState,
+  snapshot: Snapshot,
+  handlers: Handlers,
+): HTMLElement {
   if (unfiltered) {
-    return el('div', { className: 'empty' }, [
-      el('p', { text: 'No releases yet.' }),
-      el('p', {
-        className: 'empty__hint',
-        text: 'Import an sf deploy report or a previous export to populate the dashboard.',
-      }),
-      el('button', {
-        className: 'button',
-        text: 'Import JSON…',
-        attrs: { id: 'dashboard-import', type: 'button' },
-        on: { click: () => handlers.importSnapshot() },
-      }),
-    ]);
+    const connected = state.org.status?.connected === true;
+    // The same signal the org strip uses for its "last refreshed" time.
+    const refreshed = snapshot.auditLog.some((entry) => entry.action === 'snapshot.refreshed');
+
+    if (connected && refreshed) return renderOrgWithNoHistory(handlers);
+    if (connected) return renderConnectedNotYetRead(handlers);
+    return renderNothingAnywhere(handlers);
   }
   return el('div', { className: 'empty' }, [
     el('p', { text: 'No releases have this status.' }),
@@ -318,5 +330,85 @@ function renderEmpty(unfiltered: boolean, handlers: Handlers): HTMLElement {
       attrs: { id: 'dashboard-show-all', type: 'button' },
       on: { click: () => handlers.dispatch({ type: 'dashboard/statusFiltered', status: 'all' }) },
     }),
+  ]);
+}
+
+/**
+ * Connected, refreshed, and the org has nothing to show.
+ *
+ * No mention of importing in the primary advice. Import is still in the
+ * toolbar, where it always is; it is simply not what this user needs to hear.
+ */
+function renderOrgWithNoHistory(handlers: Handlers): HTMLElement {
+  return el('div', { className: 'empty' }, [
+    el('p', { text: 'This org has no deployment history.' }),
+    el('p', {
+      className: 'empty__hint',
+      text:
+        'The connection worked. Salesforce returned no deploy records for this org, which is ' +
+        'normal for an org nobody has deployed to yet. Releases will appear here after the ' +
+        'first deployment.',
+    }),
+    el('button', {
+      className: 'button',
+      text: 'Refresh',
+      attrs: { id: 'dashboard-refresh', type: 'button' },
+      on: { click: () => handlers.refreshOrg() },
+    }),
+  ]);
+}
+
+/** Connected, but nothing has been read yet — the data is one button away. */
+function renderConnectedNotYetRead(handlers: Handlers): HTMLElement {
+  return el('div', { className: 'empty' }, [
+    el('p', { text: 'Nothing has been read from this org yet.' }),
+    el('p', {
+      className: 'empty__hint',
+      text: 'This extension never polls. Press Refresh to read the org’s deploy history.',
+    }),
+    el('button', {
+      className: 'button button--primary',
+      text: 'Refresh',
+      attrs: { id: 'dashboard-refresh', type: 'button' },
+      on: { click: () => handlers.refreshOrg() },
+    }),
+  ]);
+}
+
+/**
+ * No org, no data. Both routes, each with a line saying what it gives.
+ *
+ * Connecting is offered here as well as in the strip above, because somebody
+ * reading "no releases" is looking here.
+ */
+function renderNothingAnywhere(handlers: Handlers): HTMLElement {
+  return el('div', { className: 'empty' }, [
+    el('p', { text: 'No releases yet.' }),
+    el('div', { className: 'empty__choices' }, [
+      el('div', { className: 'empty__choice' }, [
+        el('button', {
+          className: 'button button--primary',
+          text: 'Connect a Salesforce org',
+          attrs: { id: 'dashboard-connect', type: 'button' },
+          on: { click: () => handlers.dispatch({ type: 'org/connectFormToggled', open: true }) },
+        }),
+        el('p', {
+          className: 'empty__hint',
+          text: 'Read your org’s deploy history. Read-only, and only when you press Refresh.',
+        }),
+      ]),
+      el('div', { className: 'empty__choice' }, [
+        el('button', {
+          className: 'button',
+          text: 'Import JSON…',
+          attrs: { id: 'dashboard-import', type: 'button' },
+          on: { click: () => handlers.importSnapshot() },
+        }),
+        el('p', {
+          className: 'empty__hint',
+          text: 'Open a previous export, or the JSON from sf project deploy report.',
+        }),
+      ]),
+    ]),
   ]);
 }

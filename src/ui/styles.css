@@ -825,6 +825,25 @@ body {
   font-size: 12px;
 }
 
+/*
+ * Two routes out of an empty dashboard, stacked rather than side by side: the
+ * panel is 480px and a row of two buttons with captions wraps into a mess.
+ */
+.empty__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.empty__choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
 .notice {
   display: flex;
   flex-direction: column;

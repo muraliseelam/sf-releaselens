@@ -254,6 +254,17 @@ test.describe('a refresh against real Salesforce payloads', () => {
     await expect(more).toHaveAttribute('title', /API call/);
   });
 
+  /*
+   * Four of the ten orgs this extension has been validated against have never
+   * had a deploy, so this is the likeliest first experience of a connection
+   * that worked perfectly.
+   *
+   * This test used to assert only that `.empty` was visible, and passed while
+   * that empty state told the user to "import an sf deploy report or a previous
+   * export to populate the dashboard" — advice that reads as "the connection
+   * failed" to somebody who has just completed an OAuth sign-in. Asserting on
+   * the container and not the words is how a test misses the whole defect.
+   */
   test('renders an org with no deploy history as empty, not as an error', async ({ orgPanel }) => {
     await orgPanel.useFixture('namespaced-empty');
     await orgPanel.refresh();
@@ -261,8 +272,27 @@ test.describe('a refresh against real Salesforce payloads', () => {
     await expect(orgPanel.page.locator('.summary__headline')).toContainText('0 releases tracked');
     await expect(orgPanel.page.locator('.notice--error')).toHaveCount(0);
     await expect(orgPanel.page.locator('.loading')).toHaveCount(0);
-    // The empty state, not a blank panel.
     await expect(orgPanel.page.locator('.empty')).toBeVisible();
+  });
+
+  test('says the org has no history, and does not blame the connection', async ({ orgPanel }) => {
+    await orgPanel.useFixture('namespaced-empty');
+    await orgPanel.refresh();
+
+    const empty = orgPanel.page.locator('.empty');
+    await expect(empty).toContainText('This org has no deployment history.');
+    await expect(empty).toContainText('The connection worked.');
+  });
+
+  test('does not tell a successfully connected user to import a file', async ({ orgPanel }) => {
+    await orgPanel.useFixture('namespaced-empty');
+    await orgPanel.refresh();
+
+    // The assertion the original test was missing.
+    await expect(orgPanel.page.locator('.empty')).not.toContainText(/import/i);
+    await expect(orgPanel.page.locator('#dashboard-import')).toHaveCount(0);
+    // Refresh is the only thing that could change the answer, so it is offered.
+    await expect(orgPanel.page.locator('#dashboard-refresh')).toBeVisible();
   });
 
   test('refuses clearly when the org has retired the pinned API version', async ({ orgPanel }) => {

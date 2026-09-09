@@ -9,6 +9,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMPTY_QUERY, type MetadataQuery } from '../../src/core/metadata.js';
+import type { Snapshot } from '../../src/core/types.js';
 import type { Handlers } from '../../src/ui/handlers.js';
 import { INITIAL_STATE, type ViewState } from '../../src/ui/state.js';
 import { renderApprovals } from '../../src/ui/views/approvals.js';
@@ -16,7 +17,8 @@ import { renderDashboard } from '../../src/ui/views/dashboard.js';
 import { renderInspector } from '../../src/ui/views/inspector.js';
 import { makeItem, makeRelease, makeSnapshot, realisticSnapshot } from '../fixtures/snapshot.js';
 
-const NOW = Date.parse('2026-09-07T09:00:00.000Z');
+const NOW_ISO = '2026-09-07T09:00:00.000Z';
+const NOW = Date.parse(NOW_ISO);
 
 function stubHandlers(): Handlers & { dispatch: ReturnType<typeof vi.fn> } {
   return {
@@ -267,13 +269,112 @@ describe('renderDashboard', () => {
     });
   });
 
-  it('offers an import from the empty state when there are no releases at all', () => {
+  /*
+   * An empty dashboard has to explain itself.
+   *
+   * Four of the ten orgs this extension has been validated against have never
+   * had a deploy, so "connected, and nothing here" is the likeliest first
+   * experience of a working connection. One message for all three situations
+   * meant telling that user to import a file, which reads as "the connection
+   * failed" to somebody who has just completed an OAuth sign-in.
+   *
+   * These assert on the words, because that is the whole defect. A test that
+   * only checks `.empty` exists passes on either version.
+   */
+  describe('the empty dashboard explains why it is empty', () => {
     const empty = makeSnapshot({ releases: [] });
-    const view = renderDashboard(state(), empty, handlers, NOW);
 
-    expect(view.querySelector('.empty')?.textContent).toContain('No releases yet.');
-    (view.querySelector('.empty .button') as HTMLButtonElement).click();
-    expect(handlers.importSnapshot).toHaveBeenCalled();
+    const connected = (refreshed: boolean): [ViewState, Snapshot] => [
+      state({
+        org: {
+          ...INITIAL_STATE.org,
+          status: {
+            connected: true,
+            instanceUrl: 'https://acme.my.salesforce.com',
+            loginUrl: 'https://login.salesforce.com',
+            connectedAt: NOW_ISO,
+            hasHostPermission: true,
+          },
+        },
+      }),
+      refreshed
+        ? makeSnapshot({
+            releases: [],
+            auditLog: [
+              {
+                id: 'aud-1',
+                at: NOW_ISO,
+                action: 'snapshot.refreshed',
+                actor: 'Sam Okafor',
+                detail: 'read 0 deployments',
+              },
+            ],
+          })
+        : empty,
+    ];
+
+    it('names the org’s own empty history once a refresh has returned nothing', () => {
+      const [viewState, snapshot] = connected(true);
+      const text = renderDashboard(viewState, snapshot, handlers, NOW).querySelector('.empty')
+        ?.textContent;
+
+      expect(text).toContain('This org has no deployment history.');
+      expect(text).toContain('The connection worked.');
+    });
+
+    it('does not tell a connected user to import a file', () => {
+      // The assertion that would have caught the original defect. Import stays
+      // in the toolbar; it is simply not the advice this user needs.
+      const [viewState, snapshot] = connected(true);
+      const view = renderDashboard(viewState, snapshot, handlers, NOW);
+
+      expect(view.querySelector('.empty')?.textContent).not.toMatch(/import/i);
+      expect(view.querySelector('#dashboard-import')).toBeNull();
+    });
+
+    it('offers Refresh, which is the only thing that could change the answer', () => {
+      const [viewState, snapshot] = connected(true);
+      const view = renderDashboard(viewState, snapshot, handlers, NOW);
+
+      (view.querySelector('#dashboard-refresh') as HTMLButtonElement).click();
+      expect(handlers.refreshOrg).toHaveBeenCalled();
+    });
+
+    it('says nothing has been read yet when connected but never refreshed', () => {
+      const [viewState, snapshot] = connected(false);
+      const text = renderDashboard(viewState, snapshot, handlers, NOW).querySelector('.empty')
+        ?.textContent;
+
+      expect(text).toContain('Nothing has been read from this org yet.');
+      expect(text).toContain('never polls');
+    });
+
+    it('offers both routes when there is no org and no data', () => {
+      const view = renderDashboard(state(), empty, handlers, NOW);
+
+      expect(view.querySelector('.empty')?.textContent).toContain('No releases yet.');
+      expect(view.querySelector('#dashboard-connect')).not.toBeNull();
+      expect(view.querySelector('#dashboard-import')).not.toBeNull();
+    });
+
+    it('opens the same connect form the org strip opens', () => {
+      const view = renderDashboard(state(), empty, handlers, NOW);
+
+      (view.querySelector('#dashboard-connect') as HTMLButtonElement).click();
+
+      expect(handlers.dispatch).toHaveBeenCalledWith({
+        type: 'org/connectFormToggled',
+        open: true,
+      });
+    });
+
+    it('still offers the import, with a line saying what it is for', () => {
+      const view = renderDashboard(state(), empty, handlers, NOW);
+
+      (view.querySelector('#dashboard-import') as HTMLButtonElement).click();
+      expect(handlers.importSnapshot).toHaveBeenCalled();
+      expect(view.querySelector('.empty')?.textContent).toContain('sf project deploy report');
+    });
   });
 
   it('offers to clear the filter when a filter caused the empty list', () => {

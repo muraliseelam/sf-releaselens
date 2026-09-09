@@ -152,6 +152,15 @@ function diagnosticsButton(handlers: Handlers): HTMLElement {
   });
 }
 
+/**
+ * Where the Connected App instructions live, at a URL a panel can open.
+ *
+ * The repository is public precisely so this link works for somebody who
+ * installed the extension and has never seen the source.
+ */
+const CONNECTED_APP_GUIDE =
+  'https://github.com/muraliseelam/sf-releaselens/blob/main/docs/CONNECTED-APP.md';
+
 function renderConnectForm(input: OrgBarInput): HTMLElement {
   const { state, handlers } = input;
   const { loginUrlDraft, clientIdDraft, busy } = state.org;
@@ -166,10 +175,29 @@ function renderConnectForm(input: OrgBarInput): HTMLElement {
       },
     },
   }, [
-    el('p', {
-      className: 'connectform__intro',
-      text: 'Sign in with a Connected App you create in your own org. See docs/CONNECTED-APP.md.',
-    }),
+    /*
+     * A link, not a path. This was `See docs/CONNECTED-APP.md.` — unreachable
+     * from a side panel, where there is no checkout and quite possibly no
+     * repository the reader has ever seen, and it is the one thing that has to
+     * happen before anything else works.
+     *
+     * `rel="noreferrer"` because a link out of an extension page should not
+     * hand the destination a referrer naming the extension id.
+     */
+    el('p', { className: 'connectform__intro' }, [
+      'Sign in with a Connected App you create in your own org — five minutes, once. ',
+      el('a', {
+        className: 'link',
+        text: 'How to create one',
+        attrs: {
+          id: 'org-connected-app-help',
+          href: CONNECTED_APP_GUIDE,
+          target: '_blank',
+          rel: 'noreferrer',
+        },
+      }),
+      '.',
+    ]),
 
     el('label', { className: 'connectform__label', attrs: { for: 'org-login-url' } }, [
       'Login URL',

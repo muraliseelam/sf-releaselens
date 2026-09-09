@@ -217,9 +217,9 @@ Benchmarking found and fixed one real scaling bug: the dashboard computed each r
 component count by filtering the whole item list, once per row, which is quadratic in
 (releases × components). See the "What changed as a result" section of the benchmarks.
 
-Test coverage, from `npm run test:coverage`: **839 unit tests** in 37 files across
-`core/`, `data/`, the auth and message layers and the whole UI layer, plus **50 end-to-end
-checks** in a real Chromium, **26 more** replaying captured Salesforce payloads through the
+Test coverage, from `npm run test:coverage`: **846 unit tests** in 37 files across
+`core/`, `data/`, the auth and message layers and the whole UI layer, plus **56 end-to-end
+checks** in a real Chromium, **28 more** replaying captured Salesforce payloads through the
 real UI, and **17 contract tests** that run against a live org on demand. Every exported
 function has direct tests; `main.ts`, `handlers.ts` and `service-worker.ts` are excluded
 because they are `chrome.*` wiring with no logic of their own.

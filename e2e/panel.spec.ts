@@ -123,6 +123,78 @@ test.describe('release dashboard', () => {
   });
 });
 
+/*
+ * The first run, for somebody who has not read the documentation.
+ *
+ * The fixture clears both storage areas before every test, so each of these
+ * starts from a genuinely empty profile — the same state a fresh install is in.
+ */
+test.describe('the first run', () => {
+  test('seeds demo data and says so, with a way out beside it', async ({ panel }) => {
+    // Demo data on a genuinely fresh profile is a deliberate choice: it makes
+    // the product evaluable in one click. It is only defensible while it is
+    // labelled and reversible in the same breath.
+    const notice = panel.page.locator('.notice--info');
+
+    await expect(notice).toContainText('Demo data');
+    await expect(notice).toContainText('not your org');
+    await expect(panel.page.locator('#demo-start-empty')).toBeVisible();
+  });
+
+  test('offers to connect an org without anybody reading the documentation', async ({ panel }) => {
+    await expect(panel.page.locator('#org-connect')).toBeVisible();
+    await expect(panel.page.locator('.orgbar')).toContainText('no org connected');
+  });
+
+  test('links to the Connected App instructions rather than naming a file path', async ({
+    panel,
+  }) => {
+    // A side panel has no checkout to open a relative path in.
+    await panel.page.locator('#org-connect').click();
+
+    const help = panel.page.locator('#org-connected-app-help');
+    await expect(help).toBeVisible();
+    expect(await help.getAttribute('href')).toMatch(/^https:\/\/github\.com\//);
+    expect(await help.getAttribute('rel')).toBe('noreferrer');
+    await expect(panel.page.locator('.connectform')).not.toContainText('docs/CONNECTED-APP.md');
+  });
+
+  test('offers both routes once the demo data is cleared', async ({ panel }) => {
+    await panel.page.locator('#demo-start-empty').click();
+    await expect(panel.page.locator('.summary__headline')).toContainText('0 releases tracked');
+
+    const empty = panel.page.locator('.empty');
+    await expect(empty).toContainText('No releases yet.');
+    await expect(panel.page.locator('#dashboard-connect')).toBeVisible();
+    await expect(panel.page.locator('#dashboard-import')).toBeVisible();
+    // Each route says what it gives, rather than being a bare pair of buttons.
+    await expect(empty).toContainText('Read-only');
+    await expect(empty).toContainText('sf project deploy report');
+  });
+
+  test('connecting from the empty dashboard opens the one connect form', async ({ panel }) => {
+    await panel.page.locator('#demo-start-empty').click();
+    await panel.page.locator('#dashboard-connect').click();
+
+    // The same form the org strip opens, not a second copy of it.
+    await expect(panel.page.locator('.connectform')).toHaveCount(1);
+    await expect(panel.page.locator('#org-login-url')).toHaveValue(
+      'https://login.salesforce.com',
+    );
+    await expect(panel.page.locator('#org-client-id')).toHaveValue('');
+  });
+
+  test('survives a reload with the empty state it was left in', async ({ panel }) => {
+    await panel.page.locator('#demo-start-empty').click();
+    await panel.reloadPanel();
+
+    // Not re-seeded: the snapshot exists and is empty, which is different from
+    // absent, and only absent seeds.
+    await expect(panel.page.locator('.summary__headline')).toContainText('0 releases tracked');
+    await expect(panel.page.locator('#dashboard-connect')).toBeVisible();
+  });
+});
+
 test.describe('metadata inspector', () => {
   test.beforeEach(async ({ panel }) => {
     await panel.page.locator('#tab-inspector').click();
