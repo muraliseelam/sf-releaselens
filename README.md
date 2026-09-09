@@ -354,6 +354,7 @@ npm run test:e2e       # real Chromium with dist/ loaded, ~45 seconds
 npm run test:e2e:org   # the org-connected panel, from captured Salesforce payloads
 npm run test:org       # the shipping code against a real org via the sf CLI (opt-in)
 npm run size           # fail if the packaged extension outgrew its budget
+npm run evidence       # append this month's adoption reading to evidence/
 npm run lint           # eslint, type-checked rules
 npm run check          # everything except the browser suite
 node bench/bench.mjs   # the numbers above (needs a build first)
@@ -409,6 +410,16 @@ Stated plainly, because they determine whether this is useful to you:
   both still to be captured by a human.
 - **The inspector renders at most 200 rows** per result set. The count is shown, but the
   201st component is only reachable by narrowing the filters.
+
+## Adoption
+
+Public repositories accumulate numbers that nobody records, and GitHub keeps
+clone and view traffic for **fourteen days only** — so an unmeasured month is
+permanently unmeasured. [`evidence/SUMMARY.md`](evidence/SUMMARY.md) is a dated,
+append-only series of stars, forks, downloads and traffic, collected with
+`npm run evidence`. It reads what GitHub publishes about a public repository;
+**it is not telemetry**, and it names no one. See
+[`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
 ## Contributing
 

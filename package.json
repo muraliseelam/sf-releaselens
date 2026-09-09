@@ -35,6 +35,7 @@
     "test:org": "node scripts/run-org-tests.mjs",
     "assets": "npm run build && playwright test --project=capture && node scripts/compose-store-shots.mjs",
     "demo-gif": "node scripts/build-demo-gif.mjs",
+    "evidence": "node scripts/collect-evidence.mjs",
     "bench": "node --expose-gc bench/bench.mjs",
     "check": "npm run lint && npm run typecheck:e2e && npm run icons:check && npm run build && npm run test"
   },
