@@ -1,3 +1,13 @@
+## [0.8.3](https://github.com/muraliseelam/sf-releaselens/compare/v0.8.2...v0.8.3) (2026-09-09)
+
+### Refactoring
+
+* **ui:** split the panel's chrome out of its controller ([f001743](https://github.com/muraliseelam/sf-releaselens/commit/f001743db246b642b8a3f80d10c670cd7d855f14))
+
+### Documentation
+
+* name every document and who each is for ([908af35](https://github.com/muraliseelam/sf-releaselens/commit/908af3557dc3085c4d8977ad67b539eaf347bf26))
+
 ## [0.8.2](https://github.com/muraliseelam/sf-releaselens/compare/v0.8.1...v0.8.2) (2026-09-09)
 
 ### Bug fixes
