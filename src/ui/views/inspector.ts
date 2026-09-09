@@ -268,7 +268,18 @@ function renderDetail(
     el('dl', { className: 'fields' }, [
       ...field('Type', item.type),
       ...field('Operation', operationLabel(item.operation)),
-      ...field('Release', release === undefined ? item.releaseId : `${release.name} (${release.version})`),
+      ...field(
+        'Release',
+        release === undefined ? item.releaseId : `${release.name} (${release.version})`,
+        release?.checkOnly === true
+          ? 'This release was a check-only run: validated, not deployed.'
+          : undefined,
+      ),
+      // A component that was only ever validated is not a component that is in
+      // the org, and the inspector is where somebody checks exactly that.
+      ...(release?.checkOnly === true
+        ? field('Deployed?', 'No — check-only validation', 'Salesforce compiled and validated this package and deployed nothing.')
+        : []),
       ...field('API version', item.apiVersion === '' ? 'not recorded' : item.apiVersion),
       ...field('Coverage', coverageLabel(item.testCoverage)),
       ...field('Last modified', `${item.lastModifiedBy} · ${relativeTime(item.lastModifiedAt, now)}`, absoluteTime(item.lastModifiedAt)),

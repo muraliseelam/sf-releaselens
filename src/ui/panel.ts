@@ -149,10 +149,10 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
     dispatch,
     reload: () => refresh(),
 
-    refreshOrg(): void {
+    refreshOrg(deployLimit?: number): void {
       dispatch({ type: 'org/actionStarted', action: 'refreshing' });
       client
-        .send({ type: 'snapshot.refresh' })
+        .send({ type: 'snapshot.refresh', ...(deployLimit === undefined ? {} : { deployLimit }) })
         .then((result) =>
           dispatch({ type: 'org/actionSucceeded', status: result.org, snapshot: result.snapshot }),
         )

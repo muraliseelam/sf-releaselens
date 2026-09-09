@@ -41,6 +41,7 @@ import {
   emptySnapshot,
   type Actor,
   type Environment,
+  type DeployWindow,
   type MetadataItem,
   type Release,
   type RiskLevel,
@@ -73,8 +74,35 @@ export const RELEASE_OVERLAY_KEY = 'sf-releaselens.release-overlay.v1';
 /** Refuse to refresh at or above this share of the daily API budget. */
 export const API_LIMIT_REFUSE_RATIO = 0.95;
 
-/** How many recent deploys a refresh pulls components for. */
+/**
+ * How many recent deploys a refresh pulls components for.
+ *
+ * Ten is a deliberate default, not a maximum: each deploy costs one extra API
+ * call for its component details, so reading a long history is not free. The
+ * snapshot now records how much of the org's history it covers, so a truncated
+ * dashboard says so — a release dashboard silently showing a subset is wrong,
+ * not merely incomplete. A real org had twelve deploys and hid two of them,
+ * including a failure.
+ */
 export const DEFAULT_DEPLOY_LIMIT = 10;
+
+/**
+ * The most a refresh will ever read, however it is asked.
+ *
+ * The budget guard already refuses near the daily limit, but a user who keeps
+ * pressing "load more" should hit a documented ceiling rather than discover one
+ * by running the org out of API calls.
+ */
+export const MAX_DEPLOY_LIMIT = 50;
+
+/** How many more deployments one press of "load more" asks for. */
+export const DEPLOY_LIMIT_STEP = 10;
+
+/** Clamps a requested limit into the range a refresh will honour. */
+export function clampDeployLimit(requested: number | undefined): number {
+  if (requested === undefined || !Number.isFinite(requested)) return DEFAULT_DEPLOY_LIMIT;
+  return Math.min(MAX_DEPLOY_LIMIT, Math.max(1, Math.trunc(requested)));
+}
 
 /** A locally-held name for an org deploy. Nothing here comes from the org. */
 export interface ReleaseOverlayEntry {
@@ -102,7 +130,7 @@ export interface SalesforceDataSourceDeps {
 export function createSalesforceDataSource(deps: SalesforceDataSourceDeps): DataSource {
   const { storage, connection, clock, newId } = deps;
   const snapshotDeps: SnapshotDeps = { clock, newId };
-  const deployLimit = deps.deployLimit ?? DEFAULT_DEPLOY_LIMIT;
+  const deployLimit = clampDeployLimit(deps.deployLimit);
 
   /** The cached snapshot, or an empty one when the org has never been read. */
   async function readCache(): Promise<Snapshot> {
@@ -152,6 +180,8 @@ export function createSalesforceDataSource(deps: SalesforceDataSourceDeps): Data
       const environment = toEnvironment(organization, deps.orgAlias ?? 'connected org');
 
       const deploys = await fetchRecentDeploys(connection, deployLimit);
+      // One extra query, and the only way to know the dashboard is complete.
+      const totalDeploys = await countDeploys(connection, deploys.length);
       const releases: Release[] = [];
       const items: MetadataItem[] = [];
 
@@ -164,14 +194,23 @@ export function createSalesforceDataSource(deps: SalesforceDataSourceDeps): Data
       const coverage = await fetchCoverage(connection);
       applyCoverage(items, coverage.byName);
 
-      const merged = mergeIntoCache(cached, { environment, releases, items });
+      const merged = mergeIntoCache(cached, {
+        environment,
+        releases,
+        items,
+        deployWindow: { shown: releases.length, total: totalDeploys, limit: deployLimit },
+      });
       const audited = appendAudit(
         merged,
         {
           action: 'snapshot.refreshed',
           detail:
             `Refreshed from ${environment.name}: ${releases.length} deployment(s), ` +
-            `${items.length} component(s). Dependencies are not available from a deploy report.` +
+            `${items.length} component(s)` +
+            (totalDeploys > releases.length
+              ? `, of ${totalDeploys} deployment(s) in the org.`
+              : '.') +
+            ' Dependencies are not available from a deploy report.' +
             // Both of these are degradations, so both are recorded. Silence
             // here is how a partial refresh passes for a complete one.
             (coverage.unavailable === undefined
@@ -453,6 +492,26 @@ export interface CoverageResult {
  * are *not* about this object — an expired token, an unreachable org — are
  * rethrown, because those are not "no coverage", they are "no refresh".
  */
+/**
+ * How many deployments the org has, not how many were read.
+ *
+ * `SELECT COUNT()` is one query and returns no rows. A failure here degrades to
+ * "as many as we read" rather than failing the refresh: not knowing the total
+ * is a worse dashboard, not a broken one, and the caption simply does not
+ * appear.
+ */
+async function countDeploys(connection: OrgConnection, atLeast: number): Promise<number> {
+  try {
+    const page = await connection.toolingQuery<never>('SELECT COUNT() FROM DeployRequest');
+    const total = optionalNumber(page.totalSize) ?? 0;
+    // A count below what we just read is nonsense; trust the rows.
+    return Math.max(total, atLeast);
+  } catch (cause) {
+    void cause;
+    return atLeast;
+  }
+}
+
 async function fetchCoverage(connection: OrgConnection): Promise<CoverageResult> {
   const soql =
     'SELECT ApexClassOrTrigger.Name, NumLinesCovered, NumLinesUncovered FROM ApexCodeCoverageAggregate';
@@ -521,7 +580,10 @@ function toRelease(
 
   const notes =
     overlay?.notes ??
-    `Read from the org's deploy history. Dependencies are not available from a deploy ` +
+    (deploy.CheckOnly === true
+      ? 'This was a check-only run: Salesforce validated the package and deployed nothing. '
+      : '') +
+      `Read from the org's deploy history. Dependencies are not available from a deploy ` +
       `report, and risk level is a local judgement rather than an org field.` +
       (overlay === undefined
         ? ' No local name is set for this deploy, so its id is shown.'
@@ -545,6 +607,9 @@ function toRelease(
     // it through the overlay.
     riskLevel: overlay?.riskLevel ?? (errors > 0 ? 'high' : 'medium'),
     notes,
+    // Orthogonal to status: a failed validation is `failed`, and this is what
+    // says it deployed nothing.
+    ...(deploy.CheckOnly === true ? { checkOnly: true } : {}),
   };
 }
 
@@ -629,6 +694,7 @@ interface RefreshResult {
   environment: Environment;
   releases: readonly Release[];
   items: readonly MetadataItem[];
+  deployWindow: DeployWindow;
 }
 
 /**
@@ -675,5 +741,16 @@ export function mergeIntoCache(cached: Snapshot, fresh: RefreshResult): Snapshot
     releases,
     items,
     isDemoData: false,
+    /*
+     * `shown` counts the merged list, not the fresh one. A release kept from
+     * the cache after scrolling out of the recent-deploys window is still on
+     * the dashboard, so a caption reading "10 of 12" while twelve rows are
+     * visible would be its own small lie.
+     */
+    deployWindow: {
+      ...fresh.deployWindow,
+      shown: Math.min(releases.length, Math.max(fresh.deployWindow.total, releases.length)),
+      total: Math.max(fresh.deployWindow.total, releases.length),
+    },
   };
 }

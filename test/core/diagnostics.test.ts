@@ -260,7 +260,10 @@ describe('the report is worth having', () => {
       input({ org: { ...input().org, instanceUrl: 'not a url at all' } }),
     );
 
-    expect(report.org.instanceHostPattern).toBe('other (not covered by the manifest)');
+    // "unparseable" rather than "other": a stored URL that will not parse is a
+    // different problem from one on an unsupported host, and telling them apart
+    // is the whole point of a diagnostic.
+    expect(report.org.instanceHostPattern).toBe('unparseable');
   });
 
   it('flags an instance host the manifest does not cover', () => {

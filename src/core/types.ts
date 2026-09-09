@@ -36,6 +36,17 @@ export const RELEASE_STATUSES = [
   'awaiting_approval',
   'scheduled',
   'in_progress',
+  /**
+   * A check-only deploy that succeeded: Salesforce compiled and validated the
+   * package and deployed **nothing**.
+   *
+   * This used to map to `scheduled`, which was wrong in the most misleading
+   * direction available. Salesforce has no scheduled-deploy concept here, so
+   * "Scheduled" told a release manager a deploy was queued when in fact none
+   * had been requested. Caught against a real org, where a passing validation
+   * sat on the dashboard under "Scheduled".
+   */
+  'validated',
   'deployed',
   'blocked',
   'failed',
@@ -50,6 +61,9 @@ export type ReleaseStatus = (typeof RELEASE_STATUSES)[number];
  */
 export const ORG_FACT_STATUSES: readonly ReleaseStatus[] = [
   'in_progress',
+  // A validation either passed or it did not. An approval cannot change that,
+  // any more than it can change a deployment.
+  'validated',
   'deployed',
   'failed',
   'rolled_back',
@@ -76,6 +90,15 @@ export interface Release {
   /** Work item references, e.g. `W-12345`, `REL-88`. */
   readonly ticketRefs: readonly string[];
   readonly riskLevel: RiskLevel;
+  /**
+   * True when the org reported this as a check-only deploy — a validation that
+   * deployed nothing, whether it passed or failed.
+   *
+   * Separate from `status` on purpose: a *failed* check-only run is `failed`,
+   * and conflating the two would lose the distinction that matters most.
+   * Absent for a release that did not come from an org.
+   */
+  readonly checkOnly?: boolean;
   readonly notes?: string;
 }
 
@@ -223,6 +246,27 @@ export interface Snapshot {
   readonly auditLog: readonly AuditEntry[];
   /** True while the snapshot is the shipped demo dataset, so the UI can say so. */
   readonly isDemoData: boolean;
+  /**
+   * How much of an org's deploy history this snapshot covers.
+   *
+   * A refresh reads the most recent N deployments, which means a dashboard can
+   * silently be a *subset* of the org's history — and a release dashboard
+   * showing an unmarked subset is wrong rather than merely incomplete. Caught
+   * against a real org with twelve deploys and a limit of ten, where the two
+   * hidden ones included a failure.
+   *
+   * Absent for a snapshot that did not come from an org.
+   */
+  readonly deployWindow?: DeployWindow;
+}
+
+export interface DeployWindow {
+  /** Deployments in this snapshot. */
+  readonly shown: number;
+  /** Deployments the org has, as it reported them. */
+  readonly total: number;
+  /** The limit that produced `shown`. */
+  readonly limit: number;
 }
 
 export function emptySnapshot(actor: Actor): Snapshot {

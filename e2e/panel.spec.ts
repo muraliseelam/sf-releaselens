@@ -76,9 +76,9 @@ test.describe('release dashboard', () => {
       '5 releases tracked · 2 need attention',
     );
 
-    // Eight statuses plus "All". Every status is shown, including the ones at
+    // Nine statuses plus "All". Every status is shown, including the ones at
     // zero: a missing chip reads as "no such status", not as "none of these".
-    await expect(panel.page.locator('.chips .chip')).toHaveCount(9);
+    await expect(panel.page.locator('.chips .chip')).toHaveCount(10);
     await expect(panel.page.locator('#chip-status-blocked')).toHaveAttribute(
       'aria-label',
       'Blocked: 1 release',

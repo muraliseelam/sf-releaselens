@@ -229,6 +229,27 @@ describe('the DeployRequest list query', () => {
     }
   });
 
+  forEachOrg('never calls a check-only run a deployment', async (org) => {
+    const rows = await connect(org).toolingQuery<{ Status?: string | null; CheckOnly?: boolean | null }>(
+      'SELECT Id, Status, CheckOnly FROM DeployRequest ORDER BY CreatedDate DESC LIMIT 10',
+    );
+
+    const { releaseStatusFromDeployStatus } = await import('../../src/data/transfer.js');
+    for (const row of rows.records) {
+      if (row.CheckOnly !== true) continue;
+      const status = releaseStatusFromDeployStatus(row.Status ?? undefined, true);
+
+      /*
+       * A check-only run deployed nothing, whatever it reported. It used to map
+       * to `scheduled`, which told a release manager a deploy was queued — a
+       * real org had exactly that on its dashboard.
+       */
+      expect(status).not.toBe('deployed');
+      expect(status).not.toBe('scheduled');
+      if (row.Status === 'Succeeded') expect(status).toBe('validated');
+    }
+  });
+
   forEachOrg('reports a status this build can map', async (org) => {
     const rows = await connect(org).toolingQuery<{ Status?: string | null }>(
       'SELECT Id, Status FROM DeployRequest ORDER BY CreatedDate DESC LIMIT 10',
@@ -350,6 +371,39 @@ describe('a full refresh against a real org', () => {
     for (const item of snapshot.items) {
       expect(item.dependsOn).toEqual([]);
       expect(item.dependenciesUnavailable).toBe(true);
+    }
+  });
+
+  forEachOrg('records how much of the org history it covers', async (org) => {
+    const { source } = dataSourceFor(org);
+
+    const snapshot = await source.refresh();
+    const window = snapshot.deployWindow;
+
+    expect(window, 'a refresh produced no deploy window').toBeDefined();
+    expect(window!.shown).toBe(snapshot.releases.length);
+    // The whole point: a dashboard that is a subset must know that it is one.
+    expect(window!.total).toBeGreaterThanOrEqual(window!.shown);
+    expect(window!.limit).toBeGreaterThan(0);
+  });
+
+  forEachOrg('flags every check-only release, whatever its status', async (org) => {
+    const connection = connect(org);
+    const rows = await connection.toolingQuery<{ Id: string; CheckOnly?: boolean | null }>(
+      'SELECT Id, CheckOnly FROM DeployRequest ORDER BY CreatedDate DESC LIMIT 10',
+    );
+    const checkOnlyIds = new Set(
+      rows.records.filter((row) => row.CheckOnly === true).map((row) => row.Id),
+    );
+    if (checkOnlyIds.size === 0) return;
+
+    const { source } = dataSourceFor(org);
+    const snapshot = await source.refresh();
+
+    for (const release of snapshot.releases) {
+      // Nothing in the UI said a release was a validation. On a release
+      // dashboard, validating and deploying are completely different acts.
+      expect(release.checkOnly === true).toBe(checkOnlyIds.has(release.id));
     }
   });
 

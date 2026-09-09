@@ -53,13 +53,14 @@ const router = createRouter({
     remove: (origins) => chrome.permissions.remove({ origins: [...origins] }),
   },
   settingsStorage: localStorageArea,
-  orgDataSource: ({ instanceUrl, getAccessToken, orgAlias }) =>
+  orgDataSource: ({ instanceUrl, getAccessToken, orgAlias, deployLimit }) =>
     createSalesforceDataSource({
       storage: localStorageArea,
       connection: createFetchOrgConnection({ instanceUrl, apiVersion: API_VERSION, getAccessToken }),
       clock: systemClock,
       newId: systemIdFactory,
       orgAlias,
+      ...(deployLimit === undefined ? {} : { deployLimit }),
     }),
   deployImportDefaults: {
     environmentName: 'Imported org',

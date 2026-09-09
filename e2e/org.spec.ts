@@ -28,6 +28,62 @@
 
 import { expect, orgTest as test, ORG_HOST, LOGIN_HOST } from './org-fixtures.js';
 
+test.describe("the manifest's host patterns, as Chrome resolves them", () => {
+  /**
+   * Whether `https://*.my.salesforce.com/*` reaches a scratch org is a question
+   * about Chrome's match-pattern rules, not about this code — so it is put to
+   * Chrome. `chrome.permissions.contains` answers with the browser's own
+   * matcher against the granted patterns, which in this build are exactly the
+   * manifest's `optional_host_permissions` moved to `host_permissions`.
+   *
+   * The scratch case is the one that mattered: three scratch orgs existed that
+   * the compatibility run had never touched, and "the pattern probably covers
+   * it" was not good enough to build on.
+   */
+  const covered = [
+    ['a scratch org', 'https://acme.scratch.my.salesforce.com/*'],
+    ['a sandbox', 'https://acme--uat.sandbox.my.salesforce.com/*'],
+    ['a developer org', 'https://acme.develop.my.salesforce.com/*'],
+    ['a My Domain org', 'https://acme.my.salesforce.com/*'],
+    ['the production login endpoint', 'https://login.salesforce.com/*'],
+    ['the sandbox login endpoint', 'https://test.salesforce.com/*'],
+  ] as const;
+
+  for (const [what, origin] of covered) {
+    test(`reaches ${what}`, async ({ orgPanel }) => {
+      const worker = await orgPanel.worker();
+
+      expect(
+        await worker.evaluate(
+          (target: string) => chrome.permissions.contains({ origins: [target] }),
+          origin,
+        ),
+        `${origin} is not reachable by the manifest's host patterns`,
+      ).toBe(true);
+    });
+  }
+
+  const notCovered = [
+    ['a Visualforce/Experience host', 'https://acme.my.force.com/*'],
+    ['anything outside Salesforce', 'https://example.com/*'],
+  ] as const;
+
+  for (const [what, origin] of notCovered) {
+    test(`does not reach ${what}`, async ({ orgPanel }) => {
+      const worker = await orgPanel.worker();
+
+      // The other half of the claim. A permission set that reached these would
+      // be asking for more than the product needs.
+      expect(
+        await worker.evaluate(
+          (target: string) => chrome.permissions.contains({ origins: [target] }),
+          origin,
+        ),
+      ).toBe(false);
+    });
+  }
+});
+
 test.describe('a refresh against real Salesforce payloads', () => {
   test('shows the org, not local data, once connected', async ({ orgPanel }) => {
     await expect(orgPanel.page.locator('.orgbar__name')).toHaveText('fixture-org.my.salesforce.com');
@@ -54,8 +110,8 @@ test.describe('a refresh against real Salesforce payloads', () => {
 
     const rows = orgPanel.page.locator('.list .row');
     await expect(rows.first()).toBeVisible();
-    // The capture has ten deploys; Salesforce has no release name, so each one
-    // shows its deploy id.
+    // The capture lists the ten most recent; Salesforce has no release name, so
+    // each one shows its deploy id.
     await expect(orgPanel.page.locator('.summary__headline')).toContainText('10 releases tracked');
     await expect(rows.first()).toContainText('0Af');
   });
@@ -149,11 +205,53 @@ test.describe('a refresh against real Salesforce payloads', () => {
     await orgPanel.refresh();
 
     // The releases still arrive — the whole point of degrading rather than
-    // failing — and the reason is on the record.
-    await expect(orgPanel.page.locator('.summary__headline')).toContainText('2 releases tracked');
+    // failing — and the reason is on the record. The count is whatever that org
+    // had when it was captured, so it is asserted as "some", not as a number
+    // that a re-capture would invalidate.
+    await expect(orgPanel.page.locator('.list .row').first()).toBeVisible();
     const audit = await orgPanel.readAuditDetail();
     expect(audit).toContain('Coverage is unavailable in this org');
     expect(audit).toContain('INVALID_TYPE');
+  });
+
+  test('shows a check-only run as validated, and never as scheduled', async ({ orgPanel }) => {
+    await orgPanel.useFixture('mixed-history');
+    await orgPanel.refresh();
+
+    const validated = orgPanel.page.locator('.list .row').filter({ hasText: 'Validated, not deployed' });
+
+    // The capture carries one real check-only deploy from a live org.
+    await expect(validated).toHaveCount(1);
+    await expect(validated).toContainText('Check-only');
+    // "Scheduled" is still in the chip legend; no release row may claim it.
+    await expect(
+      orgPanel.page.locator('.list .row').filter({ hasText: 'Scheduled' }),
+    ).toHaveCount(0);
+  });
+
+  test('says in the inspector that a validated release deployed nothing', async ({ orgPanel }) => {
+    await orgPanel.useFixture('mixed-history');
+    await orgPanel.refresh();
+
+    await orgPanel.page.locator('.list .row').filter({ hasText: 'Check-only' }).first().click();
+    await expect(orgPanel.page.locator('[aria-label="Metadata inspector"]')).toBeVisible();
+    await orgPanel.page.locator('.list--compact .row').first().click();
+
+    const detail = orgPanel.page.locator('.detail .fields');
+    await expect(detail).toContainText('Deployed?');
+    await expect(detail).toContainText('No — check-only validation');
+  });
+
+  test('says how many of how many deployments are shown, and offers more', async ({ orgPanel }) => {
+    await orgPanel.useFixture('mixed-history');
+    await orgPanel.refresh();
+
+    // The capture holds the ten most recent of twelve. Two are missing, and
+    // silence about that was the defect.
+    await expect(orgPanel.page.locator('.summary')).toContainText('Showing 10 of 12 deployments');
+    const more = orgPanel.page.locator('#dashboard-load-more');
+    await expect(more).toHaveText('Load 2 more');
+    await expect(more).toHaveAttribute('title', /API call/);
   });
 
   test('renders an org with no deploy history as empty, not as an error', async ({ orgPanel }) => {

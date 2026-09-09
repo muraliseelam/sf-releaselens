@@ -18,7 +18,10 @@ import {
 import type { DataSource } from '../../src/data/datasource.js';
 import {
   API_LIMIT_REFUSE_RATIO,
+  DEFAULT_DEPLOY_LIMIT,
+  MAX_DEPLOY_LIMIT,
   ORG_SNAPSHOT_KEY,
+  clampDeployLimit,
   RELEASE_OVERLAY_KEY,
   createSalesforceDataSource,
 } from '../../src/data/salesforce.js';
@@ -34,6 +37,7 @@ import {
   DEPLOY_SUCCEEDED,
   DEPLOY_SUCCEEDED_DETAIL,
   DEPLOY_VALIDATED,
+  DEPLOY_VALIDATED_DETAIL,
   DEVELOPER_ORG,
   EXHAUSTED_LIMITS,
   HEALTHY_LIMITS,
@@ -77,6 +81,12 @@ function connectionFor(
       ),
     },
     queryResponses: [
+      // Before the list, because the matcher takes the first substring hit and
+      // `SELECT COUNT() FROM DeployRequest` contains `FROM DeployRequest` too.
+      {
+        match: 'COUNT() FROM DeployRequest',
+        response: { totalSize: deploys.length, records: [], done: true },
+      },
       { match: 'FROM DeployRequest', response: queryResponse(deploys) },
       {
         match: 'FROM ApexCodeCoverageAggregate',
@@ -196,15 +206,42 @@ describe('refresh() maps the org', () => {
     });
   });
 
-  it('maps a check-only success to scheduled, not deployed', async () => {
+  it('maps a check-only success to validated, and flags it as check-only', async () => {
     const { dataSource } = build(
       connectionFor({
         deploys: [DEPLOY_VALIDATED],
-        details: { [DEPLOY_VALIDATED.Id]: { ...DEPLOY_VALIDATED, DeployResult: { details: {} } } },
+        details: { [DEPLOY_VALIDATED.Id]: DEPLOY_VALIDATED_DETAIL },
       }),
     );
 
-    expect((await dataSource.refresh()).releases[0]!.status).toBe('scheduled');
+    const release = (await dataSource.refresh()).releases[0]!;
+
+    /*
+     * This asserted `scheduled` until a real org proved how wrong that was: a
+     * passing validation sat on the dashboard under "Scheduled", telling a
+     * release manager a deploy was queued when none had been requested.
+     * Salesforce has no scheduled-deploy concept here at all.
+     */
+    expect(release.status).toBe('validated');
+    expect(release.checkOnly).toBe(true);
+    expect(release.notes).toContain('deployed nothing');
+  });
+
+  it('flags a check-only run that failed, without calling it validated', async () => {
+    const failedValidation = { ...DEPLOY_FAILED, CheckOnly: true };
+    const { dataSource } = build(
+      connectionFor({
+        deploys: [failedValidation],
+        details: { [failedValidation.Id]: DEPLOY_FAILED_DETAIL },
+      }),
+    );
+
+    const release = (await dataSource.refresh()).releases[0]!;
+
+    // What happened is that it failed. That it deployed nothing is a separate
+    // fact, and folding them together would lose whichever one mattered.
+    expect(release.status).toBe('failed');
+    expect(release.checkOnly).toBe(true);
   });
 
   it('treats a Developer Edition org as a sandbox, not production', async () => {
@@ -278,6 +315,122 @@ describe('what a real org actually returns', () => {
 
     expect(snapshot.releases).toHaveLength(1);
     expect(snapshot.items).toEqual([]);
+  });
+});
+
+describe('the deploy window is never silently truncated', () => {
+  /**
+   * A release dashboard showing the ten most recent of twelve deployments, with
+   * nothing saying so, is wrong rather than incomplete — the two it hid
+   * included a failure. Found against a real org.
+   */
+  function orgWith(deployCount: number, limit?: number) {
+    const deploys = Array.from({ length: Math.min(deployCount, limit ?? DEFAULT_DEPLOY_LIMIT) }, (_, index) => ({
+      ...DEPLOY_SUCCEEDED,
+      Id: `0Af5f0000000${String(index).padStart(3, '0')}`,
+    }));
+    const base = connectionFor({ deploys, details: {} });
+    return {
+      ...base,
+      getResponses: {
+        ...base.getResponses,
+        ...Object.fromEntries(
+          deploys.map((deploy) => [
+            `${API}/metadata/deployRequest/${deploy.Id}`,
+            { id: deploy.Id, deployResult: { details: {} } },
+          ]),
+        ),
+      },
+      queryResponses: [
+        { match: 'COUNT() FROM DeployRequest', response: { totalSize: deployCount, records: [], done: true } },
+        { match: 'FROM DeployRequest', response: queryResponse(deploys) },
+        { match: 'FROM ApexCodeCoverageAggregate', response: queryResponse([]) },
+      ],
+    };
+  }
+
+  it('records how many of how many deployments it read', async () => {
+    const { dataSource } = build(orgWith(12));
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.deployWindow).toEqual({ shown: 10, total: 12, limit: 10 });
+  });
+
+  it('says so in the refresh entry as well as in the snapshot', async () => {
+    const { dataSource } = build(orgWith(12));
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.auditLog.at(-1)?.detail).toContain('of 12 deployment(s) in the org');
+  });
+
+  it('claims no truncation when it read everything', async () => {
+    const { dataSource } = build(orgWith(3));
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.deployWindow).toEqual({ shown: 3, total: 3, limit: 10 });
+    expect(snapshot.auditLog.at(-1)?.detail).not.toContain('in the org');
+  });
+
+  it('honours a widened limit', async () => {
+    const storage = createMemoryStorageArea();
+    const connection = fakeOrgConnection(orgWith(12, 12));
+    const dataSource = createSalesforceDataSource({
+      storage,
+      connection,
+      clock: createFixedClock(FIXED_NOW),
+      newId: createSequentialIdFactory('org'),
+      orgAlias: 'uat',
+      deployLimit: 12,
+    });
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.deployWindow).toEqual({ shown: 12, total: 12, limit: 12 });
+  });
+
+  it('refuses to read more than the ceiling, however it is asked', async () => {
+    const storage = createMemoryStorageArea();
+    const dataSource = createSalesforceDataSource({
+      storage,
+      connection: fakeOrgConnection(orgWith(12, 12)),
+      clock: createFixedClock(FIXED_NOW),
+      newId: createSequentialIdFactory('org'),
+      deployLimit: 10_000,
+    });
+
+    // The budget guard refuses near the daily limit; this is the ceiling that
+    // stops somebody reaching it by pressing a button repeatedly.
+    expect((await dataSource.refresh()).deployWindow?.limit).toBe(MAX_DEPLOY_LIMIT);
+  });
+
+  it('degrades to what it read when the count query fails', async () => {
+    const base = orgWith(3);
+    const { dataSource } = build({
+      ...base,
+      queryResponses: [
+        { match: 'COUNT() FROM DeployRequest', reject: new OrgRequestFailedError(400, 'MALFORMED_QUERY', 'no') },
+        ...base.queryResponses.filter((entry) => !entry.match.startsWith('COUNT()')),
+      ],
+    });
+
+    // Not knowing the total is a worse dashboard, not a broken one.
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.deployWindow).toEqual({ shown: 3, total: 3, limit: 10 });
+  });
+});
+
+describe('clampDeployLimit', () => {
+  it('defaults, floors and caps', () => {
+    expect(clampDeployLimit(undefined)).toBe(DEFAULT_DEPLOY_LIMIT);
+    expect(clampDeployLimit(Number.NaN)).toBe(DEFAULT_DEPLOY_LIMIT);
+    expect(clampDeployLimit(0)).toBe(1);
+    expect(clampDeployLimit(-5)).toBe(1);
+    expect(clampDeployLimit(12.7)).toBe(12);
+    expect(clampDeployLimit(10_000)).toBe(MAX_DEPLOY_LIMIT);
   });
 });
 

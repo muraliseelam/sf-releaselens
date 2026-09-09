@@ -215,6 +215,36 @@ export const DEPLOY_FAILED_DETAIL: DeployRequestDetailResponse = {
   },
 };
 
+/** The details for a check-only run that passed: components, but nothing deployed. */
+export const DEPLOY_VALIDATED_DETAIL: DeployRequestDetailResponse = {
+  id: DEPLOY_VALIDATED.Id,
+  deployResult: {
+    status: 'Succeeded',
+    checkOnly: true,
+    createdDate: '2026-09-06T09:30:00.000+0000',
+    completedDate: '2026-09-06T09:36:10.000+0000',
+    createdByName: 'Sam Okafor',
+    numberComponentErrors: 0,
+    details: {
+      componentSuccesses: [
+        {
+          componentType: 'ApexClass',
+          fileName: 'classes/TaxRateResolver.cls',
+          fullName: 'TaxRateResolver',
+          created: false,
+          changed: true,
+          deleted: false,
+          success: true,
+          problem: null,
+          problemType: null,
+          createdDate: '2026-09-06T09:36:00.000+0000',
+        },
+      ],
+      componentFailures: [],
+    },
+  },
+};
+
 /** A deploy whose details came back with no components at all. */
 export const DEPLOY_EMPTY_DETAIL: DeployRequestDetailResponse = {
   id: DEPLOY_VALIDATED.Id,

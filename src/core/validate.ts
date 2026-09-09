@@ -24,6 +24,7 @@ import {
   type Actor,
   type Approval,
   type ApprovalDecision,
+  type DeployWindow,
   type AuditEntry,
   type Environment,
   type MetadataItem,
@@ -62,6 +63,8 @@ export function parseSnapshot(raw: unknown): Snapshot {
     parseAuditEntry(value, `snapshot.auditLog[${index}]`),
   );
 
+  const deployWindow = parseDeployWindow(root['deployWindow'], 'snapshot.deployWindow');
+
   const snapshot: Snapshot = {
     schemaVersion,
     actor: parseActor(root['actor'], 'snapshot.actor'),
@@ -71,6 +74,7 @@ export function parseSnapshot(raw: unknown): Snapshot {
     approvals,
     auditLog,
     isDemoData: asBoolean(root['isDemoData'], 'snapshot.isDemoData'),
+    ...(deployWindow === undefined ? {} : { deployWindow }),
   };
 
   assertUniqueIds(environments, 'snapshot.environments');
@@ -108,6 +112,7 @@ function parseRelease(raw: unknown, path: string): Release {
   const value = asObject(raw, path);
   const scheduledFor = asOptionalIsoDate(value['scheduledFor'], `${path}.scheduledFor`);
   const notes = asOptionalString(value['notes'], `${path}.notes`);
+  const checkOnly = asOptionalBoolean(value['checkOnly'], `${path}.checkOnly`);
 
   return {
     id: asNonEmptyString(value['id'], `${path}.id`),
@@ -129,6 +134,7 @@ function parseRelease(raw: unknown, path: string): Release {
     // `exactOptionalPropertyTypes` treats as a meaningful difference.
     ...(scheduledFor === undefined ? {} : { scheduledFor }),
     ...(notes === undefined ? {} : { notes }),
+    ...(checkOnly === undefined ? {} : { checkOnly }),
   };
 }
 
@@ -208,6 +214,38 @@ function parseDecision(raw: unknown, path: string): ApprovalDecision {
     at: asIsoDate(value['at'], `${path}.at`),
     ...(comment === undefined ? {} : { comment }),
   };
+}
+
+/**
+ * How much of an org's deploy history the snapshot covers.
+ *
+ * Absent is normal — a local snapshot has no window. Present but nonsensical is
+ * not, so `shown` above `total` is refused rather than clamped: a caption
+ * reading "12 of 10" would be a bug wearing a plausible face.
+ */
+function parseDeployWindow(raw: unknown, path: string): DeployWindow | undefined {
+  if (raw == null) return undefined;
+  const value = asObject(raw, path);
+  const window: DeployWindow = {
+    shown: asCount(value['shown'], `${path}.shown`),
+    total: asCount(value['total'], `${path}.total`),
+    limit: asCount(value['limit'], `${path}.limit`),
+  };
+  if (window.shown > window.total) {
+    throw new SnapshotValidationError(
+      path,
+      `shows ${window.shown} of ${window.total} deployments, which cannot be`,
+    );
+  }
+  return window;
+}
+
+function asCount(value: unknown, path: string): number {
+  const count = asNumber(value, path);
+  if (!Number.isInteger(count) || count < 0) {
+    throw new SnapshotValidationError(path, `expected a whole count, received ${describe(value)}`);
+  }
+  return count;
 }
 
 function parseAuditEntry(raw: unknown, path: string): AuditEntry {

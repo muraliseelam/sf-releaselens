@@ -52,6 +52,7 @@ interface Capture {
   limits: { ok: boolean; value?: unknown };
   organization: { ok: boolean; value?: unknown };
   deployRequests: { ok: boolean; value?: { records?: { Id?: string }[] } };
+  deployCount?: { ok: boolean; value?: { totalSize?: number } };
   coverage: { ok: boolean; value?: unknown; status?: number; errorCode?: string; message?: string };
   deployDetails: { ok: boolean; value?: { id?: string } }[];
 }
@@ -169,6 +170,12 @@ export const orgTest = base.extend<{ orgPanel: OrgPanel }>({
         }
       }
       if (path === `/services/data/v${API_VERSION}/tooling/query`) {
+        // Before the list, because `SELECT COUNT() FROM DeployRequest` contains
+        // `FROM DeployRequest` too, and the count is what tells the dashboard
+        // it is showing a subset.
+        if (query.includes('COUNT() FROM DeployRequest')) {
+          return route.fulfill(json(capture.deployCount?.value ?? { totalSize: 0, records: [], done: true }));
+        }
         if (query.includes('FROM DeployRequest')) {
           return route.fulfill(json(capture.deployRequests.value));
         }

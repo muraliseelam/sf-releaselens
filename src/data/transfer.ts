@@ -134,6 +134,7 @@ export function snapshotFromDeployReport(
     updatedAt: completedAt,
     ticketRefs: [],
     riskLevel: failures.length > 0 ? 'high' : 'medium',
+    ...(result['checkOnly'] === true ? { checkOnly: true } : {}),
     notes:
       `Imported from an sf deploy report: ${successes.length} succeeded, ` +
       `${failures.length} failed. Dependencies and approvals are not present in a deploy report.`,
@@ -228,10 +229,23 @@ export function warningFromDeployFailure(entry: unknown): MetadataWarning {
  * maps to `scheduled`. Conflating the two would let the dashboard claim a
  * release is live when nothing was written to the org.
  */
+/**
+ * The org's own deploy status, mapped to a release status.
+ *
+ * `Succeeded` + `checkOnly` is **`validated`**, not `scheduled`. It used to be
+ * the latter, which was wrong in the most misleading direction available:
+ * Salesforce has no scheduled-deploy concept here, so "Scheduled" told a
+ * release manager a deploy was queued when none had been requested. A real org
+ * had exactly that on its dashboard.
+ *
+ * A *failed* check-only run stays `failed`. What happened is that the run
+ * failed; that it deployed nothing is carried by `Release.checkOnly`, and
+ * folding the two together would lose whichever one the reader needed.
+ */
 export function releaseStatusFromDeployStatus(status: string | undefined, checkOnly: boolean): ReleaseStatus {
   switch (status) {
     case 'Succeeded':
-      return checkOnly ? 'scheduled' : 'deployed';
+      return checkOnly ? 'validated' : 'deployed';
     case 'SucceededPartial':
     case 'Failed':
       return 'failed';

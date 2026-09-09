@@ -235,6 +235,11 @@ async function main() {
         'FROM DeployRequest ORDER BY CreatedDate DESC LIMIT 10',
     ),
   );
+  // The org's true deploy total, which the LIMIT-ed list query cannot report.
+  // Without it a replayed fixture cannot show "10 of 12".
+  captured.deployCount = await attempt(() =>
+    connection.toolingQuery('SELECT COUNT() FROM DeployRequest'),
+  );
   captured.coverage = await attempt(() =>
     connection.toolingQuery(
       'SELECT ApexClassOrTrigger.Name, NumLinesCovered, NumLinesUncovered FROM ApexCodeCoverageAggregate',

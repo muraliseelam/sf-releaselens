@@ -10,6 +10,10 @@ const RELEASE_STATUS_LABELS: Readonly<Record<ReleaseStatus, string>> = {
   awaiting_approval: 'Awaiting approval',
   scheduled: 'Scheduled',
   in_progress: 'In progress',
+  // Not "Validated" alone: on a release dashboard that reads as a state of
+  // readiness rather than as a statement about what happened. Nothing was
+  // deployed, and the label says so.
+  validated: 'Validated, not deployed',
   deployed: 'Deployed',
   blocked: 'Blocked',
   failed: 'Failed',

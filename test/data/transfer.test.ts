@@ -163,7 +163,7 @@ describe('snapshotFromDeployReport', () => {
     expect(snapshotFromDeployReport(DEPLOY_REPORT, testDeps(), IMPORT_OPTIONS).approvals).toEqual([]);
   });
 
-  it('maps a successful check-only deploy to scheduled, not deployed', () => {
+  it('maps a successful check-only deploy to validated, not scheduled', () => {
     const validation = {
       result: {
         ...DEPLOY_REPORT.result,
@@ -172,9 +172,12 @@ describe('snapshotFromDeployReport', () => {
       },
     };
 
-    expect(snapshotFromDeployReport(validation, testDeps(), IMPORT_OPTIONS).releases[0]?.status).toBe(
-      'scheduled',
-    );
+    const release = snapshotFromDeployReport(validation, testDeps(), IMPORT_OPTIONS).releases[0];
+
+    // `scheduled` said a deploy was queued. Nothing was queued and nothing was
+    // deployed; the package was validated. Found against a real org.
+    expect(release?.status).toBe('validated');
+    expect(release?.checkOnly).toBe(true);
   });
 
   it.each([

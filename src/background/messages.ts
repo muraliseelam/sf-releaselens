@@ -17,7 +17,15 @@ import type { Actor, ApprovalDecisionOutcome, Snapshot } from '../core/types.js'
 
 export type Request =
   | { readonly type: 'snapshot.load' }
-  | { readonly type: 'snapshot.refresh' }
+  | {
+      readonly type: 'snapshot.refresh';
+      /**
+       * How many recent deployments to read, when the user has asked for more
+       * than the default. Clamped and persisted by the worker, so a later plain
+       * refresh keeps the wider window rather than silently narrowing again.
+       */
+      readonly deployLimit?: number;
+    }
   | { readonly type: 'org.info' }
   | { readonly type: 'org.connect'; readonly loginUrl: string; readonly clientId: string }
   | { readonly type: 'org.disconnect' }

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-08",
+  "capturedAt": "2026-09-09",
   "apiVersion": "62.0",
   "orgApiVersion": "67.0",
   "namespaced": true,
@@ -198,7 +198,7 @@
     "value": {
       "DailyApiRequests": {
         "Max": 50000,
-        "Remaining": 49464
+        "Remaining": 48858
       }
     }
   },
@@ -224,6 +224,14 @@
     }
   },
   "deployRequests": {
+    "ok": true,
+    "value": {
+      "records": [],
+      "done": true,
+      "totalSize": 0
+    }
+  },
+  "deployCount": {
     "ok": true,
     "value": {
       "records": [],

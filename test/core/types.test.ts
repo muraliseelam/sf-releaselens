@@ -54,6 +54,10 @@ describe('status vocabularies', () => {
       'awaiting_approval',
       'scheduled',
       'in_progress',
+      // A check-only deploy that passed. Sits before `deployed` because that is
+      // the order the two happen in, and because it must never be mistaken for
+      // it.
+      'validated',
       'deployed',
       'blocked',
       'failed',
@@ -61,9 +65,12 @@ describe('status vocabularies', () => {
     ]);
   });
 
-  it('treats exactly the four org-fact statuses as unoverwritable', () => {
+  it('treats exactly the five org-fact statuses as unoverwritable', () => {
+    // `validated` belongs here: a validation either passed or it did not, and
+    // an approval decision cannot change that any more than it can change a
+    // deployment.
     expect([...ORG_FACT_STATUSES].sort()).toEqual(
-      ['deployed', 'failed', 'in_progress', 'rolled_back'].sort(),
+      ['deployed', 'failed', 'in_progress', 'rolled_back', 'validated'].sort(),
     );
   });
 

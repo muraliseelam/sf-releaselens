@@ -26,10 +26,8 @@
  * reported only as which pattern it matches.
  */
 
+import { classifyInstanceHost, classifyLoginHost } from './hosts.js';
 import { RELEASE_STATUSES, type ReleaseStatus, type Snapshot } from './types.js';
-
-/** The two published Salesforce login endpoints. Anything else is `other`. */
-const KNOWN_LOGIN_HOSTS = ['login.salesforce.com', 'test.salesforce.com'] as const;
 
 export interface DiagnosticEnvironment {
   /** From the manifest, e.g. `0.4.0`. */
@@ -124,47 +122,6 @@ export function buildDiagnostics(input: DiagnosticInput): DiagnosticReport {
     storage: input.storage,
     recentActivity: recentActivity(snapshot, nowMs),
   };
-}
-
-/**
- * Which login endpoint, not which URL.
- *
- * A My Domain login host embeds the customer's org name, so reporting it would
- * leak exactly what this file exists not to leak.
- */
-function classifyLoginHost(loginUrl: string | undefined): string {
-  const host = hostOf(loginUrl);
-  if (host === null) return 'none';
-  return (KNOWN_LOGIN_HOSTS as readonly string[]).includes(host) ? host : 'other (My Domain)';
-}
-
-/**
- * Which host *pattern* an instance matches. This is the field that decides
- * whether the optional host permission covers the org, and getting it wrong is
- * one of the likelier first-contact failures — so the shape is worth reporting
- * even though the value is not.
- */
-function classifyInstanceHost(instanceUrl: string | undefined): string {
-  const host = hostOf(instanceUrl);
-  if (host === null) return 'none';
-  if (host.endsWith('.my.salesforce.com')) return '*.my.salesforce.com';
-  if (host.endsWith('.sandbox.my.salesforce.com')) return '*.sandbox.my.salesforce.com';
-  if (host.endsWith('.develop.my.salesforce.com')) return '*.develop.my.salesforce.com';
-  if (host.endsWith('.salesforce.com')) return '*.salesforce.com';
-  if (host.endsWith('.force.com')) return '*.force.com (not covered by the manifest)';
-  return 'other (not covered by the manifest)';
-}
-
-function hostOf(url: string | undefined): string | null {
-  if (url === undefined || url === '') return null;
-  try {
-    return new URL(url).host.toLowerCase();
-  } catch (cause) {
-    void cause;
-    // A stored URL that will not parse is itself worth knowing about, and
-    // saying so leaks nothing.
-    return 'unparseable';
-  }
 }
 
 function minutesSince(at: string | null | undefined, nowMs: number): number | null {

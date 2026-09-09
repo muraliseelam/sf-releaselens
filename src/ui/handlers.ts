@@ -12,8 +12,14 @@ import type { Action } from './state.js';
 export interface Handlers {
   dispatch(action: Action): void;
   reload(): void;
-  /** Reads the org now. Only ever called from a user gesture. */
-  refreshOrg(): void;
+  /**
+   * Reads the org now. Only ever called from a user gesture.
+   *
+   * @param deployLimit when given, widens the window of recent deployments the
+   *        refresh reads. Each extra deployment costs one more API call, so the
+   *        caller shows the cost before asking.
+   */
+  refreshOrg(deployLimit?: number): void;
   connectOrg(loginUrl: string, clientId: string): void;
   disconnectOrg(): void;
   /** Re-requests the host permission Chrome is currently withholding. */

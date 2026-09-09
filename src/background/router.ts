@@ -33,6 +33,7 @@ import {
   UnknownMessageError,
 } from '../core/errors.js';
 import type { Snapshot } from '../core/types.js';
+import { clampDeployLimit } from '../data/salesforce.js';
 import type { OrgStatus } from './messages.js';
 import {
   isRequest,
@@ -60,6 +61,8 @@ export type OrgDataSourceFactory = (input: {
   instanceUrl: string;
   getAccessToken: (forceRefresh?: boolean) => Promise<string>;
   orgAlias: string;
+  /** How many recent deployments to read. Absent means the default. */
+  deployLimit?: number;
 }) => DataSource;
 
 export interface RouterOptions {
@@ -115,6 +118,25 @@ export function createRouter(options: RouterOptions): Router {
   /** `https://acme.my.salesforce.com/*` — the single origin we ever request. */
   function originPatternFor(instanceUrl: string): string {
     return `${new URL(instanceUrl).origin}/*`;
+  }
+
+  async function readSettings(): Promise<Record<string, unknown>> {
+    const raw = await options.settingsStorage?.read(ORG_SETTINGS_KEY);
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {};
+    return raw as Record<string, unknown>;
+  }
+
+  /** The remembered deploy window, or undefined for the default. */
+  async function readDeployLimit(): Promise<number | undefined> {
+    const value = (await readSettings())['deployLimit'];
+    return typeof value === 'number' ? value : undefined;
+  }
+
+  async function writeDeployLimit(limit: number): Promise<void> {
+    await options.settingsStorage?.write(ORG_SETTINGS_KEY, {
+      ...(await readSettings()),
+      deployLimit: limit,
+    });
   }
 
   async function readClientId(): Promise<string | undefined> {
@@ -208,10 +230,12 @@ export function createRouter(options: RouterOptions): Router {
       throw new HostPermissionRevokedError(new URL(status.instanceUrl).origin);
     }
     const session = options.orgSession;
+    const deployLimit = await readDeployLimit();
     return options.orgDataSource({
       instanceUrl: status.instanceUrl,
       getAccessToken: (forceRefresh) => session.getAccessToken(forceRefresh),
       orgAlias: new URL(status.instanceUrl).hostname.split('.')[0] ?? 'org',
+      ...(deployLimit === undefined ? {} : { deployLimit }),
     });
   }
 
@@ -225,6 +249,17 @@ export function createRouter(options: RouterOptions): Router {
         return (await currentDataSource()).load();
 
       case 'snapshot.refresh': {
+        /*
+         * A widened window is remembered, not per-request.
+         *
+         * Otherwise "load more" would be undone by the next plain Refresh, and
+         * the user would watch their history shrink for no reason they could
+         * see. Clamped on the way in, so a malformed message cannot ask the org
+         * for an unbounded read.
+         */
+        if (request.deployLimit !== undefined) {
+          await writeDeployLimit(clampDeployLimit(request.deployLimit));
+        }
         const snapshot = await (await currentDataSource()).refresh();
         return { snapshot, org: await orgStatus() } satisfies PayloadFor<'snapshot.refresh'>;
       }

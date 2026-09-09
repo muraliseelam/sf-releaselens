@@ -13,7 +13,13 @@ import {
   sortReleasesForDashboard,
   summariseByStatus,
 } from '../../core/releases.js';
-import { RELEASE_STATUSES, type Release, type Snapshot } from '../../core/types.js';
+import {
+  RELEASE_STATUSES,
+  type DeployWindow,
+  type Release,
+  type Snapshot,
+} from '../../core/types.js';
+import { DEPLOY_LIMIT_STEP, MAX_DEPLOY_LIMIT } from '../../data/salesforce.js';
 import { el } from '../dom.js';
 import { absoluteTime, pluralise, relativeTime, releaseStatusLabel, riskLabel } from '../format.js';
 import type { Handlers } from '../handlers.js';
@@ -45,6 +51,7 @@ export function renderDashboard(
           : null,
       ]),
       renderStatusBar(summary.byStatus, summary.total),
+      renderDeployWindow(snapshot.deployWindow, handlers),
     ]),
 
     el(
@@ -80,6 +87,58 @@ export function renderDashboard(
             ),
           ),
         ),
+  ]);
+}
+
+/**
+ * Says how much of the org's deploy history is on screen, and offers more.
+ *
+ * Silence here was the bug: a release dashboard showing the ten most recent of
+ * twelve deployments, with no indication that two were missing — one of them a
+ * failure. A dashboard that is quietly a subset is wrong, not incomplete.
+ *
+ * Nothing is fetched automatically. The button says what it will cost, because
+ * each additional deployment is one more API call against the org's daily
+ * budget, and this project does not spend somebody's quota on their behalf.
+ */
+function renderDeployWindow(
+  window: DeployWindow | undefined,
+  handlers: Handlers,
+): HTMLElement | null {
+  if (window === undefined || window.shown >= window.total) return null;
+
+  const remaining = window.total - window.shown;
+  const step = Math.min(remaining, DEPLOY_LIMIT_STEP);
+  const nextLimit = Math.min(window.limit + step, MAX_DEPLOY_LIMIT);
+  const atCeiling = nextLimit <= window.limit;
+
+  return el('div', { className: 'notice notice--warn', attrs: { role: 'status' } }, [
+    el('p', {
+      className: 'notice__title',
+      text: `Showing ${window.shown} of ${window.total} deployments`,
+    }),
+    el('p', {
+      className: 'muted',
+      text: atCeiling
+        ? `A refresh reads at most ${MAX_DEPLOY_LIMIT} deployments. The remaining ` +
+          `${pluralise(remaining, 'deployment')} cannot be loaded from here.`
+        : `The ${pluralise(remaining, 'older deployment')} in this org ${
+            remaining === 1 ? 'is' : 'are'
+          } not on this dashboard.`,
+    }),
+    atCeiling
+      ? null
+      : el('button', {
+          className: 'button',
+          text: `Load ${step} more`,
+          attrs: {
+            id: 'dashboard-load-more',
+            type: 'button',
+            'aria-label': `Load ${pluralise(step, 'more deployment')} from the org. Costs about ${pluralise(step + 1, 'API call')}.`,
+          },
+          title: `Reads the ${pluralise(nextLimit, 'most recent deployment')} instead of ${window.limit}. Costs about ${pluralise(step + 1, 'API call')}.`,
+          on: { click: () => handlers.refreshOrg(nextLimit) },
+        }),
   ]);
 }
 
@@ -190,6 +249,15 @@ function renderReleaseRow(
         ]),
         el('div', { className: 'row__meta' }, [
           el('span', { className: `pill status--${release.status}`, text: releaseStatusLabel(release.status) }),
+          // Orthogonal to the status pill: a *failed* validation is `failed`,
+          // and this is the only thing that says it deployed nothing.
+          release.checkOnly === true
+            ? el('span', {
+                className: 'badge badge--checkonly',
+                text: 'Check-only',
+                title: 'Salesforce validated this package and deployed nothing.',
+              })
+            : null,
           el('span', {
             className: 'row__env',
             // An environment can only go missing if the snapshot was hand-edited;

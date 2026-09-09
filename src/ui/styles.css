@@ -27,6 +27,8 @@
   --status-awaiting_approval: #b07d15;
   --status-scheduled: #1b64d1;
   --status-in_progress: #0f8394;
+  /* Deliberately not green. A validation is not a deployment. */
+  --status-validated: #5d5fa8;
   --status-deployed: #1f7a4d;
   --status-blocked: #b3261e;
   --status-failed: #8b1a14;
@@ -55,6 +57,7 @@
     --status-awaiting_approval: #e0b055;
     --status-scheduled: #6ba2f5;
     --status-in_progress: #4fc4d6;
+    --status-validated: #a3a5f0;
     --status-deployed: #64c896;
     --status-blocked: #f2857c;
     --status-failed: #d9564c;
@@ -388,6 +391,7 @@ body {
 .status--awaiting_approval { --status: var(--status-awaiting_approval); }
 .status--scheduled { --status: var(--status-scheduled); }
 .status--in_progress { --status: var(--status-in_progress); }
+.status--validated { --status: var(--status-validated); }
 .status--deployed { --status: var(--status-deployed); }
 .status--blocked { --status: var(--status-blocked); }
 .status--failed { --status: var(--status-failed); }
@@ -397,6 +401,7 @@ body {
 .dot.status--awaiting_approval,
 .dot.status--scheduled,
 .dot.status--in_progress,
+.dot.status--validated,
 .dot.status--deployed,
 .dot.status--blocked,
 .dot.status--failed,
@@ -409,12 +414,37 @@ body {
 .pill.status--awaiting_approval,
 .pill.status--scheduled,
 .pill.status--in_progress,
+.pill.status--validated,
 .pill.status--deployed,
 .pill.status--blocked,
 .pill.status--failed,
 .pill.status--rolled_back {
   background: color-mix(in srgb, var(--status) 18%, transparent);
   color: var(--status);
+}
+
+/*
+ * A validated release is drawn as an outline rather than a filled pill.
+ *
+ * Colour alone would not carry it: on a dashboard where every other pill is
+ * solid, "nothing was actually deployed" should read as provisional at a
+ * glance, and should survive being printed, screenshotted or seen by someone
+ * who does not distinguish the two hues.
+ */
+.pill.status--validated {
+  background: transparent;
+  border: 1px dashed var(--status);
+}
+
+/*
+ * The check-only marker. Deliberately not styled as a status: a failed
+ * validation is `failed`, and this badge is what says the failure deployed
+ * nothing.
+ */
+.badge--checkonly {
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-dim);
 }
 
 .approval--pending {

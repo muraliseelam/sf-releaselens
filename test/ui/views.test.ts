@@ -14,7 +14,7 @@ import { INITIAL_STATE, type ViewState } from '../../src/ui/state.js';
 import { renderApprovals } from '../../src/ui/views/approvals.js';
 import { renderDashboard } from '../../src/ui/views/dashboard.js';
 import { renderInspector } from '../../src/ui/views/inspector.js';
-import { makeItem, makeSnapshot, realisticSnapshot } from '../fixtures/snapshot.js';
+import { makeItem, makeRelease, makeSnapshot, realisticSnapshot } from '../fixtures/snapshot.js';
 
 const NOW = Date.parse('2026-09-07T09:00:00.000Z');
 
@@ -28,6 +28,14 @@ function stubHandlers(): Handlers & { dispatch: ReturnType<typeof vi.fn> } {
     importSnapshot: vi.fn(),
     reset: vi.fn(),
     setActor: vi.fn(),
+    // The org handlers were missing here, which typed fine only because the
+    // test tree is not type-checked by `tsc --build`. A view that calls one
+    // would have thrown rather than failed an assertion.
+    refreshOrg: vi.fn(),
+    connectOrg: vi.fn(),
+    disconnectOrg: vi.fn(),
+    grantOrgPermission: vi.fn(),
+    downloadDiagnostics: vi.fn(),
   };
 }
 
@@ -76,9 +84,99 @@ describe('renderDashboard', () => {
   it('renders a chip for every status including the zeros, so the row never reflows', () => {
     const view = renderDashboard(state(), snapshot, handlers, NOW);
 
-    // 8 statuses + the "All" chip.
-    expect(view.querySelectorAll('.chips .chip')).toHaveLength(9);
+    // 9 statuses + the "All" chip.
+    expect(view.querySelectorAll('.chips .chip')).toHaveLength(10);
     expect(view.querySelectorAll('.chip--zero').length).toBeGreaterThan(0);
+  });
+
+  describe('a check-only release', () => {
+    const validated = () =>
+      makeSnapshot({
+        releases: [
+          { ...makeRelease({ id: 'rel-v', name: 'Validation run', status: 'validated' }), checkOnly: true },
+        ],
+      });
+
+    it('says "Validated, not deployed" rather than "Scheduled"', () => {
+      const view = renderDashboard(state(), validated(), handlers, NOW);
+
+      // "Scheduled" told a release manager a deploy was queued. Nothing was
+      // queued and nothing was deployed. The chip legend still lists Scheduled
+      // as a status — every status is always shown — so the assertion is on
+      // the release row, which is where a reader looks.
+      expect(view.querySelector('.pill')?.textContent).toBe('Validated, not deployed');
+      expect(view.querySelector('.list .row')?.textContent).not.toContain('Scheduled');
+    });
+
+    it('badges it as check-only, separately from the status', () => {
+      const view = renderDashboard(state(), validated(), handlers, NOW);
+
+      expect(view.querySelector('.badge--checkonly')?.textContent).toBe('Check-only');
+    });
+
+    it('badges a check-only run that failed, which is still not a deployment', () => {
+      const snapshot = makeSnapshot({
+        releases: [
+          { ...makeRelease({ id: 'rel-f', status: 'failed' }), checkOnly: true },
+        ],
+      });
+      const view = renderDashboard(state(), snapshot, handlers, NOW);
+
+      expect(view.querySelector('.pill')?.textContent).toBe('Failed');
+      expect(view.querySelector('.badge--checkonly')).not.toBeNull();
+    });
+
+    it('shows no badge for a real deployment', () => {
+      const view = renderDashboard(state(), snapshot, handlers, NOW);
+
+      expect(view.querySelector('.badge--checkonly')).toBeNull();
+    });
+  });
+
+  describe('a truncated deploy window', () => {
+    const truncated = (window: { shown: number; total: number; limit: number }) => ({
+      ...snapshot,
+      deployWindow: window,
+    });
+
+    it('says how many of how many are shown', () => {
+      const view = renderDashboard(state(), truncated({ shown: 10, total: 12, limit: 10 }), handlers, NOW);
+
+      expect(view.textContent).toContain('Showing 10 of 12 deployments');
+    });
+
+    it('offers to load more, and says what it will cost', () => {
+      const view = renderDashboard(state(), truncated({ shown: 10, total: 12, limit: 10 }), handlers, NOW);
+      const button = view.querySelector('#dashboard-load-more') as HTMLButtonElement;
+
+      expect(button.textContent).toBe('Load 2 more');
+      expect(button.title).toMatch(/API call/);
+
+      button.click();
+      // Widened, not unbounded: it asks for exactly what is missing.
+      expect(handlers.refreshOrg).toHaveBeenCalledWith(12);
+    });
+
+    it('says nothing when the whole history is on screen', () => {
+      const view = renderDashboard(state(), truncated({ shown: 4, total: 4, limit: 10 }), handlers, NOW);
+
+      expect(view.querySelector('#dashboard-load-more')).toBeNull();
+      expect(view.textContent).not.toContain('Showing');
+    });
+
+    it('stops offering more at the ceiling, and explains why', () => {
+      const view = renderDashboard(state(), truncated({ shown: 50, total: 90, limit: 50 }), handlers, NOW);
+
+      expect(view.textContent).toContain('Showing 50 of 90 deployments');
+      expect(view.querySelector('#dashboard-load-more')).toBeNull();
+      expect(view.textContent).toContain('at most 50 deployments');
+    });
+
+    it('says nothing at all for a local snapshot, which has no window', () => {
+      const view = renderDashboard(state(), snapshot, handlers, NOW);
+
+      expect(view.textContent).not.toContain('Showing');
+    });
   });
 
   it('marks the active status chip as pressed', () => {

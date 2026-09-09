@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-08",
+  "capturedAt": "2026-09-09",
   "apiVersion": "62.0",
   "orgApiVersion": "67.0",
   "namespaced": false,
@@ -198,7 +198,7 @@
     "value": {
       "DailyApiRequests": {
         "Max": 101000,
-        "Remaining": 100072
+        "Remaining": 97996
       }
     }
   },
@@ -257,7 +257,7 @@
           },
           "Id": "0AfSYNTH00000004AAA",
           "Status": "Succeeded",
-          "CheckOnly": false,
+          "CheckOnly": true,
           "CreatedDate": "2026-09-01T09:04:12.000+0000",
           "StartDate": "2026-09-02T14:20:00.000+0000",
           "CompletedDate": "2026-09-01T09:00:00.000+0000",
@@ -348,14 +348,14 @@
             "url": "synthetic/DeployRequest"
           },
           "Id": "0AfSYNTH00000008AAA",
-          "Status": "Failed",
+          "Status": "Succeeded",
           "CheckOnly": false,
           "CreatedDate": "2026-09-01T09:04:12.000+0000",
           "StartDate": "2026-09-02T14:20:00.000+0000",
           "CompletedDate": "2026-09-01T09:00:00.000+0000",
           "NumberComponentsTotal": 1,
-          "NumberComponentErrors": 1,
-          "NumberComponentsDeployed": 0,
+          "NumberComponentErrors": 0,
+          "NumberComponentsDeployed": 1,
           "TestLevel": null,
           "CreatedBy": {
             "attributes": {
@@ -371,14 +371,14 @@
             "url": "synthetic/DeployRequest"
           },
           "Id": "0AfSYNTH00000009AAA",
-          "Status": "Failed",
+          "Status": "Succeeded",
           "CheckOnly": false,
           "CreatedDate": "2026-09-01T09:04:12.000+0000",
           "StartDate": "2026-09-02T14:20:00.000+0000",
           "CompletedDate": "2026-09-01T09:00:00.000+0000",
           "NumberComponentsTotal": 1,
-          "NumberComponentErrors": 1,
-          "NumberComponentsDeployed": 0,
+          "NumberComponentErrors": 0,
+          "NumberComponentsDeployed": 1,
           "TestLevel": null,
           "CreatedBy": {
             "attributes": {
@@ -394,14 +394,14 @@
             "url": "synthetic/DeployRequest"
           },
           "Id": "0AfSYNTH00000010AAA",
-          "Status": "Succeeded",
+          "Status": "Failed",
           "CheckOnly": false,
           "CreatedDate": "2026-09-01T09:04:12.000+0000",
           "StartDate": "2026-09-02T14:20:00.000+0000",
           "CompletedDate": "2026-09-01T09:00:00.000+0000",
           "NumberComponentsTotal": 1,
-          "NumberComponentErrors": 0,
-          "NumberComponentsDeployed": 1,
+          "NumberComponentErrors": 1,
+          "NumberComponentsDeployed": 0,
           "TestLevel": null,
           "CreatedBy": {
             "attributes": {
@@ -460,6 +460,14 @@
       ],
       "done": true,
       "totalSize": 10
+    }
+  },
+  "deployCount": {
+    "ok": true,
+    "value": {
+      "records": [],
+      "done": true,
+      "totalSize": 12
     }
   },
   "coverage": {
@@ -541,9 +549,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:04:12.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false,
-                "problemType": null
+                "forPackageManifestFile": false
               },
               {
                 "componentType": "",
@@ -560,24 +568,12 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-02T14:20:00.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": true,
-                "problemType": null
+                "forPackageManifestFile": true
               }
             ],
             "retrieveResult": null,
-            "runTestResult": {
-              "successes": [],
-              "failures": [],
-              "totalTime": 0,
-              "apexLogId": null,
-              "flowCoverageWarnings": [],
-              "numTestsRun": 0,
-              "codeCoverageWarnings": [],
-              "flowCoverage": [],
-              "codeCoverage": [],
-              "numFailures": 0
-            },
             "allComponentMessages": [
               {
                 "componentType": "ConnectedApp",
@@ -594,9 +590,9 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:00:00.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false,
-                "problemType": null
+                "forPackageManifestFile": false
               },
               {
                 "componentType": "",
@@ -613,11 +609,23 @@
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:04:12.000+0000",
+                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": true,
-                "problemType": null
+                "forPackageManifestFile": true
               }
-            ]
+            ],
+            "runTestResult": {
+              "successes": [],
+              "failures": [],
+              "totalTime": 0,
+              "apexLogId": null,
+              "flowCoverageWarnings": [],
+              "numTestsRun": 0,
+              "flowCoverage": [],
+              "numFailures": 0,
+              "codeCoverage": [],
+              "codeCoverageWarnings": []
+            }
           },
           "createdDate": "2026-09-02T14:20:00.000+0000",
           "startDate": "2026-09-01T09:00:00.000+0000",
@@ -647,7 +655,7 @@
           "messages": null,
           "retrieveResult": null,
           "success": true,
-          "checkOnly": false,
+          "checkOnly": true,
           "ignoreWarnings": false,
           "rollbackOnError": true,
           "status": "Succeeded",
@@ -661,9 +669,28 @@
             "componentFailures": [],
             "componentSuccesses": [
               {
-                "componentType": "",
+                "componentType": "ConnectedApp",
                 "fileName": "synth/C26.xml",
                 "fullName": "SynthComp27",
+                "id": "0AfSYNTH00000028AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": true,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:00:00.000+0000",
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false,
+                "problemType": null
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C29.xml",
+                "fullName": "SynthComp30",
                 "id": null,
                 "problem": null,
                 "success": true,
@@ -671,75 +698,16 @@
                 "created": false,
                 "changed": true,
                 "deleted": false,
-                "lineNumber": null,
-                "columnNumber": null,
-                "requiresProductionTestRun": false,
-                "createdDate": "2026-09-01T09:00:00.000+0000",
-                "problemType": null,
-                "knownPackagingProblem": false,
-                "forPackageManifestFile": true
-              },
-              {
-                "componentType": "ConnectedApp",
-                "fileName": "synth/C28.xml",
-                "fullName": "SynthComp29",
-                "id": "0AfSYNTH00000030AAA",
-                "problem": null,
-                "success": true,
-                "warning": false,
-                "created": false,
-                "changed": false,
-                "deleted": true,
                 "lineNumber": null,
                 "columnNumber": null,
                 "requiresProductionTestRun": false,
                 "createdDate": "2026-09-01T09:04:12.000+0000",
-                "problemType": null,
                 "knownPackagingProblem": false,
-                "forPackageManifestFile": false
+                "forPackageManifestFile": true,
+                "problemType": null
               }
             ],
             "retrieveResult": null,
-            "allComponentMessages": [
-              {
-                "componentType": "",
-                "fileName": "synth/C31.xml",
-                "fullName": "SynthComp32",
-                "id": null,
-                "problem": null,
-                "success": true,
-                "warning": false,
-                "created": false,
-                "changed": true,
-                "deleted": false,
-                "lineNumber": null,
-                "columnNumber": null,
-                "requiresProductionTestRun": false,
-                "createdDate": "2026-09-02T14:20:00.000+0000",
-                "problemType": null,
-                "knownPackagingProblem": false,
-                "forPackageManifestFile": true
-              },
-              {
-                "componentType": "ConnectedApp",
-                "fileName": "synth/C33.xml",
-                "fullName": "SynthComp34",
-                "id": "0AfSYNTH00000030AAA",
-                "problem": null,
-                "success": true,
-                "warning": false,
-                "created": false,
-                "changed": false,
-                "deleted": true,
-                "lineNumber": null,
-                "columnNumber": null,
-                "requiresProductionTestRun": false,
-                "createdDate": "2026-09-01T09:00:00.000+0000",
-                "problemType": null,
-                "knownPackagingProblem": false,
-                "forPackageManifestFile": false
-              }
-            ],
             "runTestResult": {
               "successes": [],
               "failures": [],
@@ -747,11 +715,51 @@
               "apexLogId": null,
               "flowCoverageWarnings": [],
               "numTestsRun": 0,
-              "flowCoverage": [],
               "codeCoverage": [],
               "numFailures": 0,
+              "flowCoverage": [],
               "codeCoverageWarnings": []
-            }
+            },
+            "allComponentMessages": [
+              {
+                "componentType": "ConnectedApp",
+                "fileName": "synth/C31.xml",
+                "fullName": "SynthComp32",
+                "id": "0AfSYNTH00000028AAA",
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": true,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-02T14:20:00.000+0000",
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": false,
+                "problemType": null
+              },
+              {
+                "componentType": "",
+                "fileName": "synth/C33.xml",
+                "fullName": "SynthComp34",
+                "id": null,
+                "problem": null,
+                "success": true,
+                "warning": false,
+                "created": false,
+                "changed": true,
+                "deleted": false,
+                "lineNumber": null,
+                "columnNumber": null,
+                "requiresProductionTestRun": false,
+                "createdDate": "2026-09-01T09:00:00.000+0000",
+                "knownPackagingProblem": false,
+                "forPackageManifestFile": true,
+                "problemType": null
+              }
+            ]
           },
           "createdDate": "2026-09-01T09:04:12.000+0000",
           "startDate": "2026-09-02T14:20:00.000+0000",
@@ -798,11 +806,11 @@
                 "componentType": "ConnectedApp",
                 "fileName": "synth/C37.xml",
                 "fullName": "SynthComp38",
-                "id": "0AfSYNTH00000030AAA",
+                "id": "0AfSYNTH00000039AAA",
                 "problem": null,
                 "success": true,
                 "warning": false,
-                "created": false,
+                "created": true,
                 "changed": true,
                 "deleted": false,
                 "lineNumber": null,
@@ -815,8 +823,8 @@
               },
               {
                 "componentType": "",
-                "fileName": "synth/C39.xml",
-                "fullName": "SynthComp40",
+                "fileName": "synth/C40.xml",
+                "fullName": "SynthComp41",
                 "id": null,
                 "problem": null,
                 "success": true,
@@ -837,13 +845,13 @@
             "allComponentMessages": [
               {
                 "componentType": "ConnectedApp",
-                "fileName": "synth/C41.xml",
-                "fullName": "SynthComp42",
-                "id": "0AfSYNTH00000030AAA",
+                "fileName": "synth/C42.xml",
+                "fullName": "SynthComp43",
+                "id": "0AfSYNTH00000039AAA",
                 "problem": null,
                 "success": true,
                 "warning": false,
-                "created": false,
+                "created": true,
                 "changed": true,
                 "deleted": false,
                 "lineNumber": null,
@@ -856,8 +864,8 @@
               },
               {
                 "componentType": "",
-                "fileName": "synth/C43.xml",
-                "fullName": "SynthComp44",
+                "fileName": "synth/C44.xml",
+                "fullName": "SynthComp45",
                 "id": null,
                 "problem": null,
                 "success": true,
@@ -894,7 +902,7 @@
           "errorStatusCode": null,
           "errorMessage": null,
           "stateDetail": null,
-          "createdBy": "synthetic-45",
+          "createdBy": "synthetic-46",
           "createdByName": "Alex Fixture",
           "canceledBy": null,
           "canceledByName": null,
@@ -912,7 +920,7 @@
       "result": {
         "checkOnly": false,
         "completedDate": "2026-09-01T09:04:12.000+0000",
-        "createdBy": "synthetic-47",
+        "createdBy": "synthetic-48",
         "createdByName": "Alex Fixture",
         "createdDate": "2026-09-02T14:20:00.000+0000",
         "details": {
@@ -923,8 +931,8 @@
               "created": true,
               "createdDate": "2026-09-01T09:00:00.000+0000",
               "deleted": false,
-              "fileName": "synth/C49.xml",
-              "fullName": "SynthComp50",
+              "fileName": "synth/C50.xml",
+              "fullName": "SynthComp51",
               "id": "0AfSYNTH00000017AAA",
               "success": true
             },
@@ -934,8 +942,8 @@
               "created": false,
               "createdDate": "2026-09-01T09:04:12.000+0000",
               "deleted": false,
-              "fileName": "synth/C51.xml",
-              "fullName": "SynthComp52",
+              "fileName": "synth/C52.xml",
+              "fullName": "SynthComp53",
               "success": true
             }
           ],
@@ -959,7 +967,7 @@
         "numberComponentErrors": 0,
         "numberComponentsDeployed": 1,
         "numberComponentsTotal": 1,
-        "numberFiles": "synthetic-53",
+        "numberFiles": "synthetic-54",
         "numberTestErrors": 0,
         "numberTestsCompleted": 0,
         "numberTestsTotal": 0,
@@ -968,7 +976,7 @@
         "startDate": "2026-09-01T09:00:00.000+0000",
         "status": "Succeeded",
         "success": true,
-        "zipSize": "synthetic-54",
+        "zipSize": "synthetic-55",
         "files": []
       },
       "warnings": []

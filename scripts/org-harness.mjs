@@ -67,6 +67,21 @@ export async function listOrgAliases() {
 }
 
 /**
+ * Whether an org in `sf org list` can actually be queried.
+ *
+ * Scratch orgs report `status: 'Active'` and **no `connectedStatus` at all**,
+ * so filtering on `connectedStatus === 'Connected'` silently dropped every one
+ * of them — which is why three scratch orgs went untouched by a compatibility
+ * run that claimed to cover everything. Scratch orgs are the primary Salesforce
+ * DevOps workflow; excluding them by accident was the largest gap in that
+ * report.
+ */
+function isUsable(org) {
+  if (org.connectedStatus === 'Connected') return true;
+  return org.isScratch === true && org.status === 'Active';
+}
+
+/**
  * Connected orgs with the facts `org list` carries and `org display` does not —
  * `namespacePrefix` in particular, which is the one that matters here and is
  * absent from `org display`'s output.
@@ -81,7 +96,7 @@ export async function listOrgs() {
     ];
     const byAlias = new Map();
     for (const org of all) {
-      if (org.connectedStatus !== 'Connected') continue;
+      if (!isUsable(org)) continue;
       const alias = org.alias ?? org.username;
       if (typeof alias !== 'string' || alias.length === 0) continue;
       // `org list` repeats an org across buckets; first wins.
@@ -92,6 +107,7 @@ export async function listOrgs() {
           instanceApiVersion: org.instanceApiVersion ?? null,
           isSandbox: org.isSandbox ?? null,
           isScratch: org.isScratch ?? null,
+          expirationDate: org.expirationDate ?? null,
         });
       }
     }
@@ -128,22 +144,22 @@ export async function describeOrg(alias) {
     isSandbox: listed?.isSandbox ?? null,
     isScratch: listed?.isScratch ?? null,
     /** For the compatibility table. Never the org id or username. */
-    instanceHostPattern: classifyHost(org.instanceUrl),
+    instanceHostPattern: await classifyHost(org.instanceUrl),
   };
 }
 
-function classifyHost(instanceUrl) {
-  try {
-    const host = new URL(instanceUrl).host.toLowerCase();
-    if (host.endsWith('.develop.my.salesforce.com')) return '*.develop.my.salesforce.com';
-    if (host.endsWith('.sandbox.my.salesforce.com')) return '*.sandbox.my.salesforce.com';
-    if (host.endsWith('.my.salesforce.com')) return '*.my.salesforce.com';
-    if (host.endsWith('.salesforce.com')) return '*.salesforce.com';
-    return 'other (not covered by the manifest)';
-  } catch (cause) {
-    void cause;
-    return 'unparseable';
-  }
+/**
+ * The product's own host classifier, from `dist/`.
+ *
+ * Imported rather than reimplemented. There used to be a copy here, and the two
+ * disagreed: this one ordered the suffixes specific-first and the product's
+ * ordered them general-first, so every sandbox, develop and scratch org was
+ * misreported by the product while this file got it right. One classifier now,
+ * in `src/core/hosts.ts`.
+ */
+async function classifyHost(instanceUrl) {
+  const { classifyInstanceHost } = await import('../dist/core/hosts.js');
+  return classifyInstanceHost(instanceUrl);
 }
 
 /**
