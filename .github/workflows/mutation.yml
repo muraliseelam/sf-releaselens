@@ -1,0 +1,45 @@
+name: Mutation testing
+
+# Deliberately not part of CI.
+#
+# Mutation testing takes minutes, not seconds. A gate that takes minutes gets
+# skipped, and a skipped gate is worse than an absent one because it is still in
+# the documentation. So this runs when somebody asks for it, and monthly, and
+# `docs/MUTATION.md` records what the last run found.
+on:
+  workflow_dispatch:
+  schedule:
+    # 04:00 UTC on the first of the month. A quiet slot; nothing waits on it.
+    - cron: '0 4 1 * *'
+
+permissions:
+  contents: read
+
+jobs:
+  mutate:
+    name: src/core and src/data
+    runs-on: ubuntu-latest
+    # Generous: the point of this job is a complete answer, not a fast one.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.13'
+          cache: npm
+
+      - run: npm ci
+
+      # No `break` threshold is configured, so this reports rather than gates.
+      # A mutation score is a finding to read, not a number to defend: the
+      # useful output is which mutants survived, which is in the HTML report.
+      - name: Run Stryker
+        run: npm run mutate
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: mutation-report
+          path: build-assets/mutation/
+          retention-days: 30

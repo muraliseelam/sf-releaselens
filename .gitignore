@@ -17,3 +17,7 @@ build-assets/
 # A copy of dist/ with the org host permission pre-granted, for the browser
 # tests that need a connected org. Built by scripts/build-org-test-extension.mjs.
 .org-test-extension/
+
+# Stryker's working copy of the tree, and its reports. `npm run mutate`.
+.stryker-tmp/
+reports/

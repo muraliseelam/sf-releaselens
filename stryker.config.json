@@ -1,0 +1,38 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Mutation testing. `npm run mutate`; the score and its survivors are in docs/MUTATION.md. Scoped to src/core and src/data because that is where the logic is. src/ui is excluded on purpose: a mutant that changes a class name or a text node is usually equivalent, and a score dominated by that noise is a score nobody reads twice. Deliberately NOT in `npm run check` or the default CI job — it takes tens of minutes, and a pre-commit gate that takes tens of minutes gets skipped.",
+  "packageManager": "npm",
+
+  "_testRunnerComment": "The command runner, not @stryker-mutator/vitest-runner. That runner declares `vitest >= 2.0.0` and is not compatible with vitest 5: it crashes in VitestTestRunner.init with 'Converting circular structure to JSON', and when it survives init it reports 'Ran 0.00 tests per mutant' and scores whole files 0%. A near-zero score produced by a runner that ran no tests is worse than no score at all, so this runs the suite as a command and reads its exit code. The cost is per-test coverage analysis, which is why a run takes tens of minutes rather than minutes.",
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "npx vitest run -c vitest.mutation.config.ts test/core test/data test/auth test/background --silent=true --reporter=dot"
+  },
+
+  "reporters": ["html", "clear-text", "progress"],
+  "htmlReporter": {
+    "fileName": "build-assets/mutation/index.html"
+  },
+
+  "_mutateComment": "src/data/seed.ts is excluded: it is the fictional demo dataset, and a mutant that renames a fake release or moves a fake component is not a defect anybody could act on. It is 632 of this tree's 2797 mutants and would dominate the score with noise.",
+  "mutate": ["src/core/**/*.ts", "src/data/**/*.ts", "!src/data/seed.ts"],
+
+  "_ignoreComment": ".org-test-extension is a generated copy of dist/ for the org browser tests; copying it into every sandbox costs minutes and mutates nothing.",
+  "ignorePatterns": [
+    "dist",
+    "build-assets",
+    "coverage",
+    ".org-test-extension",
+    "e2e-results",
+    "playwright-report",
+    "test/org"
+  ],
+
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": null
+  },
+  "timeoutMS": 60000,
+  "concurrency": 4
+}

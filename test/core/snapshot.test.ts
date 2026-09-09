@@ -188,3 +188,85 @@ describe('withActor', () => {
     expect(ACTOR.name).toBe('Sam Okafor');
   });
 });
+
+/*
+ * Cancelling is the third outcome, and the only one a requester performs on
+ * their own request. It had no test at this layer: the approvals view offers
+ * the button and the browser suite clicks it, but nothing asserted what the
+ * core writes into the audit log — which is the record a release manager reads
+ * back a week later.
+ */
+describe('cancelling a request', () => {
+  const requested = makeSnapshot({
+    releases: [makeRelease({ id: 'rel-1', status: 'awaiting_approval' })],
+    approvals: [
+      makeApproval({ id: 'apr-mine', requestedBy: ACTOR.name, requiredRole: 'uat-approver' }),
+    ],
+  });
+
+  it('records the outcome and names the action in the audit log', () => {
+    const result = applyApprovalDecision(
+      requested,
+      { approvalId: 'apr-mine', outcome: 'cancelled', comment: null },
+      testDeps(),
+    );
+
+    expect(result.approval.status).toBe('cancelled');
+    expect(result.snapshot.auditLog.at(-1)?.action).toBe('approval.cancelled');
+  });
+
+  it('says "Cancelled" in the detail, not the outcome code', () => {
+    // The audit log is read by a person. "cancelled" and "Cancelled" are the
+    // difference between a log and a dump.
+    const result = applyApprovalDecision(
+      requested,
+      { approvalId: 'apr-mine', outcome: 'cancelled', comment: null },
+      testDeps(),
+    );
+
+    expect(result.snapshot.auditLog.at(-1)?.detail).toContain('Cancelled');
+  });
+
+  it('does not promote the release when the last gate is withdrawn', () => {
+    /*
+     * The behaviour worth pinning, and not the one guessed at first: cancelling
+     * removes an opinion rather than expressing one, so a release whose only
+     * gate is withdrawn keeps the status it had. It is not silently promoted to
+     * scheduled — which would turn "I withdraw my request" into "approved" —
+     * and it is not blocked either.
+     */
+    const result = applyApprovalDecision(
+      requested,
+      { approvalId: 'apr-mine', outcome: 'cancelled', comment: null },
+      testDeps(),
+    );
+
+    expect(result.release.status).toBe('awaiting_approval');
+    expect(result.statusChange).toBeNull();
+  });
+
+  it('stops counting a cancelled gate once a live one exists beside it', () => {
+    // The contrast that makes the rule above legible: with one gate withdrawn
+    // and one approved, the approved one is the whole decision.
+    const twoGates = makeSnapshot({
+      releases: [makeRelease({ id: 'rel-1', status: 'awaiting_approval' })],
+      approvals: [
+        makeApproval({ id: 'apr-mine', requestedBy: ACTOR.name, requiredRole: 'uat-approver' }),
+        makeApproval({ id: 'apr-other', requiredRole: 'uat-approver', stage: 'QA sign-off' }),
+      ],
+    });
+
+    const afterCancel = applyApprovalDecision(
+      twoGates,
+      { approvalId: 'apr-mine', outcome: 'cancelled', comment: null },
+      testDeps(),
+    ).snapshot;
+    const result = applyApprovalDecision(
+      afterCancel,
+      { approvalId: 'apr-other', outcome: 'approved', comment: null },
+      testDeps(),
+    );
+
+    expect(result.release.status).toBe('scheduled');
+  });
+});

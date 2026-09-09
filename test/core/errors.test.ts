@@ -151,3 +151,57 @@ describe('message content', () => {
     expect(new UnknownMessageError('launch.rockets').message).toContain('"launch.rockets"');
   });
 });
+
+/*
+ * Describing a cause is error-handling code, which means it runs at the exact
+ * moment something else has already gone wrong. A second failure here replaces
+ * a real diagnosis with a serialisation error, and the user sees neither.
+ *
+ * So: every runtime type a rejected promise can carry, including the ones
+ * nobody writes on purpose.
+ */
+describe('a failure that cannot be described is still reported', () => {
+  const describedBy = (cause: unknown): string =>
+    new StorageUnavailableError('reading "k"', cause).message;
+
+  it.each([
+    ['an Error', new Error('disk on fire'), 'disk on fire'],
+    ['a string', 'disk on fire', 'disk on fire'],
+    ['a number', 42, '42'],
+    ['a boolean', false, 'false'],
+    ['null', null, 'null'],
+    ['undefined', undefined, 'undefined'],
+    ['a plain object', { code: 'QUOTA' }, '{"code":"QUOTA"}'],
+  ])('describes %s', (_label, cause, expected) => {
+    expect(describedBy(cause)).toContain(expected);
+  });
+
+  it('never produces [object Object], whatever it is given', () => {
+    for (const cause of [{}, [], { nested: { deep: true } }, new Map()]) {
+      expect(describedBy(cause)).not.toContain('[object Object]');
+    }
+  });
+
+  it('says an object could not be serialised rather than throwing on a cycle', () => {
+    const circular: Record<string, unknown> = { name: 'chrome' };
+    circular['self'] = circular;
+
+    const error = new StorageUnavailableError('writing "snapshot"', circular);
+
+    expect(error.message).toContain('could not be serialised');
+    // Still the original failure, with the original cause attached.
+    expect(error.code).toBe('STORAGE_UNAVAILABLE');
+    expect(error.cause).toBe(circular);
+  });
+
+  it('names the type of a value it has no other words for', () => {
+    // A symbol throws on String() and on JSON.stringify. Chrome will never
+    // reject with one; the point is that nothing can get through this function
+    // by being unusual.
+    expect(describedBy(Symbol('nope'))).toContain('a value of type symbol');
+  });
+
+  it('reports a BigInt without letting JSON.stringify throw on it', () => {
+    expect(describedBy(10n)).toContain('a value of type bigint');
+  });
+});

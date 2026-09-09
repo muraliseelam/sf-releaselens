@@ -211,3 +211,23 @@ describe('what the UI is told', () => {
     expect(described).not.toMatch(/org|release|component|deploy/i);
   });
 });
+
+describe('the sanitisers refuse anything that is not an object', () => {
+  it.each([null, undefined, 'view.opened', 42, true, []])(
+    'refuses %s as an envelope',
+    (candidate) => {
+      expect(sanitiseEnvelope(candidate)).toBeUndefined();
+    },
+  );
+
+  it.each([null, undefined, 'view.opened', 42, true, []])('refuses %s as an event', (candidate) => {
+    expect(sanitiseEvent(candidate)).toBeUndefined();
+  });
+
+  it('refuses a timestamp that is not a string, rather than coercing one', () => {
+    // Date.parse accepts a surprising number of strings; a non-string must not
+    // get as far as being parsed at all.
+    expect(sanitiseEnvelope({ ...ENVELOPE, at: 1_789_000_000_000 })).toBeUndefined();
+    expect(sanitiseEnvelope({ ...ENVELOPE, at: 'the day before yesterday' })).toBeUndefined();
+  });
+});

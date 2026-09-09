@@ -166,13 +166,6 @@ export function asArray(value: unknown, path: string): unknown[] {
   return value;
 }
 
-export function asString(value: unknown, path: string): string {
-  if (typeof value !== 'string') {
-    throw new OrgResponseInvalidError(path, `expected a string, received ${describe(value)}`);
-  }
-  return value;
-}
-
 /** Optional string that tolerates `null`, which Salesforce uses for "unset". */
 export function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;

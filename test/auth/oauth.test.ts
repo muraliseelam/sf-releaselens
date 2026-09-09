@@ -524,6 +524,158 @@ describe('no token can reach an error message', () => {
   });
 });
 
+/*
+ * The paths that could leave a credential behind.
+ *
+ * Every one of these runs *after* the org has handed over a refresh token, so
+ * the assertion that matters is on session storage after the throw — not on the
+ * error. A test that only checks the error type passes just as happily on a
+ * version that keeps the token, which is the whole reason these exist.
+ *
+ * They were found by measuring src/auth for the first time: it had never been
+ * in the coverage include list, so the riskiest file in the repository was the
+ * one nobody had a number for.
+ */
+describe('a connection that cannot complete leaves nothing behind', () => {
+  it('refuses an org that returns tokens but no instance URL', async () => {
+    // Salesforce always sends one. An org that does not is either broken or not
+    // Salesforce, and there is nowhere to send the API calls either way — but
+    // by this point a refresh token is already in hand.
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(tokenResponse({ instance_url: undefined })),
+    );
+    const sessionStorage = createMemoryStorageArea();
+    const { session } = build({ fetchImpl, sessionStorage });
+
+    await expect(session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID })).rejects.toThrow(
+      /did not return an instance URL/,
+    );
+
+    expect(await sessionStorage.read(SESSION_KEY)).toBeUndefined();
+    expect(await session.info()).toEqual({ connected: false });
+  });
+
+  it('refuses an empty instance URL as firmly as a missing one', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.resolve(tokenResponse({ instance_url: '' })));
+    const sessionStorage = createMemoryStorageArea();
+    const { session } = build({ fetchImpl, sessionStorage });
+
+    await expect(session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID })).rejects.toThrow(
+      /instance URL/,
+    );
+    expect(await sessionStorage.read(SESSION_KEY)).toBeUndefined();
+  });
+
+  it('stores nothing when the token response carries no access token', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(tokenResponse({ access_token: undefined })),
+    );
+    const sessionStorage = createMemoryStorageArea();
+    const { session } = build({ fetchImpl, sessionStorage });
+
+    await expect(session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID })).rejects.toThrow(
+      /did not return an access token/,
+    );
+    expect(await sessionStorage.read(SESSION_KEY)).toBeUndefined();
+  });
+
+  it('reports the reason the org gave when sign-in is denied', async () => {
+    const { session } = build({
+      redirect: redirectWith({
+        error: 'access_denied',
+        error_description: 'end-user denied authorization',
+      }),
+    });
+
+    await expect(session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID })).rejects.toThrow(
+      /access_denied: end-user denied authorization/,
+    );
+  });
+
+  it('reports a denial with no description without inventing one', async () => {
+    const { session } = build({ redirect: redirectWith({ error: 'access_denied' }) });
+
+    try {
+      await session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID });
+      expect.unreachable('connect should have failed');
+    } catch (cause) {
+      // No trailing colon, no "undefined": the message is exactly what came back.
+      expect((cause as Error).message).toContain('access_denied');
+      expect((cause as Error).message).not.toContain('undefined');
+      expect((cause as Error).message).not.toMatch(/:\s*$/);
+    }
+  });
+
+  it('connects without ids when the identity URL is not a string', async () => {
+    // `id` is documented as a URL. A number is a malformed response, and the
+    // right answer is a connection with no ids rather than a refusal — the ids
+    // are for display, and nothing depends on them.
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.resolve(tokenResponse({ id: 12345 })));
+    const { session } = build({ fetchImpl });
+
+    const info = await session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID });
+
+    expect(info.connected).toBe(true);
+    expect(info.userId).toBeUndefined();
+    expect(info.organizationId).toBeUndefined();
+  });
+});
+
+describe('a refresh that cannot be adopted is terminal', () => {
+  it('clears the session when the refresh returns 200 with an unusable body', async () => {
+    /*
+     * The dangerous shape: HTTP 200, so nothing upstream treats it as a
+     * failure, and a body with no access token. This runs unattended when a
+     * token expires mid-session, and the wrong behaviour is to keep the refresh
+     * token and try again — a silent re-prompt loop against the user's org.
+     */
+    const responses = [tokenResponse(), tokenResponse({ access_token: undefined })];
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.resolve(responses.shift()!));
+    const sessionStorage = createMemoryStorageArea();
+    const { session } = build({ fetchImpl, sessionStorage });
+    await session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID });
+
+    await expect(session.getAccessToken(true)).rejects.toThrow(OrgAuthExpiredError);
+
+    expect(await sessionStorage.read(SESSION_KEY)).toBeUndefined();
+    expect(await session.info()).toEqual({ connected: false });
+    // Exactly two calls: the exchange and the one refresh. No retry.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('names the reason rather than reporting a bare failure', async () => {
+    const responses = [tokenResponse(), tokenResponse({ access_token: '' })];
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.resolve(responses.shift()!));
+    const { session } = build({ fetchImpl });
+    await session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID });
+
+    await expect(session.getAccessToken(true)).rejects.toThrow(/did not return an access token/);
+  });
+
+  it('says nothing about the refresh token when the request itself fails', async () => {
+    const responses: (() => Promise<Response>)[] = [
+      () => Promise.resolve(tokenResponse()),
+      () => Promise.reject(new Error(`socket hang up while sending ${REFRESH_TOKEN}`)),
+    ];
+    const fetchImpl = vi.fn<typeof fetch>(() => (responses.shift() ?? (() => Promise.resolve(tokenResponse())))());
+    const sessionStorage = createMemoryStorageArea();
+    const { session } = build({ fetchImpl, sessionStorage });
+    await session.connect({ loginUrl: LOGIN_URL, clientId: CLIENT_ID });
+
+    try {
+      await session.getAccessToken(true);
+      expect.unreachable('the refresh should have failed');
+    } catch (cause) {
+      expect(cause).toBeInstanceOf(OrgAuthExpiredError);
+      const everything = `${(cause as Error).message} ${(cause as Error).stack ?? ''}`;
+      expect(containsSecret(everything, [REFRESH_TOKEN, ACCESS_TOKEN])).toBe(false);
+      // The network's own words survive; only the token is taken out.
+      expect((cause as Error).message).toContain('socket hang up');
+    }
+    expect(await sessionStorage.read(SESSION_KEY)).toBeUndefined();
+  });
+});
+
 describe('OrgConnectFailedError', () => {
   it('carries a stable code the panel can branch on', () => {
     expect(new OrgConnectFailedError('x').code).toBe('ORG_CONNECT_FAILED');

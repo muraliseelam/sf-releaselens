@@ -167,3 +167,50 @@ describe('parseSnapshot', () => {
     expect(parseSnapshot(snapshot).auditLog[0]?.releaseId).toBe('rel-1');
   });
 });
+
+/*
+ * A deploy window that cannot be true.
+ *
+ * These arrive from an import, so the shapes are not adversarial so much as
+ * wrong: a truncated export, a hand-edited file, a snapshot from a version that
+ * counted differently. The rule is refusal rather than clamping — a caption
+ * reading "12 of 10" is a bug wearing a plausible face, and clamping it to
+ * "10 of 10" is the same bug wearing a better one.
+ */
+describe('a deploy window that cannot be true is refused', () => {
+  const withWindow = (window: unknown): unknown => {
+    const snapshot = asStored(makeSnapshot()) as Record<string, unknown>;
+    snapshot['deployWindow'] = window;
+    return snapshot;
+  };
+
+  it('refuses showing more than exist, rather than clamping', () => {
+    expect(() => parseSnapshot(withWindow({ shown: 12, total: 10, limit: 20 }))).toThrow(
+      /shows 12 of 10 deployments, which cannot be/,
+    );
+  });
+
+  it('accepts showing exactly as many as exist', () => {
+    expect(() => parseSnapshot(withWindow({ shown: 10, total: 10, limit: 20 }))).not.toThrow();
+  });
+
+  it.each([
+    ['a fraction', 1.5],
+    ['a negative', -1],
+    ['infinity', Number.POSITIVE_INFINITY],
+  ])('refuses %s as a count', (_label, shown) => {
+    expect(() => parseSnapshot(withWindow({ shown, total: 10, limit: 20 }))).toThrow(
+      SnapshotValidationError,
+    );
+  });
+
+  it('names which field was wrong, not merely that something was', () => {
+    // The panel shows this path to the user. "snapshot" alone would be useless.
+    expect(() => parseSnapshot(withWindow({ shown: 0, total: 10, limit: -1 }))).toThrow(/limit/);
+  });
+
+  it('treats an absent window as normal, because a local snapshot has none', () => {
+    expect(() => parseSnapshot(withWindow(undefined))).not.toThrow();
+    expect(() => parseSnapshot(withWindow(null))).not.toThrow();
+  });
+});

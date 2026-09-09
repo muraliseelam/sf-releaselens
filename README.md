@@ -217,13 +217,23 @@ Benchmarking found and fixed one real scaling bug: the dashboard computed each r
 component count by filtering the whole item list, once per row, which is quadratic in
 (releases × components). See the "What changed as a result" section of the benchmarks.
 
-Test coverage, from `npm run test:coverage`: **697 unit tests** in 34 files across `core/`,
-`data/`, the auth and message layers and the whole UI layer, plus **45 end-to-end checks** in
-a real Chromium, **26 more** replaying captured Salesforce payloads through the real UI, and
-**17 contract tests** that run against a live org on demand. Every exported function has
-direct tests; `main.ts`, `handlers.ts` and `service-worker.ts` are excluded because they are
-`chrome.*` wiring with no logic of their own. CI fails below 90% statements or 85% branches,
-so those numbers cannot quietly slide.
+Test coverage, from `npm run test:coverage`: **839 unit tests** in 37 files across
+`core/`, `data/`, the auth and message layers and the whole UI layer, plus **50 end-to-end
+checks** in a real Chromium, **26 more** replaying captured Salesforce payloads through the
+real UI, and **17 contract tests** that run against a live org on demand. Every exported
+function has direct tests; `main.ts`, `handlers.ts` and `service-worker.ts` are excluded
+because they are `chrome.*` wiring with no logic of their own.
+
+**94.9% lines, 94.6% statements, 91.9% branches, 91.4% functions**, and CI fails below a
+floor set just under each. `src/auth` — the OAuth exchange and the token refresh, the only
+code here that touches a credential — was missing from that measurement until 9 September
+2026, because it did not exist when the include list was written. Measuring it is what turned
+up the two token paths that had no test: an org that returns tokens but no instance URL, and
+a refresh the adopter rejects. Both must clear the session, and now both are asserted to.
+
+Coverage cannot tell an assertion from a visit, so `npm run mutate` runs Stryker against
+`core/` and `data/`. The score and its survivors are in
+[`docs/MUTATION.md`](docs/MUTATION.md).
 
 ## Security and what this extension can see
 
@@ -371,7 +381,9 @@ npm run test:coverage  # vitest with v8 coverage thresholds
 npm run test:e2e       # real Chromium with dist/ loaded, ~45 seconds
 npm run test:e2e:org   # the org-connected panel, from captured Salesforce payloads
 npm run test:org       # the shipping code against a real org via the sf CLI (opt-in)
+npm run verify:package # check the build against Chrome Web Store policy
 npm run size           # fail if the packaged extension outgrew its budget
+npm run mutate         # Stryker against core/ and data/; tens of minutes, not in CI
 npm run evidence       # append this month's adoption reading to evidence/
 npm run lint           # eslint, type-checked rules
 npm run check          # everything except the browser suite

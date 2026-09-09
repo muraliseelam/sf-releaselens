@@ -381,3 +381,62 @@ describe('collectAllPages', () => {
     expect(result.records).toHaveLength(2);
   });
 });
+
+/*
+ * What arrives when the org is not really an org.
+ *
+ * A corporate proxy, a captive portal or a load balancer mid-failover will
+ * answer a Salesforce URL with something that is not a Salesforce response. The
+ * rule everywhere in this project is to refuse clearly and name what happened,
+ * so each of these asserts on the *message* as well as the type — an error that
+ * says only "request failed" is a silent degradation with a stack trace.
+ */
+describe('the response is not always a response', () => {
+  it('names the reason when the body cannot be read at all', async () => {
+    // A stream that fails mid-read: the status line arrived, the body did not.
+    const failing = vi.fn<typeof fetch>(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.reject(new Error('network connection lost')),
+      } as unknown as Response),
+    );
+
+    await expect(build(failing).get('/services/data/v62.0/limits')).rejects.toThrow(
+      OrgUnreachableError,
+    );
+    await expect(build(failing).get('/services/data/v62.0/limits')).rejects.toThrow(
+      /body could not be read.*network connection lost/,
+    );
+  });
+
+  it('describes a body-read failure that is not an Error either', async () => {
+    const failing = vi.fn<typeof fetch>(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the point of the test is a rejection that is not an Error
+        text: () => Promise.reject('abandoned'),
+      } as unknown as Response),
+    );
+
+    await expect(build(failing).get('/x')).rejects.toThrow(/body could not be read.*abandoned/);
+  });
+
+  it('describes a network failure that rejects with something other than an Error', async () => {
+    // fetch is specified to reject with a TypeError. Extensions run beside
+    // other extensions, and a patched global is not a hypothetical.
+    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- as above: fetch is specified to reject with a TypeError, and this asserts what happens when something does not
+    const failing = vi.fn<typeof fetch>(() => Promise.reject('connection refused'));
+
+    await expect(build(failing).get('/x')).rejects.toThrow(OrgUnreachableError);
+    await expect(build(failing).get('/x')).rejects.toThrow(/connection refused/);
+  });
+
+  it('reports an empty body as an invalid response rather than as empty data', async () => {
+    const empty = vi.fn<typeof fetch>(() => Promise.resolve(new Response('   ', { status: 200 })));
+
+    await expect(build(empty).get('/x')).rejects.toThrow(OrgResponseInvalidError);
+    await expect(build(empty).get('/x')).rejects.toThrow(/empty body/);
+  });
+});

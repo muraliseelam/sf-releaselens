@@ -926,3 +926,98 @@ describe('reset and actor', () => {
     expect((await dataSource.load()).actor.roles).toEqual(['qa-lead']);
   });
 });
+
+/*
+ * The version list and the coverage query each have a "cannot read this"
+ * answer that is deliberately allowed to degrade and a "cannot reach the org"
+ * answer that is deliberately not. Getting the boundary wrong in either
+ * direction is a silent degradation: too permissive and a broken org looks like
+ * an org without coverage; too strict and a good refresh fails over a
+ * diagnostic nobody asked for.
+ */
+describe('the boundary between "no data" and "no org"', () => {
+  /** Fails only the coverage query, the way a real org without it does. */
+  function coverageFailing(reject: Error) {
+    const base = connectionFor();
+    return {
+      ...base,
+      queryResponses: [
+        {
+          match: 'COUNT() FROM DeployRequest',
+          response: { totalSize: 1, records: [], done: true },
+        },
+        { match: 'FROM DeployRequest', response: queryResponse([DEPLOY_SUCCEEDED]) },
+        { match: 'FROM ApexCodeCoverageAggregate', reject },
+      ],
+    };
+  }
+
+  it.each([
+    ['an empty list', []],
+    ['entries with no version field', [{ label: "Winter '25" }]],
+    ['entries that are not objects', ['62.0']],
+    ['a null entry', [null]],
+  ])('does not block the refresh when the version list has %s', async (_label, versions) => {
+    // Nothing to compare the pinned version against, so nothing to refuse over.
+    // The list exists to produce a warning; failing over it would trade a
+    // capability for a diagnostic.
+    const { dataSource } = build(connectionFor({ versions }));
+
+    await expect(dataSource.refresh()).resolves.toBeDefined();
+  });
+
+  it('does not claim drift it cannot measure', async () => {
+    const { dataSource } = build(connectionFor({ versions: [] }));
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.auditLog.at(-1)?.detail).not.toContain('fields added since then');
+  });
+
+  it('treats a 500 on the coverage query as a real failure, not an org without coverage', async () => {
+    const { dataSource } = build(
+      coverageFailing(new OrgRequestFailedError(500, 'SERVER_ERROR', 'internal')),
+    );
+
+    await expect(dataSource.refresh()).rejects.toBeInstanceOf(OrgRequestFailedError);
+  });
+
+  it('treats a 400 about something else as a real failure too', async () => {
+    // The rule is narrow on purpose: a 400 that does not name the coverage
+    // object is a bug in the query, and swallowing it would hide it forever.
+    const { dataSource } = build(
+      coverageFailing(new OrgRequestFailedError(400, 'MALFORMED_QUERY', 'unexpected token')),
+    );
+
+    await expect(dataSource.refresh()).rejects.toBeInstanceOf(OrgRequestFailedError);
+  });
+
+  it('accepts a 403 that names the object, with no error code, and says so', async () => {
+    const { dataSource } = build(
+      coverageFailing(new OrgRequestFailedError(403, '', 'INSUFFICIENT_ACCESS for this object')),
+    );
+
+    const snapshot = await dataSource.refresh();
+
+    expect(snapshot.items.every((item) => item.testCoverage === undefined)).toBe(true);
+    expect(snapshot.auditLog.at(-1)?.detail).toContain('HTTP 403');
+  });
+});
+
+describe('readRaw', () => {
+  it('returns exactly what is in storage, without parsing it', async () => {
+    // Diagnostics reads this to show a corrupt store back to the user. Parsing
+    // here would defeat the only tool they have for a store that will not parse.
+    const storage = createMemoryStorageArea();
+    await storage.write(ORG_SNAPSHOT_KEY, { not: 'a snapshot' });
+    const { dataSource } = build(connectionFor(), storage);
+
+    expect(await dataSource.readRaw()).toEqual({ not: 'a snapshot' });
+  });
+
+  it('returns undefined before anything has been stored', async () => {
+    const { dataSource } = build();
+
+    expect(await dataSource.readRaw()).toBeUndefined();
+  });
+});

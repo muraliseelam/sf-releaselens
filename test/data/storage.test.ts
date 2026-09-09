@@ -93,3 +93,60 @@ describe('ChromeStorageArea', () => {
     await expect(remover.remove('k')).rejects.toThrow(/removing "k"/);
   });
 });
+
+/*
+ * Quota exhaustion is the failure a large org actually hits, and it arrives as
+ * a string match on a Chrome error message. The size in the error is a courtesy
+ * — but measuring it must not become a second failure on top of the first.
+ */
+describe('a quota failure survives a value that cannot be measured', () => {
+  const quotaArea = fakeArea({ set: () => Promise.reject(new Error('QUOTA_BYTES quota exceeded')) });
+
+  it('reports zero bytes rather than throwing on an unserialisable value', async () => {
+    // A cycle is what a real one looks like: a snapshot holding a reference
+    // back to something that holds it.
+    const circular: Record<string, unknown> = { releases: [] };
+    circular['self'] = circular;
+    const storage = createChromeStorageArea(quotaArea);
+
+    await expect(storage.write('k', circular)).rejects.toThrow(StorageQuotaExceededError);
+    await expect(storage.write('k', circular)).rejects.toThrow(/0 bytes/);
+  });
+
+  it('reports zero for undefined, which JSON.stringify does not return a string for', async () => {
+    const storage = createChromeStorageArea(quotaArea);
+
+    await expect(storage.write('k', undefined)).rejects.toThrow(/0 bytes/);
+  });
+
+  it('still says it was a quota failure, which is the actionable part', async () => {
+    const storage = createChromeStorageArea(quotaArea);
+
+    try {
+      await storage.write('k', undefined);
+      expect.unreachable('the write should have failed');
+    } catch (cause) {
+      expect((cause as { code: string }).code).toBe('STORAGE_QUOTA_EXCEEDED');
+    }
+  });
+
+  it('is not confused by a failure that merely mentions storage', async () => {
+    // Only QUOTA_BYTES means quota. Anything else is unavailability, and
+    // telling a user to delete data when the profile is locked would be wrong.
+    const storage = createChromeStorageArea(
+      fakeArea({ set: () => Promise.reject(new Error('storage is not available in this context')) }),
+    );
+
+    await expect(storage.write('k', 1)).rejects.toThrow(StorageUnavailableError);
+  });
+
+  it('treats a non-Error rejection as unavailability rather than quota', async () => {
+    // Chrome usually rejects with an Error. "Usually" is the interesting word.
+    const storage = createChromeStorageArea(
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- a non-Error rejection is exactly what is under test
+      fakeArea({ set: () => Promise.reject('QUOTA_BYTES') }),
+    );
+
+    await expect(storage.write('k', 1)).rejects.toThrow(StorageUnavailableError);
+  });
+});

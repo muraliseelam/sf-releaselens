@@ -38,6 +38,9 @@ export default [
       'build-assets/**',
       'e2e-results/**',
       'coverage/**',
+      // Stryker's working copy of the whole tree; see stryker.config.json.
+      '.stryker-tmp/**',
+      'reports/**',
       'node_modules/**',
       '*.tsbuildinfo',
     ],

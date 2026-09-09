@@ -284,3 +284,37 @@ describe('diagnosticsFilename', () => {
     );
   });
 });
+
+describe('a timestamp that will not parse', () => {
+  it('reports the age as unknown rather than as NaN minutes', () => {
+    /*
+     * A corrupt store is exactly when somebody opens diagnostics, so this is
+     * the one report that must not itself fall over on corrupt data. NaN would
+     * render as "NaN minutes ago", which is worse than saying nothing.
+     */
+    const report = buildDiagnostics(
+      input({ org: { ...input().org, connectedAt: 'whenever it was' } }),
+    );
+
+    expect(report.org.connectedMinutesAgo).toBeNull();
+  });
+
+  it('reports an unparseable audit timestamp as zero minutes rather than NaN', () => {
+    const snapshot = makeSnapshot({
+      auditLog: [
+        {
+          id: 'aud-1',
+          at: 'not a date',
+          action: 'snapshot.refreshed',
+          actor: 'Someone',
+          detail: 'refreshed',
+        },
+      ],
+    });
+
+    const report = buildDiagnostics(input({ snapshot }));
+
+    expect(report.recentActivity[0]?.minutesAgo).toBe(0);
+    expect(report.org.lastRefreshMinutesAgo).toBeNull();
+  });
+});
