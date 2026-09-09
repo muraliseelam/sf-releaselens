@@ -1,3 +1,14 @@
+## [0.6.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.3...v0.6.0) (2026-09-09)
+
+### Features
+
+* **evidence:** a dated, append-only record of adoption ([67d9e7c](https://github.com/muraliseelam/sf-releaselens/commit/67d9e7c950661abf8de3b0846d5b91f0eb5ed17c))
+
+### Documentation
+
+* badge the read-only posture ([7767361](https://github.com/muraliseelam/sf-releaselens/commit/77673610200065392cf92091558e1241a383fb1e))
+* put the demo GIF at the top, and lead with what ten orgs proved ([191ab35](https://github.com/muraliseelam/sf-releaselens/commit/191ab35e58ebef94adf920366965acaa90d5b7c4))
+
 ## [0.5.3](https://github.com/muraliseelam/sf-releaselens/compare/v0.5.2...v0.5.3) (2026-09-09)
 
 ### Bug fixes
