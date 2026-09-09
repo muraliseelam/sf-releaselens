@@ -23,7 +23,7 @@ Node 22.13 or later. Chrome 116 or later, for the side panel API.
 | `src/core/` | Pure functions. No `chrome.*`, no I/O, no `Date.now()`, no `crypto.randomUUID()` — time and ids arrive through the `Clock` and `IdFactory` ports. |
 | `src/data/` | Adapters behind the `DataSource` and `StorageArea` ports. The only place that knows about `chrome.storage`. |
 | `src/background/` | Message routing. The single writer: every mutation funnels through `router.ts`. |
-| `src/ui/` | DOM rendering and the view-state reducer. Views receive `Handlers` and nothing else, so a view cannot start its own I/O. `main.ts` is the only file here that touches `chrome.*`. |
+| `src/ui/` | DOM rendering and the view-state reducer. Views receive `Handlers` and nothing else, so a view cannot start its own I/O. `main.ts` is the only file here that touches `chrome.*`. `panel.ts` is the controller — state, and turning intent into messages; `shell.ts` and `views/` are pure `(state, handlers) => DOM`. |
 
 If you find yourself wanting to import `chrome` into `core/`, the logic wants to move down a
 layer or the port wants a new method.
