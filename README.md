@@ -462,6 +462,28 @@ Found a security issue? **Do not open a public issue.** Follow
 extension can reach, what it stores and where, and what it explicitly does not protect you
 from.
 
+## Every document, and who each is for
+
+There are more of these than a stranger should have to guess at, so here they
+are in the order they become useful.
+
+| Document | Read it when |
+| --- | --- |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | You are about to change something. Layout, the non-negotiables, and what CI checks. |
+| [`SECURITY.md`](SECURITY.md) | You want the threat model: what the extension can reach, what it stores and where, what it deliberately does not do, and what it does **not** protect you from. |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | You want the data model and the failure-mode table, with the reasoning. |
+| [`docs/DATASOURCE.md`](docs/DATASOURCE.md) | You are working on how data arrives — the three sources and their failure modes. |
+| [`docs/CONNECTED-APP.md`](docs/CONNECTED-APP.md) | You are connecting an org and need the Connected App. Five minutes, once. |
+| [`docs/LIVE-ORG-RUNBOOK.md`](docs/LIVE-ORG-RUNBOOK.md) | You are about to point this at a real org and want the steps that were actually measured. |
+| [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md) | You want to know which org shapes have been proven, and which have not. |
+| [`docs/QA-CHECKLIST.md`](docs/QA-CHECKLIST.md) | You are signing off a release by hand, including the parts no test can reach. |
+| [`docs/STORE-SUBMISSION.md`](docs/STORE-SUBMISSION.md) | You are submitting to the Chrome Web Store. The single checklist, including what is **not** done. |
+| [`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) | You are filling in the store form and want the field values to paste. |
+| [`docs/MUTATION.md`](docs/MUTATION.md) | You want to know what the tests are actually worth, rather than what the coverage percentage says. |
+| [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) | You changed something in `core/` and need the numbers. |
+| [`docs/ASSETS.md`](docs/ASSETS.md) | You need screenshots, tiles or the README GIF. All generated. |
+| [`docs/EVIDENCE.md`](docs/EVIDENCE.md) | You are recording this month's adoption reading. |
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE).

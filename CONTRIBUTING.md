@@ -41,21 +41,44 @@ These are enforced by `eslint.config.js` and `tsconfig.json` rather than by revi
 - No runtime dependencies. A new dev dependency needs a sentence in the PR explaining why
   the standard library will not do.
 
-Two product rules that are easy to break by accident:
+Four product rules that are easy to break by accident:
 
 - **Unknown is not zero.** `testCoverage` is optional and must never be defaulted to `0`.
 - **Org facts outrank opinions.** `deriveReleaseStatus` must never overwrite `in_progress`,
   `deployed`, `failed` or `rolled_back` — those describe what happened in an org.
+- **A permission needs a justification, in the same commit.** `npm run check` runs
+  `verify:package`, which fails if a permission in `src/manifest.json` has no row in
+  `docs/STORE-LISTING.md` §2 — *and* if a row survives a permission being removed. The
+  store rejects a listing whose paperwork describes a different extension.
+- **Nothing derived from an org may reach telemetry.** `src/core/telemetry.ts` is a closed
+  union with no free-form field, and `sanitiseEnvelope` rebuilds each envelope from an
+  allow-list at runtime. If you find yourself widening either, the answer is almost
+  certainly no. See [`SECURITY.md`](SECURITY.md).
+
+An empty screen must say **why** it is empty. "Nothing here" plus advice for the wrong
+situation is a silent degradation with a friendly face — see `renderEmpty` in
+`src/ui/views/dashboard.ts`, which chooses between three messages.
 
 ## Tests
 
 ```bash
 npm run test
-npm run test:coverage   # thresholds fail the build below 85%
+npm run test:coverage   # a ratchet, not a target; see vitest.config.ts
+npm run mutate          # Stryker against core/ and data/; tens of minutes, not in CI
 ```
 
 - Every exported function needs unit tests. Coverage thresholds are a floor, not a target:
-  test the edge case, not the line.
+  test the edge case, not the line. They sit just under what the suite genuinely achieves
+  (94.9 lines / 94.6 statements / 91.9 branches / 91.4 functions on 9 September 2026).
+  **Raise them when the real numbers rise; never lower one to make a run pass.**
+- **Assert what happened, not that something did.** `expect(findings.length)
+  .toBeGreaterThan(0)` passes on a check that rejects everything. `resolves.toBeDefined()`
+  passes on a function that returns an empty result. Both have been real bugs in this
+  repository's own tests. Coverage cannot tell an assertion from a visit;
+  [`docs/MUTATION.md`](docs/MUTATION.md) is the mechanical version of this rule.
+- **Adding a directory to `src/` means adding it to the coverage `include` list.** It is
+  not automatic, nothing fails when you forget, and `src/auth` — the only code here that
+  touches a credential — went unmeasured for months that way.
 - No network and no live org in tests. Substitute `MemoryStorageArea`, a fixed clock and
   a sequential id factory (`test/fixtures/snapshot.ts`), so assertions are on exact values
   rather than shapes. The panel is driven through a stub `Client`, never `chrome.runtime`.
