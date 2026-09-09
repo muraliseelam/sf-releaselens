@@ -1,3 +1,9 @@
+## [0.8.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.7.0...v0.8.0) (2026-09-09)
+
+### Features
+
+* **store:** verify the package against store policy, and generate the tiles ([5b93de5](https://github.com/muraliseelam/sf-releaselens/commit/5b93de50861deb6360cae3c8e777a90d591aa8f5))
+
 ## [0.7.0](https://github.com/muraliseelam/sf-releaselens/compare/v0.6.0...v0.7.0) (2026-09-09)
 
 ### Features
