@@ -65,17 +65,15 @@ being established once on submission day.
       2026-09-12 (`build-assets/manifest.json` `capturedAt`) from the build in
       `dist/`, whose manifest reads 0.8.3; the look at them by a person is
       still to do.
-- [ ] **A privacy policy is published at a stable URL.** **Required**: the
+- [x] **A privacy policy is published at a stable URL.** **Required**: the
       extension handles authentication information, which makes the privacy
-      policy field mandatory rather than optional. The page exists —
+      policy field mandatory rather than optional. Done on 2026-09-12:
       [`privacy.html`](privacy.html), derived from [`SECURITY.md`](../SECURITY.md)
-      and [`STORE-LISTING.md`](STORE-LISTING.md) §2 — and is meant to be served
-      at `https://muraliseelam.github.io/sf-releaselens/privacy.html` by GitHub
-      Pages from `main`, folder `/docs`. Not yet published: Pages was not
-      enabled as of 2026-09-12. After the page is committed and pushed, enable
-      it once (`gh api -X POST repos/muraliseelam/sf-releaselens/pages -f
-      "source[branch]=main" -f "source[path]=/docs"`), open the URL, then tick
-      this.
+      and [`STORE-LISTING.md`](STORE-LISTING.md) §2, is served by GitHub Pages
+      from `main`, folder `/docs`, and
+      <https://muraliseelam.github.io/sf-releaselens/privacy.html> returns 200.
+      Re-check it after any change to that page, because the store form and a
+      reviewer both open it.
 - [ ] **A Chrome Web Store developer account exists and has paid the
       registration fee.** Not done. This is the actual blocker.
 - [ ] **The org connection has been exercised against a real Salesforce org on
@@ -176,9 +174,10 @@ Neither clause changes what is uploaded today.
 
 ## Order of operations
 
-0. Commit and push `docs/privacy.html`, `docs/index.html` and `docs/.nojekyll`;
-   enable GitHub Pages for `main`, folder `/docs`; wait for the Pages build (up
-   to ten minutes), open the privacy policy URL and confirm it loads.
+0. Done on 2026-09-12: `docs/privacy.html`, `docs/index.html` and
+   `docs/.nojekyll` are committed, GitHub Pages serves `main` folder `/docs`,
+   and the privacy policy URL returns 200. Re-check the URL if that page
+   changes.
 1. `npm run check` — includes `verify:package` against a fresh build.
 2. `npm run test:e2e` — the browser suite against `dist/`.
 3. Fetch the release asset for the tag being submitted (`gh release download
