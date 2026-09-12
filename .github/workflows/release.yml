@@ -20,12 +20,29 @@ jobs:
   release:
     name: semantic-release
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    # Three conditions, not one. `conclusion == success` is the original gate.
+    # The other two close a gap in workflow_run: its `branches` filter matches
+    # the *triggering* run's head branch, so a pull request from a fork whose
+    # branch happened to be named `main` would otherwise run that fork's
+    # package.json scripts inside the job that holds the release token.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    # GITHUB_TOKEN is not used to release (see the Release step), so it keeps
+    # the workflow's read-only default here.
     permissions:
-      # Push the version bump and changelog, create the tag and the release.
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: read
+    env:
+      # semantic-release defaults the author and committer of the release
+      # commit, and of the git notes it writes, to "semantic-release-bot".
+      # Every commit in this repository is by its maintainer, so the release
+      # commit is too. Change all four together if the maintainer's identity
+      # changes.
+      GIT_AUTHOR_NAME: Murali Seelam
+      GIT_AUTHOR_EMAIL: muraliseelam1@gmail.com
+      GIT_COMMITTER_NAME: Murali Seelam
+      GIT_COMMITTER_EMAIL: muraliseelam1@gmail.com
     steps:
       # Pinned to a SHA, not a tag. See the note in ci.yml.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -48,7 +65,20 @@ jobs:
       - name: Verify
         run: npm run check
 
+      # RELEASE_TOKEN is a fine-grained personal access token owned by the
+      # maintainer, restricted to this repository with Contents: read and
+      # write, so the tag and the GitHub Release are created by the
+      # maintainer's account rather than by github-actions[bot]. It is exposed
+      # to this step only. If the secret is missing the job fails here with a
+      # clear message instead of semantic-release's EGITNOPERMISSION. Pushes
+      # made with this token do start workflows, which is why the release
+      # commit message carries [skip ci].
       - name: Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::RELEASE_TOKEN secret is not set; semantic-release has no credential to push the release commit or create the GitHub Release."
+            exit 1
+          fi
+          npx semantic-release
