@@ -22,7 +22,8 @@ traffic series; it is imperfect and it is the best a manual process can do.
 
 Everything comes from the GitHub API through the `gh` CLI, using the credential
 the maintainer already has. **Nothing comes from the extension or from any
-user.** This is not telemetry, and the extension ships none — see
+user.** This is not telemetry. The extension's own telemetry switch is opt-in,
+off by default and has no endpoint to send to — see
 [`../SECURITY.md`](../SECURITY.md).
 
 | Field | Meaning |

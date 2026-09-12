@@ -52,7 +52,7 @@ build-assets/
     small-tile-440x280.png     required; a listing without one is rejected
     marquee-1400x560.png       optional, unless you want to be featured
   video/
-    walkthrough.webm           the whole run, about 30 seconds
+    walkthrough.webm           the whole run, about 20 seconds
 ```
 
 `store/` is the set [`STORE-LISTING.md`](STORE-LISTING.md) §3 calls for, at the
@@ -89,8 +89,9 @@ The small tile is **required**: a listing without one is rejected.
 
 ## The org shot
 
-`STORE-LISTING.md` §3 asks for a *connected* org strip — instance host, last
-refreshed time, active Refresh button. **The capture run cannot reach it.** It
+`STORE-LISTING.md` §3 row 5 asks for the connect form and treats a *connected*
+org strip — instance host, last refreshed time, active Refresh button — as an
+optional hand-captured replacement. **The capture run cannot reach that strip.** It
 needs a live org and a completed OAuth sign-in, and Chrome's permission prompt
 cannot be driven by a test in any mode.
 

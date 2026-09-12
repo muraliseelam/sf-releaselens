@@ -5,7 +5,9 @@
 `npm run test:e2e` launches a real Chromium with the built extension from
 `dist/` loaded, and drives the panel document at the extension's own origin
 through the real service worker, real `chrome.storage` and real message passing.
-40 checks. Any uncaught exception, unhandled promise rejection or console error
+56 checks in three spec files (`npx playwright test --project=e2e --list`), plus
+28 in the org-connected project (`--project=org --list`) that replays captured
+org payloads, as of 2026-09-12. Any uncaught exception, unhandled promise rejection or console error
 fails the run even if every assertion passed.
 
 That moves most of §1–§7 from "a human must check" to "CI checks". The rows
@@ -18,10 +20,12 @@ the same origin, inside a 480px viewport.
 
 ## Why this document exists
 
-Nobody has yet loaded this extension into a real Chrome, and nobody has pointed
-it at a real Salesforce org. The automated suite (521 tests) and two harnesses
-that drive the **built `dist/` output** under jsdom
-cover the logic and the DOM, but they cannot cover Chrome itself: browser
+No person has yet worked through this checklist in a real Chrome by hand. The
+automated suite (858 tests in 37 files on 2026-09-12; `npm test` prints the
+current figure), two harnesses that drive the
+**built `dist/` output** under jsdom, and the browser suite that loads `dist/`
+into an automated Chromium cover the logic and the DOM, but they cannot cover
+Chrome's own side-panel host: browser
 automation tooling is blocked from interacting with `chrome://` URLs at all — it
 cannot navigate there, and cannot even screenshot such a page — so *Load
 unpacked* cannot be automated. A side panel is also not a tab, so it would not be
@@ -46,20 +50,20 @@ Each item says how it stands today:
 Requires **Chrome 116+** (the `sidePanel` API).
 
 ```bash
-npm run check     # must exit 0; emits 135 files into dist/
+npm run check     # must exit 0; emits 159 files into dist/
 ```
 
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode** (top right).
-3. **Load unpacked** → select `C:\EB1A\chrome-extension\dist` (the `dist`
+3. **Load unpacked** → select the `dist` directory of your clone (the `dist`
    directory itself, not the repo root).
 
 | # | Check | Expected | Status |
 | --- | --- | --- | --- |
-| 1.1 | The extension loads | Card appears: *sf-releaselens 0.1.0*. **No errors** button on the card. | ❓ |
+| 1.1 | The extension loads | Card appears: *sf-releaselens 0.8.3* (the version in `package.json`). **No errors** button on the card. | ❓ |
 | 1.2 | Permissions | Card shows *storage*, *sidePanel* and *identity*. **Site access must be empty** — host permissions are optional and requested only at connect time. | ❓ |
 | 1.3 | Service worker | Card shows *service worker* as **active** or *inactive* — never *errored*. Click it: DevTools console must be empty. | ❓ |
-| 1.4 | Icon | Chrome shows the **default grey puzzle piece** — the extension ships no icons. Expected, and a known gap. | ❓ |
+| 1.4 | Icon | Chrome shows the extension's own icon, the generated `icons/` set the manifest declares (`npm run icons:check` confirms it matches the design). Not the grey puzzle piece. | ❓ |
 
 ## 2. Open the side panel
 
@@ -214,7 +218,7 @@ Chrome**. It is listed rather than faked into a passing test.
 | Area | What only a live org can confirm |
 | --- | --- |
 | OAuth round trip | That the authorize URL, PKCE challenge, redirect URI and token exchange are accepted by Salesforce end to end. The flow is fully unit-tested against a fake, which proves our side of the contract and nothing about theirs. |
-| Connected App setup | That the steps in `CONNECTED-APP.md` are correct and complete — particularly that PKCE on / "Require Secret" off is the combination that works. |
+| Connected App setup | That the steps in `CONNECTED-APP.md` are correct and complete — particularly that PKCE on / "Require Secret" off is the combination that works. An app was created to those settings on 9 September 2026, but nothing has signed in through it, so the settings are untested. |
 | `chrome.identity` behaviour | That `launchWebAuthFlow` returns the redirect we expect, and that `getRedirectURL()` matches the Callback URL exactly. |
 | Permission gesture | **The highest-risk unknown.** `permissions.request` needs a user gesture; it is called from the panel for that reason, but that has never been executed in a browser. If Chrome refuses it, connecting fails at the first step. |
 | Real API shapes | That `DeployRequest`, its `DeployResult.details`, and `ApexCodeCoverageAggregate` match the fixtures in `test/fixtures/salesforce.ts`. Those were written from the documented shapes, not captured from an org. |

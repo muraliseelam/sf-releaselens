@@ -5,12 +5,13 @@ live in [`STORE-LISTING.md`](STORE-LISTING.md); this is the list of what has to
 be true before any of them are pasted anywhere.
 
 **Nothing has been submitted.** Publishing needs a Chrome Web Store developer
-account with its one-off USD 5 registration fee, which the maintainer has not
-bought. Nothing here has been through review, and the outcome of a review is
+account with its one-time registration fee (USD 5 when last checked; the
+official registration page does not state the amount), which the maintainer has
+not bought. Nothing here has been through review, and the outcome of a review is
 genuinely unknown until someone tries.
 
 Requirements were re-read against the store's own documentation on
-**9 September 2026**. Policy moves — see [Since you last read the
+**12 September 2026**. Policy moves — see [Since you last read the
 policy](#since-you-last-read-the-policy) — so re-read it rather than trusting
 this file if a season has passed.
 
@@ -52,21 +53,40 @@ being established once on submission day.
       [`QA-CHECKLIST.md`](QA-CHECKLIST.md) §1–§7.** Not done. The e2e suite
       drives `dist/` directly; it has never driven the artefact that would
       actually be uploaded, and unpacking is where a packaging mistake shows up.
+      What has been done (2026-09-12): the v0.8.3 release asset was screened by
+      `verify:package` (45 entries, all present in `dist/`) and its extracted
+      contents compared with a fresh local build — identical apart from one
+      line-ending byte in `ui/panel.js`; see the reproducibility note below.
 - [ ] **The screenshots contain no real org name, username, instance URL or
       deploy id.** A script can assert 1280x800; it cannot read a screenshot.
       The five generated plates use demo data and are safe by construction — but
       if you replace plate 5 with a connected-org capture, this is on you.
-      See [`ASSETS.md`](ASSETS.md).
-- [ ] **A privacy policy is published at a stable URL.** Not done, and
-      **required**: the extension handles authentication information, which
-      makes the privacy policy field mandatory rather than optional.
-      [`SECURITY.md`](../SECURITY.md) is the content; it needs a URL that is not
-      a file in a repository that could be renamed.
+      See [`ASSETS.md`](ASSETS.md). Plates and tiles were regenerated on
+      2026-09-12 (`build-assets/manifest.json` `capturedAt`) from the build in
+      `dist/`, whose manifest reads 0.8.3; the look at them by a person is
+      still to do.
+- [ ] **A privacy policy is published at a stable URL.** **Required**: the
+      extension handles authentication information, which makes the privacy
+      policy field mandatory rather than optional. The page exists —
+      [`privacy.html`](privacy.html), derived from [`SECURITY.md`](../SECURITY.md)
+      and [`STORE-LISTING.md`](STORE-LISTING.md) §2 — and is meant to be served
+      at `https://muraliseelam.github.io/sf-releaselens/privacy.html` by GitHub
+      Pages from `main`, folder `/docs`. Not yet published: Pages was not
+      enabled as of 2026-09-12. After the page is committed and pushed, enable
+      it once (`gh api -X POST repos/muraliseelam/sf-releaselens/pages -f
+      "source[branch]=main" -f "source[path]=/docs"`), open the URL, then tick
+      this.
 - [ ] **A Chrome Web Store developer account exists and has paid the
       registration fee.** Not done. This is the actual blocker.
 - [ ] **The org connection has been exercised against a real Salesforce org on
-      the version being submitted.** Done on 0.5.3 against ten orgs; redo it if
-      the OAuth or fetch paths changed since. See
+      the version being submitted.** The data layer was run on 0.5.3 against
+      ten orgs through the CLI's token; redo it if the OAuth or fetch paths
+      changed since. As of 2026-09-12, `src/auth/` and
+      `src/data/fetchConnection.ts` are unchanged in git since v0.5.3
+      (`git diff --stat v0.5.3..HEAD -- src/auth src/data/fetchConnection.ts`
+      prints nothing), so that trigger has not fired. The
+      extension's own sign-in window and permission prompt are a separate,
+      person-only check: [`QA-CHECKLIST.md`](QA-CHECKLIST.md) §8. See
       [`LIVE-ORG-RUNBOOK.md`](LIVE-ORG-RUNBOOK.md).
 
 ## Assets to upload
@@ -79,7 +99,7 @@ npm run assets     # about 40 seconds; writes build-assets/
 | --- | --- | --- | --- |
 | Store icon | 128x128 | `assets/icon-128.png` | **Required.** Rejected without one |
 | Screenshots | 1280x800 | `build-assets/store/1-5*.png` | **Required**, at least one, at most five |
-| Small promotional tile | 440x280 | `build-assets/promo/small-tile-440x280.png` | **Required.** A listing missing it is rejected |
+| Small promotional tile | 440x280 | `build-assets/promo/small-tile-440x280.png` | Marked *required* in the image guidelines; listings without one are ranked after those with one |
 | Marquee tile | 1400x560 | `build-assets/promo/marquee-1400x560.png` | Optional — but an extension without one cannot be featured |
 
 Every one of these is generated: the screenshots by driving the real extension
@@ -94,17 +114,26 @@ The store asks, and a reviewer will look. The honest answer is short:
 - **`dist/` is `tsc` plus a copy step.** `scripts/build.mjs` compiles the
   TypeScript in `src/` and copies the static files. There is no bundler, no
   minifier, no transpiler beyond `tsc`, and no code-generation step.
-- **There are no runtime dependencies.** `package.json` has an empty
-  `dependencies`. Everything in the archive was written in this repository.
-- **The shipped JavaScript corresponds line for line to the source** at
+- **There are no runtime dependencies.** `package.json` has no
+  `dependencies` field. Everything in the archive was written in this repository.
+- **The shipped JavaScript is the TypeScript compiler's output of the source** at
   <https://github.com/muraliseelam/sf-releaselens>, which is public, so the
   permission justifications describe code a reviewer can read.
 - **The archive is reproducible.** `scripts/package-extension.mjs` sorts entries
   and fixes timestamps, so packaging the same `dist/` twice gives byte-identical
   output — anybody can rebuild the zip and compare it to the uploaded one.
+  One caveat, measured 2026-09-12: on the maintainer's Windows checkout, 10 of
+  the 41 `.ts` files under `src/` still carry CRLF in the working tree
+  (`git ls-files --eol src` shows `w/crlf`). They pre-date `.gitattributes` and
+  Git does not rewrite files already checked out; a fresh clone shows `w/lf` for
+  all 41. A multi-line template literal keeps that ending, so a local build
+  differed from the CI-built v0.8.3 asset by one byte in `ui/panel.js`. Upload
+  the asset CI attached to the release, or build from a checkout where
+  `git ls-files --eol src` shows only `w/lf`.
 
-`npm run verify:package` prints the exact sentence to paste into the remote-code
-declaration field, derived from the artefact rather than from memory.
+`npm run verify:package` prints the wording to have ready if a reviewer asks how
+the package was built; the remote-code question itself is answered by selecting
+"No, I am not using remote code".
 
 ### What the remote-code check does not prove
 
@@ -118,7 +147,11 @@ that.
 
 ## Since you last read the policy
 
-The **1 August 2026** update changed two things that matter to this extension.
+The update announced on **1 July 2026** and enforced from **1 August 2026**
+(<https://developer.chrome.com/blog/cws-policy-updates-2026>) changed two things
+that matter to this extension. The wording quoted below is the blog post's; at
+the time of writing the policy pages themselves still read "necessary" rather
+than "strictly necessary".
 
 **Limited Use** now requires that user data collected be *strictly necessary to
 the extension's disclosed single purpose*. This lands on the opt-in telemetry
@@ -143,9 +176,14 @@ Neither clause changes what is uploaded today.
 
 ## Order of operations
 
+0. Commit and push `docs/privacy.html`, `docs/index.html` and `docs/.nojekyll`;
+   enable GitHub Pages for `main`, folder `/docs`; wait for the Pages build (up
+   to ten minutes), open the privacy policy URL and confirm it loads.
 1. `npm run check` — includes `verify:package` against a fresh build.
 2. `npm run test:e2e` — the browser suite against `dist/`.
-3. `npm run package` — produces `sf-releaselens.zip`.
+3. Fetch the release asset for the tag being submitted (`gh release download
+   vX.Y.Z --pattern sf-releaselens.zip --clobber`), or `npm run package` on an
+   LF checkout — produces `sf-releaselens.zip`.
 4. `npm run verify:package` again — now the archive exists to be screened.
 5. Load the unpacked zip in Chrome and work `QA-CHECKLIST.md` §1–§7.
 6. `npm run assets` — screenshots, tiles and the walkthrough video.

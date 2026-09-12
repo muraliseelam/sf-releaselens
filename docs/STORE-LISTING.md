@@ -4,7 +4,8 @@ Everything needed to submit, written out so submission is copy-and-paste rather
 than improvisation at the form.
 
 **Not submitted.** Publishing needs a Chrome Web Store developer account (a
-one-off USD 5 registration). Nothing here has been through review, and the
+one-time registration fee, USD 5 when last checked; the official registration
+page does not state the amount). Nothing here has been through review, and the
 review outcome is genuinely unknown until someone tries.
 
 ---
@@ -23,7 +24,7 @@ sf-releaselens
 Release dashboard, metadata inspector and approvals helper for Salesforce release managers. Read-only, local-first.
 ```
 
-*(114 characters.)*
+*(115 characters.)*
 
 **Category:** Developer Tools
 **Language:** English (UK)
@@ -56,14 +57,16 @@ Three ways, and it is always clear which you are looking at:
 • Demo data, shipped with the extension so you can evaluate it in one click.
   Clearly labelled. Entirely fictional.
 • A file you import — either a previous export, or the JSON from
-  `sf project deploy report --json`.
+  sf project deploy report --json.
 • A Salesforce org you connect, using a Connected App you create in your own
   org. Read-only.
 
 WHAT IT DOES NOT DO
 
-• It never writes to your Salesforce org. The interface it uses to reach
-  Salesforce has no create, update or delete operation at all.
+• It never writes to your Salesforce org. The interface it uses to read org
+  data has no create, update or delete operation; the only requests it sends
+  other than reads are the OAuth token exchange, token refresh and, on
+  Disconnect, token revocation.
 • It never reads the page you are on. There are no content scripts and no tabs
   permission.
 • It never polls. Data is read from your org only when you press Refresh.
@@ -74,6 +77,8 @@ WHAT IT DOES NOT DO
   approval record that stands up to an audit, this is not it.
 
 Open source, MIT licensed: https://github.com/muraliseelam/sf-releaselens
+
+Not affiliated with, endorsed by or supported by Salesforce, Inc.
 ```
 
 ---
@@ -107,7 +112,7 @@ Tick exactly these, and no others:
 
 | Question | Answer |
 | --- | --- |
-| Does it collect personally identifiable information? | **No** |
+| Does it collect personally identifiable information? | **Yes** — see the note below |
 | Health information? | **No** |
 | Financial and payment information? | **No** |
 | Authentication information? | **Yes** — see the note below |
@@ -128,6 +133,16 @@ other than the user's own Salesforce org, or visible to the extension author.
 There is no server operated by this extension.
 ```
 
+Personally identifiable information note:
+
+```
+The display name of the Salesforce user who ran each deployment (CreatedBy.Name),
+read from the connected org's own deployment records and cached in
+chrome.storage.local so the panel can show who deployed what. Stored only in the
+user's browser, never transmitted anywhere, and replaced by an empty snapshot
+when the user presses Start empty while connected.
+```
+
 Certifications:
 
 - **I do not sell or transfer user data to third parties**, outside the approved use cases — ✅
@@ -135,23 +150,39 @@ Certifications:
 - **I do not use or transfer user data to determine creditworthiness or for lending purposes** — ✅
 
 **Privacy policy URL:** required because the extension handles authentication
-information. Publish `SECURITY.md`'s threat model, or a page derived from it, at
-a stable URL and use that.
+information.
+
+```
+https://muraliseelam.github.io/sf-releaselens/privacy.html
+```
+
+The page is [`docs/privacy.html`](privacy.html), derived from `SECURITY.md`'s
+threat model and the disclosures above, served by GitHub Pages from `main`,
+folder `/docs` (`docs/.nojekyll` keeps Pages from rendering the other
+documents). Pages must be enabled once in the repository settings; until then
+the URL does not resolve.
+
+### Remote code
+
+Answer **No, I am not using remote code**. There is no free-text field for that
+answer; `npm run verify:package` prints the wording to have ready if a reviewer
+asks how the package was built.
 
 ---
 
 ## 3. Screenshot shot list
 
 Chrome accepts 1280×800 or 640×400. Use **1280×800**, five screenshots. The side
-panel is narrow, so compose each shot as the panel beside a Salesforce tab
-rather than the panel alone on a white field.
+panel is narrow, so each shot is the 480px panel at true size, centred on a
+1280×800 plate in the icon's background colour (`#1b2430`); see
+[`ASSETS.md`](ASSETS.md).
 
 | # | Shot | What must be visible | Why |
 | --- | --- | --- | --- |
 | 1 | Release dashboard | The `5 releases tracked · 2 need attention` headline, the status chips including the zero ones, and the blocked release sorted first with its red edge. | The first screenshot is the one that decides whether anyone reads the second. |
-| 2 | Metadata inspector, filtered | The search box with a term typed, the type facet chips, and the `21 of 57 components` caption. | Shows the tool is about narrowing, not scrolling. |
-| 3 | Component detail, imported | A component from an imported deploy report, showing the amber *Dependency data is not available* notice in both directions. | Demonstrates the honesty of the data model, which is the differentiator. Coverage and the unavailable notice cannot appear together — coverage comes from the demo dataset, the notice from an import — so this shot carries the notice and shot 2 carries the rest. |
-| 4 | Approvals | The three queues, and a decision just recorded showing the release status change in place. | Shows the one interactive workflow. |
+| 2 | Metadata inspector, filtered | The search box with a term typed, the type facet chips, and the `11 of 57 components` caption. | Shows the tool is about narrowing, not scrolling. |
+| 3 | Component detail, imported | A component from an imported deploy report, showing the amber *Dependency data is not available* notice under *Depends on* (the matching notice under *Depended on by* sits below the fold at panel height). | Demonstrates the honesty of the data model, which is the differentiator. Coverage and the unavailable notice cannot appear together — coverage comes from the demo dataset, the notice from an import — so this shot carries the notice and shot 2 carries the rest. |
+| 4 | Approvals | The three queues, and a decision just recorded, with the notice stating its effect on the release status (here *unchanged*, because the QA gate is still pending). | Shows the one interactive workflow. |
 | 5 | Org connection | The connect form: login URL, Consumer Key, and the note that no client secret is accepted. | Shows that the org integration uses a Connected App the reviewer creates themselves. A *connected* strip would have to be staged, since there is no live org; if you have one, capture that state by hand and replace this plate. |
 
 **Before recording**
@@ -174,7 +205,7 @@ plate cannot show a state the product does not reach.
 
 | Tile | Size | Store position |
 | --- | --- | --- |
-| Small | 440×280 | **Required.** A listing missing it is rejected — an earlier version of this document called it optional, which was wrong |
+| Small | 440×280 | Marked *required* in Google's image guidelines; the same page says listings without one are shown after those that have one. Upload it |
 | Marquee | 1400×560 | Optional, in the sense that never being featured is optional |
 
 Neither carries text. The store asks that promotional images avoid it, and

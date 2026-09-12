@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sf-releaselens privacy policy</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; padding: 2rem 1rem 4rem; background: #fff; color: #1f2328; font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.2rem; margin: 2rem 0 .5rem; border-bottom: 1px solid #d0d7de; padding-bottom: .25rem; }
+  p.meta { color: #59636e; margin: 0 0 1.5rem; }
+  table { border-collapse: collapse; width: 100%; margin: .75rem 0 1rem; font-size: .95rem; }
+  th, td { text-align: left; vertical-align: top; padding: .4rem .5rem; border: 1px solid #d0d7de; }
+  th { background: #f6f8fa; }
+  code { font: .9em ui-monospace, SFMono-Regular, Consolas, monospace; background: #f6f8fa; padding: 0 .25em; border-radius: 3px; }
+  ul { padding-left: 1.25rem; }
+  a { color: #0969da; }
+</style>
+</head>
+<body>
+<main>
+<h1>sf-releaselens privacy policy</h1>
+<p class="meta">Effective 12 September 2026. Applies to the sf-releaselens Chrome extension from version 0.8.3 onward, until this page is revised. Published by Murali Seelam. Not affiliated with, endorsed by or supported by Salesforce, Inc.</p>
+
+<p>sf-releaselens is a read-only side panel for Salesforce release managers. Everything it does happens inside your own browser. The developer operates no server, receives no data from the extension, and cannot see what you do with it.</p>
+
+<h2>What the extension collects</h2>
+<p>Nothing is collected by the developer. The extension has no analytics, no crash or error reporting, and no telemetry that leaves the browser. The only network requests it can make are to Salesforce, and only after you connect an org: the login host you sign in through (login.salesforce.com, test.salesforce.com or your My Domain) for the OAuth token exchange, refresh and revocation, and the one org instance you connected for the read-only API calls. The connect form contains one link to the setup instructions on GitHub; nothing is fetched unless you click it.</p>
+
+<h2>What the extension stores in your browser</h2>
+<p>All storage is Chrome's extension storage for this extension, on the machine and browser profile where it is installed. Nothing is synchronised to another device or to any server.</p>
+<table>
+  <thead><tr><th>Data</th><th>Where</th><th>Written to disk?</th><th>Removed by</th></tr></thead>
+  <tbody>
+    <tr><td>OAuth access token for the connected org</td><td>Service-worker memory only</td><td>No</td><td>Worker suspension, closing the browser, <strong>Disconnect</strong></td></tr>
+    <tr><td>OAuth refresh token for the connected org</td><td><code>chrome.storage.session</code> (memory-backed)</td><td>No</td><td>Closing the browser; an extension update, reload or disable; a refresh your org rejects; <strong>Disconnect</strong></td></tr>
+    <tr><td>Consumer Key of the Connected App you created, and the deploy-window size you chose</td><td><code>chrome.storage.local</code></td><td>Yes</td><td>Uninstalling the extension. <strong>Disconnect</strong> keeps it so you can reconnect without retyping it.</td></tr>
+    <tr><td>Your local release snapshot (demo data, or data you imported)</td><td><code>chrome.storage.local</code></td><td>Yes</td><td><strong>Start empty</strong></td></tr>
+    <tr><td>Cached copy of data read from your org: release names, deploy ids, component names and paths, the display names of the users who ran each deployment, coverage figures</td><td><code>chrome.storage.local</code></td><td>Yes</td><td><strong>Start empty</strong> while the org is connected, which replaces the cache with an empty snapshot. <strong>Disconnect</strong> does not remove it, so use <strong>Start empty</strong> first if nothing may remain on disk. Uninstalling the extension removes it.</td></tr>
+    <tr><td>Release name overlay (deploy id to name). This version has no screen that writes it, so it is normally absent.</td><td><code>chrome.storage.local</code></td><td>Yes</td><td>Uninstalling the extension</td></tr>
+    <tr><td>Telemetry opt-in flag and a random install id</td><td><code>chrome.storage.local</code></td><td>Only if you turn telemetry on</td><td>Turning telemetry off</td></tr>
+  </tbody>
+</table>
+<p><code>chrome.storage.local</code> is not encrypted. The cached org data is deployment metadata, including the display names of the users who ran each deployment, and never a credential. Uninstalling the extension removes all of its storage, as Chrome does for any extension.</p>
+
+<h2>Authentication information</h2>
+<p>When you connect a Salesforce org, the extension runs an OAuth 2.0 authorization-code flow with PKCE against a Connected App that you create in your own org. The Consumer Key is a public identifier; there is no client secret, the connect form has no field for one, and the token requests never include one. The resulting access token and refresh token are held only as described in the table above, are sent only to Salesforce (the login host you chose, for refresh and revocation, and your own org instance, as the bearer token on API calls), and are never written to disk, transmitted anywhere else, or visible to the developer. <strong>Disconnect</strong> removes them from the browser and asks your org to revoke the refresh token.</p>
+
+<h2>What the extension reads from your org</h2>
+<p>It requests two OAuth scopes, <code>api</code> and <code>refresh_token</code>. The data it can read is only what the <code>api</code> scope allows for your own user; it cannot exceed your own permissions. In practice it reads the API versions your org offers, your org's API usage limits, the <code>Organization</code> record, the most recent <code>DeployRequest</code> records (ten by default, up to fifty if you press <strong>Load more</strong>) with the details of their components, a count of all <code>DeployRequest</code> records, and <code>ApexCodeCoverageAggregate</code>. It reads only when you press <strong>Refresh</strong> or <strong>Load more</strong>. It never creates, updates or deletes records or metadata in your org: the interface it uses to read org data has only GET and query operations; the only other requests it sends are the OAuth token exchange, refresh and revocation to the login host. The one thing it changes at Salesforce is the OAuth authorization created for your user when you sign in, which <strong>Disconnect</strong> asks the org to revoke.</p>
+
+<h2>Permissions</h2>
+<table>
+  <thead><tr><th>Permission</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td><code>storage</code></td><td>Holds the data listed above, locally.</td></tr>
+    <tr><td><code>sidePanel</code></td><td>The whole user interface is a side panel.</td></tr>
+    <tr><td><code>identity</code></td><td>Runs the OAuth sign-in window for your Connected App. Your Google account identity is never requested.</td></tr>
+    <tr><td><code>https://*.salesforce.com/*</code> (optional)</td><td>Requested only when you connect an org: the Salesforce login host, where the token exchange and token revocation endpoints are.</td></tr>
+    <tr><td><code>https://*.my.salesforce.com/*</code> (optional)</td><td>Requested only when you connect an org: your org instance, where the read-only API calls go.</td></tr>
+  </tbody>
+</table>
+<p>The extension has no content scripts and no <code>tabs</code>, <code>activeTab</code>, <code>scripting</code>, <code>history</code>, <code>webNavigation</code>, <code>cookies</code> or <code>alarms</code> permission. It cannot read the page you are on, your browsing history or your cookies, and it cannot run on a schedule.</p>
+
+<h2>Telemetry</h2>
+<p>The panel has an opt-in checkbox, off by default. If you turn it on, the extension would share a random install id, the extension version, the name of the event (that you turned telemetry on, or which of its three views you opened) and the time it happened, and nothing else. No endpoint is configured, so even when the checkbox is on, nothing is sent. Turning it off deletes the stored flag and id.</p>
+
+<h2>Files you import or export</h2>
+<p><strong>Import</strong> reads a file you pick and stores its contents in the local snapshot. <strong>Export</strong> writes the snapshot to a file you save. <strong>Download diagnostics</strong> writes a report of versions, counts and storage sizes, with the org identified only by host pattern, to a file you save. All three stay on your machine.</p>
+
+<h2>Sharing and sale of data</h2>
+<p>The extension does not sell, transfer or share data with anyone. It has no third-party services. Data is used only for the extension's single purpose: showing you the state of Salesforce deployments and local approval sign-offs. The use of user data by sf-releaselens complies with the Chrome Web Store User Data Policy, including the Limited Use requirements.</p>
+
+<h2>Children</h2>
+<p>The extension is a developer tool and is not directed at children.</p>
+
+<h2>Changes to this policy</h2>
+<p>If a future version changes what the extension stores, reads or sends, the effective date at the top of this page will be updated and the release notes will say so before that version is published. This page is versioned with the extension's source code, so every change appears in the repository history with its date.</p>
+
+<h2>Contact</h2>
+<p>Source code, issues and private security reporting: <a href="https://github.com/muraliseelam/sf-releaselens" rel="noreferrer">github.com/muraliseelam/sf-releaselens</a>. For a security concern, use the repository's <em>Report a vulnerability</em> button rather than a public issue.</p>
+</main>
+</body>
+</html>

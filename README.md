@@ -40,10 +40,11 @@ the mocks had been written from the same assumptions as the code. Among them:
 The full list, with what each one now does instead, is in
 [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md).
 
-> **Status: pre-1.0.** The OAuth sign-in has now been completed once, by hand, against a
-> live org. Everything else below is either covered by a test or explicitly marked as
-> unverified — see [Limitations and known gaps](#limitations-and-known-gaps) before you rely
-> on any of it.
+> **Status: pre-1.0.** The extension's own OAuth sign-in has **never been completed**
+> against a live org: a Connected App was created on 9 September 2026, but no org records
+> an authorization or a login through it. Everything else below is either covered by a test
+> or explicitly marked as unverified — see [Limitations and known
+> gaps](#limitations-and-known-gaps) before you rely on any of it.
 
 ## The problem
 
@@ -70,8 +71,9 @@ state visible and actionable in one panel.
 
 ## Install
 
-Not on the Chrome Web Store yet. What is left is a paid developer account and a
-privacy policy at a stable URL, not code:
+Not on the Chrome Web Store yet. What is left is a paid developer account and
+switching on GitHub Pages for the privacy policy
+([`docs/privacy.html`](docs/privacy.html)), not code:
 [`docs/STORE-SUBMISSION.md`](docs/STORE-SUBMISSION.md) is the checklist, and
 `npm run check` verifies the package against store policy on every commit — including
 that every permission the manifest requests is justified in the listing, and that no
@@ -98,8 +100,10 @@ npm run build
 Then **Load unpacked** → the `dist/` directory.
 
 Chrome 116 or later is required for the side panel API. The build is deterministic and
-`npm run package` produces the same zip the release attaches, so you can rebuild a release
-from its tag and compare it byte-for-byte against the published artefact.
+`npm run package` on a checkout whose sources are LF produces the same zip the release
+attaches, so you can rebuild a release from its tag and compare it byte-for-byte against
+the published artefact; see the line-ending caveat in
+[`docs/STORE-SUBMISSION.md`](docs/STORE-SUBMISSION.md).
 
 ## 60-second quickstart
 
@@ -404,13 +408,16 @@ Stated plainly, because they determine whether this is useful to you:
   edit by exporting, changing the JSON and re-importing. If you need an approval trail that
   stands up to an audit, this is not it, and pretending otherwise would be worse than the
   Slack thread it replaces.
-- **The data layer is validated against ten real Salesforce orgs; the OAuth sign-in has been
-  done once, by hand.** `npm run test:org` drives the shipping code against orgs the `sf` CLI
-  is authenticated to, and [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md) records
-  what those orgs actually return. That found eight real defects the mocked suite had missed.
-  The sign-in itself — a Connected App plus `chrome.identity.launchWebAuthFlow` — has been
-  completed once against a live org and is **not** automated: the org tests borrow the CLI's
-  token, and Chrome's permission prompt cannot be driven by a test in any mode.
+- **The data layer is validated against ten real Salesforce orgs; the OAuth sign-in has
+  never been performed.** `npm run test:org` drives the shipping code against orgs the `sf`
+  CLI is authenticated to, and [`docs/ORG-COMPATIBILITY.md`](docs/ORG-COMPATIBILITY.md)
+  records what those orgs actually return. That found eight real defects the mocked suite
+  had missed. The sign-in itself — a Connected App plus
+  `chrome.identity.launchWebAuthFlow` — has **not** been completed: a Connected App named
+  `sf-releaselens` was created in two orgs on 9 September 2026, and as of 12 September 2026
+  neither org holds an OAuth token for it or a login-history entry naming it, which a
+  completed sign-in would leave behind. It is also not automatable: the org tests borrow
+  the CLI's token, and Chrome's permission prompt cannot be driven by a test in any mode.
   [`docs/LIVE-ORG-RUNBOOK.md`](docs/LIVE-ORG-RUNBOOK.md) marks which steps are measured and
   which are not.
 - **Nothing is shared between machines.** Two people running this see two independent

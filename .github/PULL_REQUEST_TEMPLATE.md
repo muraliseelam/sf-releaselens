@@ -29,7 +29,7 @@
 
 - [ ] This adds **no** write path to a Salesforce org.
 - [ ] This adds **no** background poll, timer or scheduled fetch.
-- [ ] This adds **no** telemetry.
+- [ ] This adds **no** telemetry endpoint, transport or analytics.
 - [ ] This adds **no** runtime dependency. *(A dev dependency needs a line in the commit
       message saying why it earns its place.)*
 

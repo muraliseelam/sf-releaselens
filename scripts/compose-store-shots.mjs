@@ -41,7 +41,7 @@ const PLATES = [
   // records no dependency edges, saying so rather than showing an empty list.
   { from: '07-dependencies-unavailable', to: '3-component-detail' },
   { from: '06-approval-recorded', to: '4-approvals' },
-  // §3 shot 5 asks for a *connected* org strip. That needs a live org, so this
+  // §3 row 5 asks for the connect form; a connected org strip is an optional hand-captured replacement. That needs a live org, so this
   // is the connect form instead — the honest reachable state. See ASSETS.md.
   { from: '08-org-connect-form', to: '5-org-connection' },
 ];

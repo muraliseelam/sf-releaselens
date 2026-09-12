@@ -56,7 +56,7 @@ reach, not what it intends to do — an intention is not a control.
 | **Your browsing history** | Nothing. No `history` or `webNavigation` permission. |
 | **Your cookies** | Nothing. No `cookies` permission, and the extension does not read a Salesforce session out of an open tab — a design decision, recorded in `docs/DATASOURCE.md`, not an oversight. |
 | **The network** | Nothing at install: the manifest declares **no** `host_permissions`, only `optional_host_permissions`. Until you connect an org and Chrome prompts you to grant that origin, the extension cannot make a cross-origin request at all. |
-| **Your Salesforce org, once connected** | Whatever the OAuth `api` scope allows for **your own user**. It cannot exceed your own permissions. In practice it reads `Organization`, the ten most recent `DeployRequest` records with their components, and `ApexCodeCoverageAggregate`. |
+| **Your Salesforce org, once connected** | Whatever the OAuth `api` scope allows for **your own user**. It cannot exceed your own permissions. In practice it reads the API version list and usage limits, `Organization`, the most recent `DeployRequest` records (ten by default, up to fifty with **Load more**) with their components, a count of `DeployRequest`, and `ApexCodeCoverageAggregate`. |
 
 ### What it stores, and where
 
@@ -64,21 +64,24 @@ reach, not what it intends to do — an intention is not a control.
 | --- | --- | --- | --- |
 | Access token | Service-worker memory only. Never passed to any storage area. | No | Worker suspension, browser close, **Disconnect** |
 | Refresh token (`sf-releaselens.org-session.v1`) | `chrome.storage.session` | **No** — session storage is memory-backed | Browser close, **Disconnect** |
-| Consumer Key (`sf-releaselens.org-settings.v1`) | `chrome.storage.local` | Yes | **Disconnect** |
+| Consumer Key and deploy-window size (`sf-releaselens.org-settings.v1`) | `chrome.storage.local` | Yes | Uninstalling. **Disconnect** keeps it so the connect form is pre-filled next time |
 | Local snapshot (`sf-releaselens.snapshot.v1`) | `chrome.storage.local` | Yes | **Start empty** |
-| Org data cache (`sf-releaselens.org-snapshot.v1`) | `chrome.storage.local` | Yes | **Disconnect**, **Start empty** |
-| Release name overlay (`sf-releaselens.release-overlay.v1`) | `chrome.storage.local` | Yes | **Start empty** |
+| Org data cache (`sf-releaselens.org-snapshot.v1`) | `chrome.storage.local` | Yes | **Start empty** while connected, which overwrites it with an empty snapshot. **Disconnect** does not remove it |
+| Release name overlay (`sf-releaselens.release-overlay.v1`) | `chrome.storage.local` | Yes | Uninstalling. Nothing in this version writes it, so it is normally absent |
 | Telemetry opt-in and install id (`sf-releaselens.telemetry.v1`) | `chrome.storage.local` | Yes, **only if you turn telemetry on** | Turning telemetry off, which deletes the key |
 
 The Consumer Key of a PKCE public client is a public identifier, not a secret —
 it is embedded in the authorization URL that appears in the browser address bar.
-There is no client secret, and the token exchange refuses to send one.
+There is no client secret; the connect form has no field for one and the token
+requests never include one.
 
 `chrome.storage.local` is **not encrypted**. The org cache on disk contains
 release names, deploy ids, component names and paths, authors and coverage
-figures. That is org metadata, never record data and never a credential — but if
-your policy says org metadata may not rest unencrypted on a laptop, this
-extension is not compliant with it, and **Disconnect** is the answer.
+figures. That is deployment metadata, including the names of the users who ran
+each deployment, never record data and never a credential — but if your policy
+says org metadata may not rest unencrypted on a laptop, this extension is not
+compliant with it: press **Start empty** while connected to overwrite the cache,
+because **Disconnect** alone leaves it in place.
 
 ### What it deliberately does not do
 
@@ -144,8 +147,9 @@ Stated plainly, because a threat model that only lists strengths is marketing:
   runtime dependencies, which removes the supply-chain path into the published
   artefact — but the toolchain that builds it has development dependencies like
   any project. CI pins actions to commit SHAs, runs `npm audit --omit=dev` as a
-  gate, and Dependabot proposes updates; the packaging step is deterministic, so
-  a released zip can be rebuilt and compared byte-for-byte from its tag.
+  gate, and dependency updates are applied by hand; the packaging step is
+  deterministic, so a released zip can be rebuilt from its tag on an LF checkout
+  and compared byte-for-byte.
 - **Someone editing an exported snapshot.** Import validates shape, not
   provenance. See the next point.
 - **A dishonest approval.** Approvals are local, unauthenticated state. The

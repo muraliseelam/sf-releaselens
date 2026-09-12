@@ -10,8 +10,9 @@
  * either draws a rejection or means a document is describing a build that does
  * not exist, and neither is a warning.
  *
- * Checked against the store's own documentation on 9 September 2026. Policy
- * moves — the 1 August 2026 update tightened Limited Use and the disclosure
+ * Checked against the store's own documentation on 12 September 2026. Policy
+ * moves — the update announced 1 July 2026 and enforced from 1 August 2026
+ * tightened Limited Use and the disclosure
  * rules — so re-read it before a submission rather than trusting this comment.
  */
 

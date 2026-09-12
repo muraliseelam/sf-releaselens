@@ -7,10 +7,17 @@ true. That found and fixed five real defects, including one that made the
 metadata inspector permanently empty for org data. Everything below the
 "Connect from the panel" step is therefore **measured**, not predicted.
 
-What is still unverified is the half only you can do: creating a Connected App
-and completing `chrome.identity.launchWebAuthFlow`. The org tests borrow the
-Salesforce CLI's token, so the extension's own OAuth flow has still never run.
-Those steps are marked **⚠ never performed** below.
+What is still unverified is the half only you can do: completing
+`chrome.identity.launchWebAuthFlow`. The org tests borrow the Salesforce CLI's
+token, so the extension's own OAuth flow has still never run. Step 3 is marked
+**⚠ never performed** below.
+
+Step 2 has been done once: a Connected App named `sf-releaselens` was created in
+two orgs on 9 September 2026 (`SELECT Name, CreatedDate FROM ConnectedApplication`
+through the Tooling API). Nothing was signed in through it — as of 12 September
+2026 neither org has an `OauthToken` row or a `LoginHistory` entry naming the app,
+and a completed sign-in leaves both — so the settings in step 2 are recorded as
+written, not as proven to work.
 
 Use a **scratch org or a developer sandbox**. Not production, not on the first
 run. Nothing here writes to an org — the interface used to reach Salesforce has
@@ -105,11 +112,13 @@ sf project deploy start --source-dir force-app --target-org releaselens-test
 
 One Apex class is enough. Do it twice if you want more than one release.
 
-## 2. Create the Connected App ⚠ never performed
+## 2. Create the Connected App ✅ done once, 9 September 2026
 
-> Everything in this section is still written from Salesforce's documentation
-> rather than from having done it. The steps below the OAuth consent screen are
-> measured; these are not.
+> An app with this name was created on 9 September 2026, so the form can be
+> filled in as described. Whether these exact settings are the ones that work is
+> still unproven: nothing has signed in through that app, so no step here has
+> been confirmed by its result. The field values remain Salesforce's
+> documentation, not experience.
 
 Setup → **App Manager** → **New Connected App** → **Create an API-only app** if
 prompted, otherwise the classic form.

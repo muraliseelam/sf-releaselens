@@ -153,16 +153,22 @@ function report(findings, notes, manifest) {
   /*
    * Printed rather than filed away, because it is the answer to a form field
    * the developer has to fill in by hand, and the whole point of this script is
-   * that the answer should come from the artefact.
+   * that the answer should come from the artefact. The remote-code question is
+   * a radio button with no free-text box, so this is what to have ready if a
+   * reviewer asks how the package was built, not something to paste in.
    */
-  out.write('\nRemote code declaration — paste this:\n\n');
+  out.write(
+    '\nRemote code: answer "No, I am not using remote code". There is no free-text\n' +
+      'field for that answer; have this ready if a reviewer asks how the package was\n' +
+      'built:\n\n',
+  );
   out.write(
     '  No, I am not using remote code. Every file the extension executes is inside the\n' +
       '  uploaded package. The build is the TypeScript compiler plus a copy step over a\n' +
       '  first-party source tree with no runtime dependencies: no bundler, no minifier and\n' +
-      '  no vendored library, so the shipped JavaScript corresponds line for line to the\n' +
-      '  source at https://github.com/muraliseelam/sf-releaselens. There is no eval, no\n' +
-      '  new Function, no dynamic import, no remote script or stylesheet, and no relaxed\n' +
+      '  no vendored library, so the shipped JavaScript is the TypeScript compiler output\n' +
+      '  of the source at https://github.com/muraliseelam/sf-releaselens. There is no eval,\n' +
+      '  no new Function, no dynamic import, no remote script or stylesheet, and no relaxed\n' +
       '  content security policy.\n',
   );
 }

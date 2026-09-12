@@ -12,7 +12,9 @@ body:
           main reason this is installable in a regulated org.
         - **Background polling, timers or scheduled refresh.** Reads happen when
           the user asks.
-        - **Telemetry or analytics of any kind.**
+        - **Telemetry that sends anything, or analytics of any kind.** The
+          opt-in switch that exists has no endpoint and sends nothing; see
+          SECURITY.md.
         - **A hosted service, a shared Connected App, or any server operated by
           this project.**
         - **Treating approvals as an audit trail.** They are local and
