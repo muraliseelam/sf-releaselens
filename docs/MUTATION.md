@@ -132,7 +132,9 @@ replacement, is in the HTML report at `build-assets/mutation/index.html`. That
 file is 30 MB and gitignored, so it is regenerated rather than read from here;
 the survivors have **not** been triaged one by one yet.
 
-**The number to act on is `core/redact.ts` at 73.33%, with 12 survivors.**
+**The number that was acted on is `core/redact.ts` at 73.33%, with 12
+survivors — see [the follow-up](#what-the-redactor-survivors-turned-out-to-be)
+below.**
 Not because it is the lowest — `data/connection.ts` and `core/types.ts` are
 lower, and both are largely type and interface declarations where a surviving
 mutant is usually equivalent — but because
@@ -143,7 +145,55 @@ that promise is about. Triage those twelve before any other survivor.
 
 `core/diagnostics.ts` at 66.67% with 30 survivors is the same argument one step
 weaker: it builds the bug report that is meant to be safe to attach to a public
-issue.
+issue. It has **not** been triaged.
+
+### What the redactor survivors turned out to be
+
+Re-running Stryker over `src/core/redact.ts` alone on 13 September 2026 listed
+them: 45 mutants, 32 killed, **13 survived, 71.11%**. The scoped run disagrees
+with the tree-wide run above by one mutant, which recorded 12 survivors and
+73.33% over the same 45. The cause was not identified; both runs used the same
+commit and the same command runner. Treat the difference as the measurement
+noise of this setup rather than as a change in the code.
+
+Every one of the 13 broke a **single rule while another rule covered for it**.
+`redact` applies four rules in sequence — known values, the access-token shape,
+the bearer shape, the OAuth-parameter shape, then the opaque run — and the tests
+asserted the outcome, that the token is gone, which any one of them can deliver.
+So a rule could stop working and no test would notice, and the header on the
+test file claiming each layer was exercised on its own was not true.
+
+Each mutant was checked against the real implementation to find an input that
+distinguishes them, rather than reasoned about. All 13 were distinguishable, so
+none was equivalent. The cases worth knowing:
+
+- **A partial redaction leaks the rest of the value.** With the parameter rule's
+  `+` reduced to a single character, `code=abcdef` redacts the first character
+  and leaves `bcdef` in the text.
+- **Two spaces after `Bearer` defeated the header rule**, because nothing
+  exercised more than one space.
+- **The access-token rule earns its place in exactly one case**: a token ending
+  in `=` padding. The opaque-run rule needs a word boundary, so it stops before
+  the `=` and leaves it visible; the access-token rule takes it. For every other
+  input tried, the opaque-run rule covers the access-token rule completely.
+- **The eight-character floor on a known secret was untested on both sides.**
+
+Thirteen tests were added to `test/core/redact.test.ts`, each isolating one rule
+with values the others cannot match: under twenty characters, or free of digits,
+or ending on a character that stops the opaque run at a word boundary.
+
+**`src/core/redact.ts` now scores 97.78%: 45 mutants, 44 killed, 1 survived.**
+
+The one survivor is equivalent, and is left alone deliberately:
+
+```
+- export function redact(text: string, secrets: readonly (string|undefined)[] = []): string
++ export function redact(text: string, secrets: readonly (string|undefined)[] = ["Stryker was here"]): string
+```
+
+Killing it would need text containing the literal `Stryker was here`, which
+tests the mutation framework rather than the product. An equivalent mutant is a
+score you cannot reach, not a test you are missing.
 
 ### The monthly workflow cannot finish this run
 
