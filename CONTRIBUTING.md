@@ -64,7 +64,7 @@ situation is a silent degradation with a friendly face — see `renderEmpty` in
 ```bash
 npm run test
 npm run test:coverage   # a ratchet, not a target; see vitest.config.ts
-npm run mutate          # Stryker against core/ and data/; tens of minutes, not in CI
+npm run mutate          # Stryker against core/ and data/; hours, not in CI
 ```
 
 - Every exported function needs unit tests. Coverage thresholds are a floor, not a target:

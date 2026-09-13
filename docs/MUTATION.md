@@ -8,10 +8,11 @@ Stryker changes the code and asks whether any test notices. It is the only
 mechanical way to tell a test that pins behaviour from a test that merely
 visits a line — coverage counts both the same.
 
-**Not in `npm run check` and not in the default CI job.** A full run is tens of
-minutes. A pre-commit gate that takes tens of minutes gets skipped, and a
-skipped gate is worse than an absent one because it is still in the
-documentation. It runs on manual trigger and on the first of each month:
+**Not in `npm run check` and not in the default CI job.** A full run took
+**442 minutes** when it was first measured end to end on 13 September 2026. A
+pre-commit gate that takes seven hours does not get skipped occasionally, it
+gets skipped always, and a skipped gate is worse than an absent one because it
+is still in the documentation. It runs on manual trigger and on the first of each month:
 [`.github/workflows/mutation.yml`](../.github/workflows/mutation.yml).
 
 ## Scope, and why it is narrow
@@ -59,8 +60,8 @@ measurement is to distrust the instrument.
 
 So `npm run mutate` uses Stryker's **command runner** instead: it runs the suite
 as a command per mutant and reads the exit code. That costs per-test coverage
-analysis — which is the entire reason a full run takes tens of minutes rather
-than minutes — and it is worth it, because the number it produces is real.
+analysis — which is the entire reason a full run takes hours rather than
+minutes — and it is worth it, because the number it produces is real.
 
 ## The score
 
@@ -79,14 +80,88 @@ number before spending an hour on the whole tree.
 For comparison, the same file scored **0.00%** under the vitest runner on the
 same tests, minutes earlier.
 
-### Full run
+### Full run, 13 September 2026
 
-The full `src/core` + `src/data` figure is recorded here when a complete run
-lands; see the HTML report at `build-assets/mutation/index.html` after
-`npm run mutate`. Until then the honest statement is: **one file has been
-measured properly, and the tree-wide number is not yet known.** The 16.09%
-reported by the incompatible runner is not it, and is recorded above only as the
-thing that was wrong.
+The first complete run of `src/core` + `src/data` under the command runner.
+Node v24.19.0 on win32 x64, concurrency 4, against the suite as it stood at
+commit `b790dfc` (864 tests in 38 files).
+
+| | |
+| --- | --- |
+| Mutants | 2,160 |
+| Killed | 1,769 |
+| Timed out | 12 |
+| Survived | 379 |
+| No coverage | 0 |
+| Errors | 0 |
+| **Mutation score** | **82.45%** |
+| Wall clock | **442 minutes** |
+
+A timeout counts as killed: the mutant changed behaviour enough to hang the
+suite, which is a test noticing. No mutant was left uncovered and none errored,
+so every one of the 2,160 got a verdict — the run is complete, not partial.
+
+For comparison the incompatible vitest runner reported 16.09% over this same
+tree. That number was never real; see the section above.
+
+| File | Score | Killed | Timed out | Survived |
+| --- | ---: | ---: | ---: | ---: |
+| `core/clock.ts` | 100.00% | 10 | 0 | 0 |
+| `core/releases.ts` | 98.85% | 86 | 0 | 1 |
+| `core/hosts.ts` | 95.95% | 71 | 0 | 3 |
+| `core/snapshot.ts` | 92.75% | 64 | 0 | 5 |
+| `core/telemetry.ts` | 92.59% | 117 | 8 | 10 |
+| `data/local.ts` | 91.89% | 34 | 0 | 3 |
+| `core/approvals.ts` | 91.58% | 87 | 0 | 8 |
+| `data/storage.ts` | 87.76% | 43 | 0 | 6 |
+| `core/metadata.ts` | 87.01% | 154 | 0 | 23 |
+| `core/errors.ts` | 86.59% | 71 | 0 | 11 |
+| `data/transfer.ts` | 83.94% | 183 | 0 | 35 |
+| `data/fetchConnection.ts` | 79.02% | 110 | 3 | 30 |
+| `data/salesforce.ts` | 77.98% | 301 | 0 | 85 |
+| `core/validate.ts` | 77.38% | 301 | 0 | 88 |
+| `core/redact.ts` | 73.33% | 33 | 0 | 12 |
+| `core/diagnostics.ts` | 66.67% | 59 | 1 | 30 |
+| `core/types.ts` | 62.07% | 18 | 0 | 11 |
+| `data/connection.ts` | 60.00% | 27 | 0 | 18 |
+
+`core` scores 84.24% and `data` 79.84%.
+
+The per-mutant detail, including every survivor with its line and its
+replacement, is in the HTML report at `build-assets/mutation/index.html`. That
+file is 30 MB and gitignored, so it is regenerated rather than read from here;
+the survivors have **not** been triaged one by one yet.
+
+**The number to act on is `core/redact.ts` at 73.33%, with 12 survivors.**
+Not because it is the lowest — `data/connection.ts` and `core/types.ts` are
+lower, and both are largely type and interface declarations where a surviving
+mutant is usually equivalent — but because
+[`SECURITY.md`](../SECURITY.md) rests a promise on that file: that no token can
+appear in a log or a serialized error. A surviving mutant there is a change to
+the redactor that no test noticed, which is exactly the shape of the defect
+that promise is about. Triage those twelve before any other survivor.
+
+`core/diagnostics.ts` at 66.67% with 30 survivors is the same argument one step
+weaker: it builds the bug report that is meant to be safe to attach to a public
+issue.
+
+### The monthly workflow cannot finish this run
+
+[`.github/workflows/mutation.yml`](../.github/workflows/mutation.yml) sets
+`timeout-minutes: 45`. This run took 442 minutes on a 12-thread machine at
+concurrency 4. A GitHub-hosted runner is smaller, so the scheduled run on the
+first of each month is cancelled at 45 minutes and has never produced a score —
+which is consistent with that workflow having no completed run to date.
+
+Three ways out, none of them free, and none chosen here:
+
+- **Raise the timeout.** GitHub caps a job at 6 hours, which is *less* than this
+  run took, so the timeout alone does not fix it.
+- **Narrow the scope.** Mutating only the files whose score matters — the
+  redactor, the validator, the approval rules — would fit, at the cost of no
+  longer having a tree-wide number.
+- **Run it locally and commit the result**, as this section does. Slowest to
+  remember, cheapest to operate, and the only option that needs no CI budget.
 
 ## How to read a survivor
 

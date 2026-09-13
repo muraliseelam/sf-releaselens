@@ -387,7 +387,7 @@ npm run test:e2e:org   # the org-connected panel, from captured Salesforce paylo
 npm run test:org       # the shipping code against a real org via the sf CLI (opt-in)
 npm run verify:package # check the build against Chrome Web Store policy
 npm run size           # fail if the packaged extension outgrew its budget
-npm run mutate         # Stryker against core/ and data/; tens of minutes, not in CI
+npm run mutate         # Stryker against core/ and data/; hours, not in CI
 npm run evidence       # append this month's adoption reading to evidence/
 npm run lint           # eslint, type-checked rules
 npm run check          # everything except the browser suite
