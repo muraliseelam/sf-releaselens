@@ -21,7 +21,7 @@ the same origin, inside a 480px viewport.
 ## Why this document exists
 
 No person has yet worked through this checklist in a real Chrome by hand. The
-automated suite (858 tests in 37 files on 2026-09-12; `npm test` prints the
+automated suite (864 tests in 38 files on 2026-09-13; `npm test` prints the
 current figure), two harnesses that drive the
 **built `dist/` output** under jsdom, and the browser suite that loads `dist/`
 into an automated Chromium cover the logic and the DOM, but they cannot cover
