@@ -411,13 +411,17 @@ rather than in Node.
 
 | | Measured | Budget | Where |
 | --- | ---: | ---: | --- |
-| Packaged zip | 83.6 KB | 97 KB | \`npm run size\`, gated in CI |
-| Unpacked \`dist/\` | 250.2 KB | 288 KB | same |
-| Shipped files | 41 | 56 | same |
-| Largest single file | 20.9 KB (\`ui/panel.js\`) | 27 KB | same |
+| Packaged zip | 102.7 KB | 116 KB | \`npm run size\`, gated in CI |
+| Unpacked \`dist/\` | 305.5 KB | 344 KB | same |
+| Shipped files | 45 | 59 | same |
+| Largest single file | 26.7 KB (\`data/salesforce.js\`) | 34 KB | same |
 | Time to interactive, worker warm | 225 ms median | 1,500 ms | \`e2e/startup.spec.ts\` |
 | Time to interactive, worker evicted | 239 ms | 4,000 ms | same |
 | \`domInteractive\` | 23 ms | — | same, recorded not asserted |
+
+The four size rows are v0.8.4, measured on 2026-10-17; that zip is
+byte-identical to the one attached to the release. The three startup rows date
+from 2026-09-08 and have not been updated since.
 
 Time to interactive means the dashboard on screen with real numbers in it, not
 the document having loaded: it includes Chrome starting the extension page, the

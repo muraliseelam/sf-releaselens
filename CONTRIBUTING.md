@@ -99,7 +99,10 @@ measured.
 `dist/` loaded and drives the panel through the real service worker, real
 `chrome.storage` and real message passing. It is deliberately **outside**
 `npm run check`: the unit suite runs in about five seconds and is what you run
-on every save, and a ninety-second suite in that loop gets skipped.
+on every save, and a suite that takes about a minute in that loop gets skipped.
+On 17 October 2026 its 58 tests took 2.0 min (the first run after installing
+Chromium), 38 s and 66 s on the Windows laptop in
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md), and 19 s in CI's Ubuntu job.
 
 Run it before opening a pull request, and always after touching anything in
 `background/`, `data/storage.ts` or the panel's message plumbing. CI runs it as
@@ -114,7 +117,7 @@ Two things to know before adding to it:
   anything.
 - **One browser per worker, storage cleared between tests.** Do not add a
   per-test browser: deleting a Chromium profile on Windows costs tens of
-  seconds, and that choice is what keeps the suite at ninety seconds rather than
+  seconds, and that choice is what keeps the suite at about a minute rather than
   seven minutes.
 
 `npm run typecheck:e2e` type-checks the suite, which Playwright's runner does

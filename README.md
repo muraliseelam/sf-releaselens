@@ -71,10 +71,12 @@ state visible and actionable in one panel.
 
 ## Install
 
-Not on the Chrome Web Store yet. What is left is a paid developer account and
-switching on GitHub Pages for the privacy policy
-([`docs/privacy.html`](docs/privacy.html)), not code:
-[`docs/STORE-SUBMISSION.md`](docs/STORE-SUBMISSION.md) is the checklist, and
+Not on the Chrome Web Store yet. The blocker is a paid developer account, not code.
+The privacy policy the listing needs ([`docs/privacy.html`](docs/privacy.html)) has
+been served by GitHub Pages from `main` `/docs` since 12 September 2026, and
+<https://muraliseelam.github.io/sf-releaselens/privacy.html> returned 200 on
+17 October 2026. [`docs/STORE-SUBMISSION.md`](docs/STORE-SUBMISSION.md) is the
+checklist, including the checks only a person can make, and
 `npm run check` verifies the package against store policy on every commit — including
 that every permission the manifest requests is justified in the listing, and that no
 justification survives a permission being removed. Two ways to load it today, both
@@ -206,10 +208,12 @@ At **1,000 components across 20 releases**, which is a large quarterly release:
 | Search, text + type + operation facets | 0.68 ms | 1.18 ms |
 | Merge a refresh into the cache | 0.03 ms | 0.06 ms |
 
-**Size and startup**, measured in a real Chromium: the packaged extension is **83.6 KB**
-zipped (250 KB unpacked, 41 files, zero runtime dependencies), and the panel is readable
-**225 ms** after opening — 239 ms if Chrome had evicted the service worker and has to start
-it first. Both are budgeted and gated in CI; `npm run size` fails the build if the package
+**Size and startup.** At v0.8.4, measured by `npm run size` on 17 October 2026, the
+packaged extension is **102.7 KB** zipped (305.5 KB unpacked, 45 files, zero runtime
+dependencies) — the same 105,200 bytes as the zip attached to the release. In a real
+Chromium the panel is readable **225 ms** after opening — 239 ms if Chrome had evicted the
+service worker and has to start it first; those two date from 8 September 2026 and have not
+been updated since. Both are budgeted and gated in CI; `npm run size` fails the build if the package
 outgrows its budget.
 
 The filtered search is the slowest core path because facet counts are computed three times —
@@ -382,7 +386,7 @@ Development commands:
 npm run build          # tsc + copy assets + verify every manifest path exists
 npm run test           # vitest, ~5 seconds
 npm run test:coverage  # vitest with v8 coverage thresholds
-npm run test:e2e       # real Chromium with dist/ loaded, ~45 seconds
+npm run test:e2e       # real Chromium with dist/ loaded, about a minute
 npm run test:e2e:org   # the org-connected panel, from captured Salesforce payloads
 npm run test:org       # the shipping code against a real org via the sf CLI (opt-in)
 npm run verify:package # check the build against Chrome Web Store policy
@@ -443,8 +447,11 @@ Stated plainly, because they determine whether this is useful to you:
   there is no automation surface for the browser's toolbar icon or the side-panel container
   itself. That the icon opens the panel, and that the panel is legible at the width Chrome
   gives it, are still human checks.
-- **No demo recording.** See "What it looks like" above; the screenshots and the GIF are
-  both still to be captured by a human.
+- **No person has signed off the store screenshots.** The five store plates and both promo
+  tiles are generated from demo data by `npm run assets`, like the GIF above, so they are
+  safe by construction. But a script can check a screenshot's size, not what it shows: a
+  person still has to look at each one before it is uploaded, and
+  [`docs/STORE-SUBMISSION.md`](docs/STORE-SUBMISSION.md) keeps that box open until they do.
 - **The inspector renders at most 200 rows** per result set. The count is shown, but the
   201st component is only reachable by narrowing the filters.
 
