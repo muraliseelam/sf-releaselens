@@ -520,6 +520,34 @@ test.describe('keyboard only', () => {
   });
 });
 
+test.describe('zoomed to 200%', () => {
+  /*
+   * A 480px panel at 200% zoom is 240 CSS px wide. Before the header and the
+   * tab strip were allowed to wrap, Export and the Approvals badge sat past the
+   * right edge and every surface scrolled sideways (QA checklist 7a.10).
+   */
+  test('fits 240 CSS px on every surface without scrolling sideways', async ({ panel }) => {
+    await panel.page.setViewportSize({ width: 240, height: 900 });
+
+    for (const surface of ['dashboard', 'inspector', 'approvals']) {
+      await panel.page.locator(`#tab-${surface}`).click();
+      await expect(panel.page.locator(`#tab-${surface}`)).toHaveAttribute('aria-selected', 'true');
+      const overflow = await panel.page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `the ${surface} scrolls sideways`).toBe(0);
+    }
+
+    for (const id of ['toolbar-export', 'tab-approvals']) {
+      const box = await panel.page.locator(`#${id}`).boundingBox();
+      expect(box, `#${id} is not rendered`).not.toBeNull();
+      expect((box?.x ?? 0) + (box?.width ?? 0), `#${id} runs past the right edge`).toBeLessThanOrEqual(
+        240,
+      );
+    }
+  });
+});
+
 async function focusedId(page: Page): Promise<string> {
   return page.evaluate(() => document.activeElement?.id ?? '');
 }

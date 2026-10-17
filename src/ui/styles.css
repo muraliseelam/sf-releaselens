@@ -82,8 +82,15 @@ body {
   min-height: 100vh;
 }
 
+/*
+ * The header and the tab strip wrap rather than overflow. At 200% zoom a 480px
+ * panel is 240 CSS px wide, which neither row fits on one line; without
+ * wrapping, Export and the Approvals badge were pushed off the right edge and
+ * the whole panel scrolled sideways.
+ */
 .shell__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
@@ -104,6 +111,7 @@ body {
 
 .shell__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -116,6 +124,7 @@ body {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   padding: 0 8px;
   border-bottom: 1px solid var(--border);
@@ -991,6 +1000,7 @@ body {
 
 .orgbar__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-left: auto;
 }
