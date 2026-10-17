@@ -57,6 +57,15 @@ being established once on submission day.
       `verify:package` (45 entries, all present in `dist/`) and its extracted
       contents compared with a fresh local build — identical apart from one
       line-ending byte in `ui/panel.js`; see the reproducibility note below.
+      What has been done (2026-10-17): a script unpacked the v0.8.3 release
+      asset, loaded it into Playwright's Chromium 153 and worked §1–§7 and §7a
+      against it. Most rows pass, marked *✅ zip* in the checklist. Two fail:
+      7a.7, where focus lands on the refusal notice, and 7a.10, overflow at 200%
+      zoom, fixed in
+      [#1](https://github.com/muraliseelam/sf-releaselens/pull/1). 2.1, the toolbar click, could not be automated. That is
+      the first time the uploadable artefact has run, but a script is not a
+      person and none of it went through Chrome's side-panel host, so this box
+      stays open.
 - [ ] **The screenshots contain no real org name, username, instance URL or
       deploy id.** A script can assert 1280x800; it cannot read a screenshot.
       The five generated plates use demo data and are safe by construction — but
@@ -64,7 +73,12 @@ being established once on submission day.
       See [`ASSETS.md`](ASSETS.md). Plates and tiles were regenerated on
       2026-09-12 (`build-assets/manifest.json` `capturedAt`) from the build in
       `dist/`, whose manifest reads 0.8.3; the look at them by a person is
-      still to do.
+      still to do. Regenerated again on 2026-10-17 from a fresh clone at
+      v0.8.3 plus docs-only commits, and each plate and both tiles were opened
+      and read: demo or fixture data only, with no real org name, username,
+      instance URL or deploy id. Plate 5 shows the connect form with its
+      `3MVG9...` placeholder and `login.salesforce.com`. Have a person
+      confirm before uploading.
 - [x] **A privacy policy is published at a stable URL.** **Required**: the
       extension handles authentication information, which makes the privacy
       policy field mandatory rather than optional. Done on 2026-09-12:
@@ -82,7 +96,13 @@ being established once on submission day.
       changed since. As of 2026-09-12, `src/auth/` and
       `src/data/fetchConnection.ts` are unchanged in git since v0.5.3
       (`git diff --stat v0.5.3..HEAD -- src/auth src/data/fetchConnection.ts`
-      prints nothing), so that trigger has not fired. The
+      prints nothing), so that trigger has not fired. On 2026-10-17
+      `npm run test:org` was tried against 0.8.3 and produced no result. The
+      suite walks every CLI-connected org in one test and stops at the first
+      failure, and the first org's token from `sf org display` was refused
+      by the REST API even though `sf data query` against the same org
+      succeeded. So one org with a stale CLI session masks all the others.
+      Run it per org with `--target-org` until that is fixed. The
       extension's own sign-in window and permission prompt are a separate,
       person-only check: [`QA-CHECKLIST.md`](QA-CHECKLIST.md) §8. See
       [`LIVE-ORG-RUNBOOK.md`](LIVE-ORG-RUNBOOK.md).
@@ -127,7 +147,10 @@ The store asks, and a reviewer will look. The honest answer is short:
   all 41. A multi-line template literal keeps that ending, so a local build
   differed from the CI-built v0.8.3 asset by one byte in `ui/panel.js`. Upload
   the asset CI attached to the release, or build from a checkout where
-  `git ls-files --eol src` shows only `w/lf`.
+  `git ls-files --eol src` shows only `w/lf`. That held on 2026-10-17: a
+  fresh Windows clone (all 41 `w/lf`) ran `npm run package` and produced a zip
+  byte-identical to the v0.8.3 release asset, sha256
+  `c7493095b3049603cd6c8da17432d362ca6e75102f43b54d899c8bfade834a2e`.
 
 `npm run verify:package` prints the wording to have ready if a reviewer asks how
 the package was built; the remote-code question itself is answered by selecting
