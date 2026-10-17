@@ -1,3 +1,22 @@
+## [0.8.4](https://github.com/muraliseelam/sf-releaselens/compare/v0.8.3...v0.8.4) (2026-10-17)
+
+### Bug fixes
+
+* let the panel header, tab strip and org actions wrap at 200% zoom ([aa9ce96](https://github.com/muraliseelam/sf-releaselens/commit/aa9ce9668db81438e5fe73bcb15102917913690e))
+* return focus to Reject when a rejection is refused ([5f076e9](https://github.com/muraliseelam/sf-releaselens/commit/5f076e9721ccf5bef6e27fc263cef3da42f8cacb))
+
+### Documentation
+
+* drop a browser-test count that will go stale ([86510a3](https://github.com/muraliseelam/sf-releaselens/commit/86510a314d0cda3ff9a11e686498d5cf17b10fd3))
+* publish a privacy policy, and correct what the docs claim ([53303f5](https://github.com/muraliseelam/sf-releaselens/commit/53303f566a572b4f9fcdd3b99513c6db900d4ba4))
+* record the 2026-10-17 release-zip QA run ([abf8746](https://github.com/muraliseelam/sf-releaselens/commit/abf874683f35adbb2f209951b6920262735c6d37)), closes [#1](https://github.com/muraliseelam/sf-releaselens/issues/1)
+* record the first complete mutation run, and what it says about the redactor ([1119941](https://github.com/muraliseelam/sf-releaselens/commit/11199412954d36532f67133e8d2d58ebd529e440))
+* the privacy policy is published, so tick it ([70549d1](https://github.com/muraliseelam/sf-releaselens/commit/70549d1b794477869be410c495762e1a61bf656b))
+
+### Build and CI
+
+* release as the maintainer, not a bot ([4ab7521](https://github.com/muraliseelam/sf-releaselens/commit/4ab752196ea0a50349a36e4bb1817299a0fb2cc8))
+
 ## [0.8.3](https://github.com/muraliseelam/sf-releaselens/compare/v0.8.2...v0.8.3) (2026-09-09)
 
 ### Refactoring
