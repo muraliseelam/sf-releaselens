@@ -225,14 +225,15 @@ Benchmarking found and fixed one real scaling bug: the dashboard computed each r
 component count by filtering the whole item list, once per row, which is quadratic in
 (releases × components). See the "What changed as a result" section of the benchmarks.
 
-Test coverage, from `npm run test:coverage`: **858 unit tests** in 37 files across
-`core/`, `data/`, the auth and message layers and the whole UI layer, plus **56 end-to-end
-checks** in a real Chromium, **28 more** replaying captured Salesforce payloads through the
-real UI, and **17 contract tests** that run against a live org on demand. Every exported
+Test coverage, from `npm run test:coverage` at v0.8.4 on 17 October 2026: **877 unit
+tests** in 38 files across `core/`, `data/`, the auth and message layers and the whole UI
+layer, plus **58 end-to-end checks** in a real Chromium, **28 more** replaying captured
+Salesforce payloads through the real UI, and **17 contract tests** that run against a live
+org on demand. Every exported
 function has direct tests; `main.ts`, `handlers.ts` and `service-worker.ts` are excluded
 because they are `chrome.*` wiring with no logic of their own.
 
-**94.9% lines, 94.6% statements, 91.9% branches, 91.4% functions**, and CI fails below a
+**94.9% lines, 94.6% statements, 92.0% branches, 91.3% functions**, and CI fails below a
 floor set just under each. `src/auth` — the OAuth exchange and the token refresh, the only
 code here that touches a credential — was missing from that measurement until 9 September
 2026, because it did not exist when the include list was written. Measuring it is what turned
