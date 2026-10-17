@@ -60,9 +60,11 @@ being established once on submission day.
       What has been done (2026-10-17): a script unpacked the v0.8.3 release
       asset, loaded it into Playwright's Chromium 153 and worked §1–§7 and §7a
       against it. Most rows pass, marked *✅ zip* in the checklist. Two fail:
-      7a.7, where focus lands on the refusal notice, and 7a.10, overflow at 200%
-      zoom, fixed in
-      [#1](https://github.com/muraliseelam/sf-releaselens/pull/1). 2.1, the toolbar click, could not be automated. That is
+      7a.7, where focus lands on the refusal notice, fixed in
+      [#3](https://github.com/muraliseelam/sf-releaselens/pull/3), and 7a.10,
+      overflow at 200% zoom, fixed in
+      [#1](https://github.com/muraliseelam/sf-releaselens/pull/1). Neither fix
+      is in a release yet. 2.1, the toolbar click, could not be automated. That is
       the first time the uploadable artefact has run, but a script is not a
       person and none of it went through Chrome's side-panel host, so this box
       stays open.
