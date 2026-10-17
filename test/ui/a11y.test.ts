@@ -55,6 +55,17 @@ const DECISION = {
   statusChange: { from: 'awaiting_approval', to: 'scheduled' },
 };
 
+/** The realistic snapshot after the UAT sign-off was approved: its card has left the queue. */
+function withUatApproved() {
+  const snapshot = realisticSnapshot();
+  return {
+    ...snapshot,
+    approvals: snapshot.approvals.map((approval) =>
+      approval.id === 'apr-uat' ? { ...approval, status: 'approved' as const } : approval,
+    ),
+  };
+}
+
 async function settle(): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();
@@ -138,7 +149,7 @@ describe('focus survives a re-render', () => {
   });
 
   it('moves focus to the notice when the control the user was on disappears', async () => {
-    await openPanel({ 'approval.decide': { ...DECISION, snapshot: realisticSnapshot() } });
+    await openPanel({ 'approval.decide': { ...DECISION, snapshot: withUatApproved() } });
     (root.querySelector('#tab-approvals') as HTMLButtonElement).click();
     const approve = root.querySelector('.card__buttons .button--primary') as HTMLButtonElement;
     expect(approve).not.toBeNull();
@@ -149,7 +160,44 @@ describe('focus survives a re-render', () => {
 
     // The card moved to the decided queue, taking the button with it. Landing
     // on the body would mean tabbing from the top of the panel again.
+    expect(root.querySelector('#approve-apr-uat')).toBeNull();
     expect(document.activeElement?.id).toBe('approvals-feedback');
+  });
+
+  it('puts focus back on Reject when the rejection is refused', async () => {
+    await openPanel({ 'approval.decide': FAILS });
+    (root.querySelector('#tab-approvals') as HTMLButtonElement).click();
+    const reject = root.querySelector('#reject-apr-uat') as HTMLButtonElement;
+    expect(reject).not.toBeNull();
+
+    reject.focus();
+    reject.click();
+    await settle();
+
+    // The button was disabled while the decision was in flight, so focus had to
+    // wait on the card. The card is still here and the button usable again, so
+    // the user is back where they pressed it rather than on the refusal notice,
+    // one Shift+Tab from the comment the refusal asks for (QA checklist 7a.7).
+    expect(root.querySelector('.notice--error')).not.toBeNull();
+    expect(document.activeElement?.id).toBe('reject-apr-uat');
+  });
+
+  it('leaves focus alone if the user moved it while the decision was in flight', async () => {
+    let refuse: (reason: Error) => void = () => undefined;
+    const inFlight = new Promise((_resolve, reject) => {
+      refuse = reject;
+    });
+    await openPanel({ 'approval.decide': inFlight });
+    (root.querySelector('#tab-approvals') as HTMLButtonElement).click();
+    const reject = root.querySelector('#reject-apr-uat') as HTMLButtonElement;
+
+    reject.focus();
+    reject.click();
+    (root.querySelector('#actor-role') as HTMLSelectElement).focus();
+    refuse(new Error('refused'));
+    await settle();
+
+    expect(document.activeElement?.id).toBe('actor-role');
   });
 
   it('does not steal focus when nothing had it', async () => {

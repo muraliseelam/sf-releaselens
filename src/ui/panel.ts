@@ -15,7 +15,7 @@
 import type { Actor, ApprovalDecisionOutcome } from '../core/types.js';
 import type { SeedKind } from '../data/datasource.js';
 import { RemoteError, toSerialisedError, type Client } from './client.js';
-import { captureFocus, el, focusFallback, restoreFocus } from './dom.js';
+import { captureFocus, el, focusFallback, restoreFocus, type FocusSnapshot } from './dom.js';
 import { diagnosticsFilename } from '../core/diagnostics.js';
 import type { Handlers } from './handlers.js';
 import { INITIAL_STATE, reduce, type Action, type ViewState } from './state.js';
@@ -299,13 +299,33 @@ export function start(root: HTMLElement, client: Client, permissions?: PanelPerm
     },
   };
 
+  /*
+   * Where the user really was while focus waits on a fallback. A control the
+   * render itself disabled (Reject reading "Recording…") cannot take focus back,
+   * so focus is parked on the busy card meanwhile. Without this, the render that
+   * re-enables the control finds the user on the card, which is no longer
+   * focusable either, and falls back again onto the notice: a refused rejection
+   * left the keyboard user away from the comment it asked for.
+   */
+  let parked: { readonly from: FocusSnapshot; readonly on: string } | null = null;
+
   function render(): void {
-    const focus = captureFocus(document);
+    const current = captureFocus(document);
+    // Still where the last render parked it: the user has not moved on, so aim
+    // for the control they actually pressed.
+    const focus = parked !== null && current?.id === parked.on ? parked.from : current;
+    parked = null;
     mount.replaceChildren(renderShell(state, handlers));
     // When the control the user was on has gone — an approved card that moved
     // queue, a row a filter removed — put focus on whatever replaced it rather
     // than dropping the keyboard user back at the top of the panel.
-    if (!restoreFocus(document, focus) && focus !== null) focusFallback(document);
+    if (!restoreFocus(document, focus) && focus !== null) {
+      focusFallback(document);
+      const landed = document.activeElement;
+      if (document.getElementById(focus.id) !== null && landed instanceof HTMLElement && landed.id !== '') {
+        parked = { from: focus, on: landed.id };
+      }
+    }
     announce();
   }
 

@@ -500,6 +500,23 @@ test.describe('keyboard only', () => {
     expect(await focusedId(panel.page)).toBe('approvals-feedback');
   });
 
+  test('keeps focus on Reject when a keyboard rejection is refused', async ({ panel }) => {
+    await panel.page.locator('#tab-approvals').focus();
+    await panel.page.keyboard.press('End');
+    await expect(panel.page.locator('[aria-label="Approvals"]')).toBeVisible();
+
+    const reject = panel.page.locator('.card__buttons .button--danger');
+    const id = await reject.getAttribute('id');
+    await reject.focus();
+    await panel.page.keyboard.press('Enter');
+
+    await expect(panel.page.locator('.notice--error')).toContainText('MISSING_REJECTION_COMMENT');
+    // Not the refusal notice: the user is one Shift+Tab from the comment the
+    // refusal asks for, not hunting for it (QA checklist 7a.7).
+    expect(id).toMatch(/^reject-/);
+    expect(await focusedId(panel.page)).toBe(id);
+  });
+
   test('activates a status chip with the keyboard and stays on it', async ({ panel }) => {
     await panel.page.locator('#chip-status-blocked').focus();
     await panel.page.keyboard.press('Enter');
