@@ -46,14 +46,19 @@ Nothing here came through Chrome's own side-panel host, and screenshots were
 read for legibility but nobody listened to anything. A ✅ zip row still wants a
 human pass before a release is signed off.
 
+Later the same day the script was run again against the **v0.8.4 release
+asset**, the one to upload now, unpacked into the folder a person would choose
+in *Load unpacked*. Every row it covers passed, including 7a.7 and 7a.10, which
+had failed on v0.8.3 and were fixed in v0.8.4.
+
 Each item says how it stands today:
 
 | Mark | Meaning |
 | --- | --- |
 | ✅ auto | Covered by `npm test` against the source. |
 | ✅ dist | Additionally exercised against the built `dist/` output under jsdom. |
-| ✅ zip | Driven by script against the unpacked v0.8.3 release zip in Playwright's Chromium 153, 2026-10-17. Not a person, and not Chrome's side-panel host. |
-| ❌ zip | Failed that run. The row says what was measured. |
+| ✅ zip | Driven by script against the unpacked release zip in Playwright's Chromium 153 on 2026-10-17, first v0.8.3 and then v0.8.4, passing on both unless the row says otherwise. Not a person, and not Chrome's side-panel host. |
+| ❌ zip | Failed on v0.8.3. The row says what was measured and what fixed it. |
 | ❓ | **Never verified.** Needs a human with Chrome. |
 
 ---
@@ -171,10 +176,10 @@ reader.
 | 7a.4 | One Tab stop for three tabs | Tab into the strip, then Tab again. Focus leaves the strip rather than visiting each tab. | ✅ auto |
 | 7a.5 | Focus survives activation | Space or Enter on a status chip, then a component row. Focus stays on the control you activated, not the top of the panel. | ✅ auto |
 | 7a.6 | Focus survives a decision | Keyboard-approve something. Focus lands on the outcome notice, not on the document body. | ✅ auto |
-| 7a.7 | Reject with no comment | Keyboard-reject with an empty comment. The refusal is announced and focus does not jump away from the comment box. | ❌ zip. Tab to *Reject*, then Enter: the `MISSING_REJECTION_COMMENT` refusal is shown, but focus lands on the refusal notice (`#approvals-feedback`), not back on *Reject* or in the comment box, so the user has to Shift+Tab back to type. The button is disabled while the decision is in flight, so focus fell back twice and landed on the notice. Fixed in v0.8.4 by [#3](https://github.com/muraliseelam/sf-releaselens/pull/3), which returns focus to *Reject* and pins it in a unit test and in the e2e suite. Nothing has driven the v0.8.4 zip yet. Whether it is announced was not checked. |
+| 7a.7 | Reject with no comment | Keyboard-reject with an empty comment. The refusal is announced and focus does not jump away from the comment box. | ✅ zip on v0.8.4: after the refusal, focus is back on *Reject*, one Shift+Tab from the comment box. ❌ zip on v0.8.3: focus landed on the refusal notice (`#approvals-feedback`), because the button is disabled while the decision is in flight and focus fell back twice. Fixed by [#3](https://github.com/muraliseelam/sf-releaselens/pull/3), which pins it in a unit test and in the e2e suite. Whether the refusal is announced was not checked. |
 | 7a.8 | Announcements | With NVDA or VoiceOver: the load announces the counts, a decision announces the outcome, a failure interrupts. **Typing in the search box must announce nothing** — the panel re-renders on every keystroke, and a live region that repeats itself is worse than none. | ❓ |
 | 7a.9 | Names, not positions | Browse by button with a screen reader. Every "Approve" says what it approves; every chip says what its number counts. | ✅ auto (names), ❓ (as read aloud) |
-| 7a.10 | Zoom to 200% | Nothing is clipped, and the panel does not scroll horizontally. | ❌ zip. At 240 CSS px (a 480px panel at 200%), every surface measured `scrollWidth` 276: the header's Reload/Import/Export row and the tab strip did not wrap, cutting off *Export* and the Approvals badge. It was clean from 280px up. Fixed in v0.8.4 by [#1](https://github.com/muraliseelam/sf-releaselens/pull/1), which also pins 240px in the e2e suite. Nothing has driven the v0.8.4 zip yet. |
+| 7a.10 | Zoom to 200% | Nothing is clipped, and the panel does not scroll horizontally. | ✅ zip on v0.8.4: `scrollWidth` 240 at 240 CSS px (a 480px panel at 200%) on all three surfaces. ❌ zip on v0.8.3: 276, because the header's Reload/Import/Export row and the tab strip did not wrap, cutting off *Export* and the Approvals badge. Fixed by [#1](https://github.com/muraliseelam/sf-releaselens/pull/1), which also pins 240px in the e2e suite. |
 
 ## 8. Org connection
 

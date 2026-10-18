@@ -64,7 +64,9 @@ being established once on submission day.
       [#3](https://github.com/muraliseelam/sf-releaselens/pull/3), and 7a.10,
       overflow at 200% zoom, fixed by
       [#1](https://github.com/muraliseelam/sf-releaselens/pull/1). Both fixes
-      shipped in v0.8.4 on 2026-10-17; nothing has driven the v0.8.4 zip yet.
+      shipped in v0.8.4 on 2026-10-17. The same script then drove the
+      v0.8.4 release asset, the one to upload now, and every row it covers
+      passed, both of those included.
       2.1, the toolbar click, could not be automated. That is
       the first time the uploadable artefact has run, but a script is not a
       person and none of it went through Chrome's side-panel host, so this box
@@ -153,7 +155,10 @@ The store asks, and a reviewer will look. The honest answer is short:
   `git ls-files --eol src` shows only `w/lf`. That held on 2026-10-17: a
   fresh Windows clone (all 41 `w/lf`) ran `npm run package` and produced a zip
   byte-identical to the v0.8.3 release asset, sha256
-  `c7493095b3049603cd6c8da17432d362ca6e75102f43b54d899c8bfade834a2e`.
+  `c7493095b3049603cd6c8da17432d362ca6e75102f43b54d899c8bfade834a2e`. The same
+  held for v0.8.4, rebuilt from its tag: sha256
+  `57893b25492108d2512a2ddc1ffd74e02685ba293617711d296299c6cab34250`, 105,200
+  bytes.
 
 `npm run verify:package` prints the wording to have ready if a reviewer asks how
 the package was built; the remote-code question itself is answered by selecting

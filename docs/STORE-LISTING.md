@@ -159,8 +159,8 @@ https://muraliseelam.github.io/sf-releaselens/privacy.html
 The page is [`docs/privacy.html`](privacy.html), derived from `SECURITY.md`'s
 threat model and the disclosures above, served by GitHub Pages from `main`,
 folder `/docs` (`docs/.nojekyll` keeps Pages from rendering the other
-documents). Pages must be enabled once in the repository settings; until then
-the URL does not resolve.
+documents). Pages has served it since 12 September 2026, and the URL returned
+200 on 17 October 2026.
 
 ### Remote code
 
