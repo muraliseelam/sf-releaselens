@@ -49,8 +49,9 @@ being established once on submission day.
 
 ## What only a person can check
 
-- [ ] **Somebody has loaded the packaged zip in Chrome and worked through
-      [`QA-CHECKLIST.md`](QA-CHECKLIST.md) §1–§7.** Not done. The e2e suite
+- [x] **Somebody has loaded the packaged zip in Chrome and worked through
+      [`QA-CHECKLIST.md`](QA-CHECKLIST.md) §1–§7.** Done on 2026-10-18 for
+      v0.8.4; see the last paragraph of this item. The e2e suite
       drives `dist/` directly; it has never driven the artefact that would
       actually be uploaded, and unpacking is where a packaging mistake shows up.
       What has been done (2026-09-12): the v0.8.3 release asset was screened by
@@ -67,10 +68,19 @@ being established once on submission day.
       shipped in v0.8.4 on 2026-10-17. The same script then drove the
       v0.8.4 release asset, the one to upload now, and every row it covers
       passed, both of those included.
-      2.1, the toolbar click, could not be automated. That is
-      the first time the uploadable artefact has run, but a script is not a
-      person and none of it went through Chrome's side-panel host, so this box
-      stays open.
+      2.1, the toolbar click, could not be automated. That was the first time
+      the uploadable artefact had run, but a script is not a person and none of
+      it went through Chrome's side-panel host.
+      Done (2026-10-18): the maintainer loaded the v0.8.4 release zip into
+      Google Chrome 155.0.8059.80 with *Load unpacked*. By hand they checked
+      every row of §1–§7 that no automation reaches: the toolbar icon opening
+      the real side panel (2.1), a clean console, the narrowest width, the OS
+      theme and 200% zoom, a keyboard rejection, an approval surviving a full
+      browser quit, and a real download. Those rows are marked *✅ person*.
+      Every other row in §1–§7 is covered by a script against the same zip
+      (*✅ zip*) or against `dist/`. The approval and the download were
+      confirmed from the profile on disk as well. Still open elsewhere: the
+      screen-reader rows in §7a and the org sign-in in §8.
 - [ ] **The screenshots contain no real org name, username, instance URL or
       deploy id.** A script can assert 1280x800; it cannot read a screenshot.
       The five generated plates use demo data and are safe by construction — but

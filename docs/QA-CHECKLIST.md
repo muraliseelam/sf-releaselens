@@ -20,8 +20,9 @@ the same origin, inside a 480px viewport.
 
 ## Why this document exists
 
-No person has yet worked through this checklist in a real Chrome by hand. The
-automated suite (875 tests in 38 files on 2026-10-17; `npm test` prints the
+Until 2026-10-18 no person had worked through this checklist in a real Chrome by
+hand. The rows marked *✅ person* now have been; no other row has. The
+automated suite (877 tests in 38 files on 2026-10-17; `npm test` prints the
 current figure), two harnesses that drive the
 **built `dist/` output** under jsdom, and the browser suite that loads `dist/`
 into an automated Chromium cover the logic and the DOM, but they cannot cover
@@ -51,6 +52,16 @@ asset**, the one to upload now, unpacked into the folder a person would choose
 in *Load unpacked*. Every row it covers passed, including 7a.7 and 7a.10, which
 had failed on v0.8.3 and were fixed in v0.8.4.
 
+On **2026-10-18** the maintainer loaded the same v0.8.4 release zip into
+Google Chrome 155 with *Load unpacked* and checked by hand the things no
+automation here can reach: the toolbar icon opening the real side panel, the
+console, the narrowest panel width, 200% zoom, the OS theme, a keyboard
+rejection, an approval surviving a full browser quit, and a download landing
+in `~/Downloads`. Those rows are marked *✅ person*. The approval and the
+download were then confirmed from the profile on disk. The extension's
+storage still held the decision after Chrome had reopened it, and the
+exported file contained it.
+
 Each item says how it stands today:
 
 | Mark | Meaning |
@@ -58,6 +69,7 @@ Each item says how it stands today:
 | ✅ auto | Covered by `npm test` against the source. |
 | ✅ dist | Additionally exercised against the built `dist/` output under jsdom. |
 | ✅ zip | Driven by script against the unpacked release zip in Playwright's Chromium 153 on 2026-10-17, first v0.8.3 and then v0.8.4, passing on both unless the row says otherwise. Not a person, and not Chrome's side-panel host. |
+| ✅ person | Checked by hand by the maintainer in Google Chrome 155.0.8059.80 on Windows, 2026-10-18, against the v0.8.4 release zip loaded with *Load unpacked*, through Chrome's real side-panel host. |
 | ❌ zip | Failed on v0.8.3. The row says what was measured and what fixed it. |
 | ❓ | **Never verified.** Needs a human with Chrome. |
 
@@ -78,8 +90,8 @@ npm run check     # must exit 0; emits 159 files into dist/
 
 | # | Check | Expected | Status |
 | --- | --- | --- | --- |
-| 1.1 | The extension loads | Card appears: *sf-releaselens 0.8.3* (the version in `package.json`). **No errors** button on the card. | ✅ zip (enabled, 0 manifest errors, 0 runtime errors) |
-| 1.2 | Permissions | The details page lists **no permission lines**: `storage`, `sidePanel` and `identity` carry no install warning, so Chrome shows nothing for them. A *Site access* section **does** appear, with Chrome's generic "can read and change your data on sites" sentence, because the manifest declares `optional_host_permissions`. No site may be granted: host permissions are requested only at connect time. | ✅ zip (no permission lines; no host granted) |
+| 1.1 | The extension loads | Card appears: *sf-releaselens 0.8.4* (the version in `package.json`). **No errors** button on the card. | ✅ person, ✅ zip (enabled, 0 manifest errors, 0 runtime errors) |
+| 1.2 | Permissions | The details page lists **no permission lines**: `storage`, `sidePanel` and `identity` carry no install warning, so Chrome shows nothing for them. A *Site access* section **does** appear, with Chrome's generic "can read and change your data on sites" sentence, because the manifest declares `optional_host_permissions`. No site may be granted: host permissions are requested only at connect time. | ✅ person, ✅ zip (no permission lines; no host granted) |
 | 1.3 | Service worker | Card shows *service worker* as **active** or *inactive* — never *errored*. Click it: DevTools console must be empty. | ✅ zip (listed under *Inspect views*; no console error) |
 | 1.4 | Icon | Chrome shows the extension's own icon, the generated `icons/` set the manifest declares (`npm run icons:check` confirms it matches the design). Not the grey puzzle piece. | ✅ zip |
 
@@ -87,11 +99,11 @@ npm run check     # must exit 0; emits 159 files into dist/
 
 | # | Check | Expected | Status |
 | --- | --- | --- | --- |
-| 2.1 | Toolbar click opens the panel | Clicking the toolbar icon opens the side panel directly (set by `sidePanel.setPanelBehavior({openPanelOnActionClick:true})` on install). | ❓ (behaviour call ✅ dist). On 2026-10-17, CDP `Extensions.triggerAction` dropped the browser connection in both headless and headed Chromium 153, so the click still needs a person. |
-| 2.2 | Panel renders | Header *sf-releaselens*, an org strip reading **Local data · no org connected**, three tabs, and a blue **Demo data** banner. | ✅ zip |
-| 2.3 | No console errors | Right-click the panel → Inspect. Console clean. **This is the CSP check** — MV3 blocks inline script, and nothing else tests that. | ✅ zip (no console error, uncaught exception or unhandled rejection from the panel or the worker across two browser launches) |
-| 2.4 | Theme | Panel follows the OS light/dark setting; text legible in both. | ✅ zip (both schemes emulated and screenshotted. Zero-count chips are deliberately dimmed, at 2.2:1 contrast in light and 2.5:1 in dark.) |
-| 2.5 | Narrow width | Drag the panel to its narrowest. No horizontal scrollbar; long API names wrap rather than truncate. | ✅ zip at a 320px viewport, not by dragging Chrome's panel |
+| 2.1 | Toolbar click opens the panel | Clicking the toolbar icon opens the side panel directly (set by `sidePanel.setPanelBehavior({openPanelOnActionClick:true})` on install). | ✅ person (Chrome 155: the pinned toolbar icon opened the side panel), behaviour call ✅ dist. Not automatable here: CDP `Extensions.triggerAction` dropped the browser connection in headless and headed Chromium 153 on 2026-10-17. |
+| 2.2 | Panel renders | Header *sf-releaselens*, an org strip reading **Local data · no org connected**, three tabs, and a blue **Demo data** banner. | ✅ person, ✅ zip |
+| 2.3 | No console errors | Right-click the panel → Inspect. Console clean. **This is the CSP check** — MV3 blocks inline script, and nothing else tests that. | ✅ person (Inspect → Console clean), ✅ zip (no console error, uncaught exception or unhandled rejection from the panel or the worker across two browser launches) |
+| 2.4 | Theme | Panel follows the OS light/dark setting; text legible in both. | ✅ person (Windows light and dark), ✅ zip (both schemes emulated and screenshotted. Zero-count chips are deliberately dimmed, at 2.2:1 contrast in light and 2.5:1 in dark.) |
+| 2.5 | Narrow width | Drag the panel to its narrowest. No horizontal scrollbar; long API names wrap rather than truncate. | ✅ person (Chrome's panel dragged to its narrowest), ✅ zip at a 320px viewport |
 
 ## 3. Release dashboard
 
@@ -99,7 +111,7 @@ Seeded demo data. Values below are exact — anything else is a bug.
 
 | # | Check | Expected | Status |
 | --- | --- | --- | --- |
-| 3.1 | Headline | `5 releases tracked · 2 need attention` (the second half in red). | ✅ dist |
+| 3.1 | Headline | `5 releases tracked · 2 need attention` (the second half in red). | ✅ person, ✅ dist |
 | 3.2 | Status counts | Ten chips: `All 5`, `Draft 1`, `Awaiting approval 1`, `Scheduled 0`, `In progress 0`, `Validated, not deployed 0`, `Deployed 1`, `Blocked 1`, `Failed 1`, `Rolled back 0`. Zero-count chips are present and dimmed. | ✅ dist |
 | 3.3 | Status bar | Proportional coloured bar above the chips. | ✅ dist |
 | 3.4 | Row order | *Payment Retry Hotfix* first, with a red left border (attention sorts first). | ✅ dist |
@@ -133,18 +145,18 @@ Seeded demo data. Values below are exact — anything else is a bug.
 | 5.3 | Buttons only where actionable | Only the *Waiting on you* card has Approve/Reject. | ✅ dist |
 | 5.4 | Reject needs a reason | Click **Reject** with an empty comment → red notice, code `MISSING_REJECTION_COMMENT`. Nothing is recorded. | ✅ dist |
 | 5.5 | Draft survives the refusal | Type a comment, click **Reject**, get refused, then check the comment is **still in the box**. | ✅ dist |
-| 5.6 | Approve | Type `Verified in UAT.`, click **Approve** → green notice: *"UAT sign-off on Q3 Billing Enhancements is now approved. The release status is unchanged."* | ✅ dist |
+| 5.6 | Approve | Type `Verified in UAT.`, click **Approve** → green notice: *"UAT sign-off on Q3 Billing Enhancements is now approved. The release status is unchanged."* | ✅ person (approved without a comment, which Approve allows; the decision was in storage afterwards), ✅ dist |
 | 5.7 | Role switch | Set **Acting as** to `qa-lead` → *QA regression sign-off* becomes actionable. | ✅ dist |
 | 5.8 | Reject blocks the release | Reject that gate with a comment → *"...is now rejected. The release moved from awaiting_approval to blocked."* Dashboard now shows `Blocked 2`. | ✅ dist |
 | 5.9 | **Persists across reopen** | Close the side panel entirely, reopen it. The approval is still in *Recently decided*, with decider and comment; the badge is gone. | ✅ dist (two-process reload) |
-| 5.10 | Persists across browser restart | Quit Chrome, reopen, open the panel. Same state. **Only a real browser tests this** — the harness cannot. | ✅ zip (Chromium quit and relaunched on the same profile) |
+| 5.10 | Persists across browser restart | Quit Chrome, reopen, open the panel. Same state. **Only a real browser tests this** — the harness cannot. | ✅ person (Chrome quit with ⋮ → Exit and reopened: the decision was still listed, and still in the extension's storage on disk), ✅ zip (Chromium quit and relaunched on the same profile) |
 | 5.11 | Two panels disagree | Open the panel in two windows. Decide the same approval in both. The second must fail with `INVALID_APPROVAL_TRANSITION` naming who decided first — not silently overwrite. | ✅ zip (two panel documents. The second panel's card disappeared on the broadcast, and a stale decision sent from it anyway was refused with `INVALID_APPROVAL_TRANSITION` naming the decider.) |
 
 ## 6. Import / export
 
 | # | Check | Expected | Status |
 | --- | --- | --- | --- |
-| 6.1 | Export downloads | **Export** → a file `sf-releaselens-<timestamp>.json` lands in Downloads. **Browser-only**: the harness stubs `URL.createObjectURL`. | ✅ zip (a real browser download, valid JSON. It went to the automation's download directory, not `~/Downloads`.) |
+| 6.1 | Export downloads | **Export** → a file `sf-releaselens-<timestamp>.json` lands in Downloads. **Browser-only**: the harness stubs `URL.createObjectURL`. | ✅ person (`sf-releaselens-<timestamp>.json` landed in `~/Downloads`: valid JSON, containing the decision just made), ✅ zip (a real browser download, valid JSON. It went to the automation's download directory, not `~/Downloads`.) |
 | 6.2 | Import round-trip | **Import** that file → dashboard unchanged, demo banner gone. | ✅ auto |
 | 6.3 | Import a deploy report | Import `sf project deploy report --json` output → one release, components mapped, failures as error warnings. | ✅ auto |
 | 6.4 | Malformed import | Import a non-JSON file → `IMPORT_FORMAT` error and **the existing snapshot is untouched**. | ✅ auto |
@@ -176,10 +188,10 @@ reader.
 | 7a.4 | One Tab stop for three tabs | Tab into the strip, then Tab again. Focus leaves the strip rather than visiting each tab. | ✅ auto |
 | 7a.5 | Focus survives activation | Space or Enter on a status chip, then a component row. Focus stays on the control you activated, not the top of the panel. | ✅ auto |
 | 7a.6 | Focus survives a decision | Keyboard-approve something. Focus lands on the outcome notice, not on the document body. | ✅ auto |
-| 7a.7 | Reject with no comment | Keyboard-reject with an empty comment. The refusal is announced and focus does not jump away from the comment box. | ✅ zip on v0.8.4: after the refusal, focus is back on *Reject*, one Shift+Tab from the comment box. ❌ zip on v0.8.3: focus landed on the refusal notice (`#approvals-feedback`), because the button is disabled while the decision is in flight and focus fell back twice. Fixed by [#3](https://github.com/muraliseelam/sf-releaselens/pull/3), which pins it in a unit test and in the e2e suite. Whether the refusal is announced was not checked. |
+| 7a.7 | Reject with no comment | Keyboard-reject with an empty comment. The refusal is announced and focus does not jump away from the comment box. | ✅ person on v0.8.4 (Chrome 155), ✅ zip on v0.8.4: after the refusal, focus is back on *Reject*, one Shift+Tab from the comment box. ❌ zip on v0.8.3: focus landed on the refusal notice (`#approvals-feedback`), because the button is disabled while the decision is in flight and focus fell back twice. Fixed by [#3](https://github.com/muraliseelam/sf-releaselens/pull/3), which pins it in a unit test and in the e2e suite. Whether the refusal is announced was not checked. |
 | 7a.8 | Announcements | With NVDA or VoiceOver: the load announces the counts, a decision announces the outcome, a failure interrupts. **Typing in the search box must announce nothing** — the panel re-renders on every keystroke, and a live region that repeats itself is worse than none. | ❓ |
 | 7a.9 | Names, not positions | Browse by button with a screen reader. Every "Approve" says what it approves; every chip says what its number counts. | ✅ auto (names), ❓ (as read aloud) |
-| 7a.10 | Zoom to 200% | Nothing is clipped, and the panel does not scroll horizontally. | ✅ zip on v0.8.4: `scrollWidth` 240 at 240 CSS px (a 480px panel at 200%) on all three surfaces. ❌ zip on v0.8.3: 276, because the header's Reload/Import/Export row and the tab strip did not wrap, cutting off *Export* and the Approvals badge. Fixed by [#1](https://github.com/muraliseelam/sf-releaselens/pull/1), which also pins 240px in the e2e suite. |
+| 7a.10 | Zoom to 200% | Nothing is clipped, and the panel does not scroll horizontally. | ✅ person on v0.8.4 (Chrome 155, `Ctrl`+`+` to 200%), ✅ zip on v0.8.4: `scrollWidth` 240 at 240 CSS px (a 480px panel at 200%) on all three surfaces. ❌ zip on v0.8.3: 276, because the header's Reload/Import/Export row and the tab strip did not wrap, cutting off *Export* and the Approvals badge. Fixed by [#1](https://github.com/muraliseelam/sf-releaselens/pull/1), which also pins 240px in the e2e suite. |
 
 ## 8. Org connection
 
@@ -195,7 +207,7 @@ Prerequisite: a Connected App per [`CONNECTED-APP.md`](CONNECTED-APP.md). Use a
 
 | # | Check | Expected | Status |
 | --- | --- | --- | --- |
-| 8.1 | Installs with no host access | On the extension card, *Site access* lists no site. Chrome still shows the section, because the Salesforce hosts are declared as optional; see 1.2. The extension has requested nothing. | ✅ zip (no host granted at install) |
+| 8.1 | Installs with no host access | On the extension card, *Site access* lists no site. Chrome still shows the section, because the Salesforce hosts are declared as optional; see 1.2. The extension has requested nothing. | ✅ person, ✅ zip (no host granted at install) |
 | 8.2 | Local mode is untouched | Before connecting, everything in §3–§6 behaves exactly as it did. | ✅ auto (regression guard) |
 | 8.3 | Connect prompt | **Connect org…** → enter login URL + Consumer Key → **Sign in**. Chrome asks for access to the org origin *before* the Salesforce login window opens. | ❓ |
 | 8.4 | Refusing the prompt | Decline Chrome's permission prompt → red notice, no Salesforce window opens, still in local mode. | ✅ auto |
