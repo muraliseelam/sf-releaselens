@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use sf-releaselens in your work, please cite it using the metadata below."
+title: "sf-releaselens: a read-only Chrome side panel for Salesforce release managers"
+abstract: >-
+  sf-releaselens is a Manifest V3 Chrome side panel that gives Salesforce release managers one surface for what is in flight, what a release actually contains, and what is awaiting their approval, beside the org tab they already have open. It is strictly read-only: the interface it uses to reach Salesforce exposes no post, patch, or delete member, it requests no host permission until an org is connected, it never polls, and opt-in telemetry is off by default. It has been validated against ten real Salesforce orgs.
+type: software
+authors:
+  - family-names: Seelam
+    given-names: Murali Mohan Reddy
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add after you register a free ORCID iD
+version: 0.8.4
+date-released: 2026-10-17
+license: MIT
+repository-code: "https://github.com/muraliseelam/sf-releaselens"
+url: "https://github.com/muraliseelam/sf-releaselens"
+# identifiers:                       # uncomment and fill in after the first Zenodo archive
+#   - type: doi
+#     value: "10.5281/zenodo.XXXXXXX"
+#     description: "Concept DOI that always resolves to the latest version"
+keywords:
+  - Salesforce
+  - release management
+  - Chrome extension
+  - Manifest V3
+  - DevOps
+  - metadata inspector
+  - approvals
+  - release engineering
